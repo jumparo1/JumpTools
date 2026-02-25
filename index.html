@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JumpTrading Tools</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
+h1{font-size:2.4rem;margin-bottom:8px;background:linear-gradient(135deg,#58a6ff,#238636);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{color:#8b949e;font-size:1rem;margin-bottom:48px;letter-spacing:0.5px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:960px;width:100%}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:32px 28px;text-decoration:none;color:#e6edf3;transition:all .25s ease;position:relative;overflow:hidden}
+.card:hover{border-color:#58a6ff;transform:translateY(-4px);box-shadow:0 8px 32px rgba(88,166,255,.12)}
+.card-icon{font-size:2.8rem;margin-bottom:16px;display:block}
+.card-title{font-size:1.3rem;font-weight:600;margin-bottom:8px}
+.card-desc{color:#8b949e;font-size:0.9rem;line-height:1.5}
+.card-arrow{position:absolute;top:28px;right:24px;color:#30363d;font-size:1.4rem;transition:all .25s}
+.card:hover .card-arrow{color:#58a6ff;transform:translateX(4px)}
+.card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;opacity:0;transition:opacity .25s}
+.card:hover::after{opacity:1}
+.card:nth-child(1)::after{background:linear-gradient(90deg,#238636,#39d353)}
+.card:nth-child(2)::after{background:linear-gradient(90deg,#1f6feb,#58a6ff)}
+.card:nth-child(3)::after{background:linear-gradient(90deg,#d29922,#e3b341)}
+footer{margin-top:64px;color:#484f58;font-size:0.8rem;letter-spacing:0.3px}
+@media(max-width:640px){h1{font-size:1.8rem}.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>JumpTrading Tools</h1>
+<p class="subtitle">Trading analytics & portfolio management suite</p>
+
+<div class="cards">
+  <a class="card" href="fund-hq.html">
+    <span class="card-icon">🏦</span>
+    <span class="card-arrow">&#8594;</span>
+    <div class="card-title">Fund HQ</div>
+    <div class="card-desc">Central dashboard for fund management, tracking, and operations overview.</div>
+  </a>
+
+  <a class="card" href="trading-journal.html">
+    <span class="card-icon">📊</span>
+    <span class="card-arrow">&#8594;</span>
+    <div class="card-title">Trading Journal Analyst</div>
+    <div class="card-desc">Full trade journal with analytics, portfolio tracking, equity curves, and AI coaching.</div>
+  </a>
+
+  <a class="card" href="backtesting.html">
+    <span class="card-icon">🧪</span>
+    <span class="card-arrow">&#8594;</span>
+    <div class="card-title">Backtesting Tool</div>
+    <div class="card-desc">Strategy backtesting engine for testing and validating trading setups.</div>
+  </a>
+</div>
+
+<footer>JumpTrading &middot; Built for speed</footer>
+</body>
+</html>

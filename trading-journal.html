@@ -1,0 +1,2521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Journal Analyst</title>
+<style>
+/* ── Reset & Base ── */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--bg4:#30363d;
+  --tx:#e6edf3;--tx2:#8b949e;--tx3:#484f58;
+  --green:#3fb950;--green2:#238636;--red:#f85149;--red2:#da3633;
+  --blue:#58a6ff;--blue2:#1f6feb;--yellow:#d29922;--orange:#db6d28;
+  --purple:#bc8cff;--cyan:#39d353;
+  --radius:8px;--radius2:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--tx);display:flex;height:100vh;overflow:hidden}
+a{color:var(--blue);text-decoration:none}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--bg4);
+  display:flex;flex-direction:column;padding:16px 0;flex-shrink:0}
+.sidebar .logo{padding:0 16px 20px;font-size:18px;font-weight:700;
+  background:linear-gradient(135deg,var(--green),var(--blue));-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;letter-spacing:-0.5px}
+.sidebar .logo span{font-size:11px;display:block;-webkit-text-fill-color:var(--tx2);margin-top:2px;letter-spacing:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;
+  color:var(--tx2);font-size:14px;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg3);color:var(--tx)}
+.nav-item.active{background:var(--bg3);color:var(--tx);border-left-color:var(--green)}
+.nav-item svg{width:18px;height:18px;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--bg4)}
+.trade-count{font-size:12px;color:var(--tx2)}
+.trade-count strong{color:var(--green);font-size:14px}
+.hide-toggle{display:flex;align-items:center;gap:6px;margin-top:8px;padding:6px 10px;border-radius:6px;
+  border:1px solid var(--bg4);background:transparent;color:var(--tx2);cursor:pointer;font-size:11px;
+  width:100%;transition:all .2s}
+.hide-toggle:hover{border-color:var(--tx3);color:var(--tx)}
+.hide-toggle.active{background:var(--bg3);color:var(--yellow);border-color:var(--yellow)}
+
+/* ── Main ── */
+.main{flex:1;overflow-y:auto;padding:24px 32px}
+.page{display:none}
+.page.active{display:block}
+.page-title{font-size:24px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+
+/* ── Cards ── */
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.metric-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);
+  padding:20px;transition:border-color .2s}
+.metric-card:hover{border-color:var(--bg3)}
+.metric-card .label{font-size:12px;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.metric-card .value{font-size:28px;font-weight:700}
+.metric-card .sub{font-size:12px;color:var(--tx2);margin-top:4px}
+.val-green{color:var(--green)}.val-red{color:var(--red)}.val-blue{color:var(--blue)}
+.val-yellow{color:var(--yellow)}.val-neutral{color:var(--tx)}
+
+/* ── Import ── */
+.import-zone{border:2px dashed var(--bg4);border-radius:var(--radius2);padding:48px;
+  text-align:center;cursor:pointer;transition:all .2s;margin-bottom:20px}
+.import-zone:hover,.import-zone.drag-over{border-color:var(--green);background:rgba(63,185,80,.05)}
+.import-zone svg{width:48px;height:48px;color:var(--tx2);margin-bottom:12px}
+.import-zone h3{font-size:18px;margin-bottom:8px}
+.import-zone p{color:var(--tx2);font-size:14px}
+.import-or{text-align:center;color:var(--tx3);margin:16px 0;font-size:13px}
+.import-paste{width:100%;min-height:120px;background:var(--bg2);border:1px solid var(--bg4);
+  border-radius:var(--radius);color:var(--tx);font-family:monospace;font-size:12px;padding:12px;resize:vertical}
+.import-paste::placeholder{color:var(--tx3)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);
+  border:1px solid var(--bg4);background:var(--bg3);color:var(--tx);font-size:13px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--bg4);border-color:var(--tx3)}
+.btn-primary{background:var(--green2);border-color:var(--green2);color:#fff}
+.btn-primary:hover{background:var(--green);border-color:var(--green)}
+.btn-danger{background:var(--red2);border-color:var(--red2);color:#fff}
+.btn-danger:hover{background:var(--red)}
+.btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.import-status{margin-top:12px;padding:12px;border-radius:var(--radius);font-size:13px;display:none}
+.import-status.success{display:block;background:rgba(63,185,80,.1);border:1px solid var(--green2);color:var(--green)}
+.import-status.error{display:block;background:rgba(248,81,73,.1);border:1px solid var(--red2);color:var(--red)}
+
+/* ── Chart containers ── */
+.chart-container{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);
+  padding:20px;margin-bottom:20px}
+.chart-container h3{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--tx2)}
+.chart-container canvas{width:100%;display:block}
+
+/* ── Tables ── */
+.tbl-wrap{overflow-x:auto;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;background:var(--bg3);color:var(--tx2);font-weight:600;
+  font-size:11px;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0;cursor:pointer;
+  border-bottom:2px solid var(--bg4);white-space:nowrap}
+th:hover{color:var(--tx)}
+td{padding:8px 12px;border-bottom:1px solid var(--bg3);white-space:nowrap}
+tr:hover td{background:var(--bg2)}
+.win{color:var(--green)}.loss{color:var(--red)}
+
+/* ── Filters ── */
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-row select,.filter-row input{background:var(--bg2);border:1px solid var(--bg4);
+  border-radius:var(--radius);color:var(--tx);padding:6px 10px;font-size:13px}
+.filter-row select:focus,.filter-row input:focus{outline:none;border-color:var(--blue)}
+.filter-row label{font-size:12px;color:var(--tx2)}
+
+/* ── Insights ── */
+.insight-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);
+  padding:20px;margin-bottom:12px;border-left:4px solid var(--blue)}
+.insight-card.positive{border-left-color:var(--green)}
+.insight-card.negative{border-left-color:var(--red)}
+.insight-card.warning{border-left-color:var(--yellow)}
+.insight-card h4{font-size:15px;margin-bottom:6px}
+.insight-card p{font-size:13px;color:var(--tx2);line-height:1.5}
+.insight-card .action{margin-top:8px;font-size:13px;color:var(--green);font-weight:600}
+
+/* ── Two-column layout ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+.section-title{font-size:16px;font-weight:600;margin:20px 0 12px;color:var(--tx)}
+
+/* ── Comparison cards ── */
+.compare-row{display:flex;gap:16px;margin-bottom:16px}
+.compare-card{flex:1;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);
+  padding:16px;text-align:center}
+.compare-card .label{font-size:12px;color:var(--tx2);margin-bottom:4px}
+.compare-card .big{font-size:24px;font-weight:700}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--tx3)}
+
+/* ── No-data state ── */
+.no-data{text-align:center;padding:60px 20px;color:var(--tx2)}
+.no-data svg{width:64px;height:64px;margin-bottom:16px;opacity:.4}
+.no-data h3{font-size:18px;margin-bottom:8px;color:var(--tx)}
+.no-data p{font-size:14px}
+
+/* ── Portfolio ── */
+.portfolio-tabs{display:flex;gap:8px;margin-bottom:20px}
+.portfolio-tabs .tab{padding:8px 20px;border-radius:8px;border:1px solid var(--bg4);
+  background:var(--bg2);color:var(--tx2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.portfolio-tabs .tab:hover{border-color:var(--tx3);color:var(--tx)}
+.portfolio-tabs .tab.active{background:var(--green2);border-color:var(--green2);color:#fff}
+.portfolio-form{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.portfolio-form input,.portfolio-form select{padding:7px 10px;border-radius:6px;border:1px solid var(--bg4);
+  background:var(--bg2);color:var(--tx);font-size:13px}
+.portfolio-form input:focus,.portfolio-form select:focus{border-color:var(--blue2);outline:none}
+.pf-participant-hdr{padding:10px 0 6px;font-size:14px;font-weight:700;color:var(--blue);border-bottom:1px solid var(--bg3)}
+.pf-subtotal{background:var(--bg2);font-weight:600;color:var(--tx2)}
+
+/* ── Chat Coach ── */
+.chat-fab{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--green2),var(--blue2));border:none;color:#fff;font-size:22px;
+  cursor:pointer;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:transform .2s}
+.chat-fab:hover{transform:scale(1.1)}
+.chat-fab.has-panel{background:var(--bg3);font-size:16px}
+.chat-panel{position:fixed;bottom:88px;right:24px;width:420px;height:540px;background:var(--bg2);
+  border:1px solid var(--bg4);border-radius:16px;display:flex;flex-direction:column;z-index:998;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;transform:translateY(16px) scale(.96);
+  pointer-events:none;transition:opacity .25s,transform .25s}
+.chat-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.chat-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+  border-bottom:1px solid var(--bg4)}
+.chat-header-title{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.chat-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;background:linear-gradient(135deg,var(--green),var(--blue));color:#fff;position:relative}
+.chat-avatar-status{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;
+  border-radius:50%;background:var(--green);border:2px solid var(--bg2)}
+.chat-close{background:none;border:none;color:var(--tx2);font-size:18px;cursor:pointer;padding:4px 8px}
+.chat-close:hover{color:var(--tx)}
+.chat-messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.chat-msg{max-width:90%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5}
+.chat-msg-bot{align-self:flex-start;background:var(--bg3);color:var(--tx)}
+.chat-msg-user{align-self:flex-end;background:var(--blue2);color:#fff;border-radius:12px 12px 4px 12px}
+.chat-msg-text strong{color:var(--green)}
+.chat-msg-text .red{color:var(--red)}
+.chat-msg-text .yellow{color:var(--yellow)}
+.chat-msg-text .blue{color:var(--blue)}
+.chat-msg-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chat-action{padding:4px 10px;border-radius:8px;font-size:11px;cursor:pointer;
+  border:1px solid var(--bg4);background:transparent;color:var(--tx2);transition:all .15s}
+.chat-action:hover{background:rgba(88,166,255,.1);border-color:var(--blue);color:var(--blue)}
+.chat-input-row{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--bg4)}
+.chat-input{flex:1;background:var(--bg3);border:1px solid var(--bg4);border-radius:8px;
+  padding:8px 12px;color:var(--tx);font-size:13px;outline:none}
+.chat-input:focus{border-color:var(--blue)}
+.chat-input::placeholder{color:var(--tx3)}
+.chat-send{background:var(--green2);border:none;color:#fff;border-radius:8px;padding:8px 14px;
+  cursor:pointer;font-size:14px;transition:background .15s}
+.chat-send:hover{background:var(--green)}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="logo">Trading Journal<span>Analyst</span></div>
+  <div class="nav-item active" onclick="showPage('import')" data-page="import">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Import Data
+  </div>
+  <div class="nav-item" onclick="showPage('dashboard')" data-page="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item" onclick="showPage('analysis')" data-page="analysis">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Analysis
+  </div>
+  <div class="nav-item" onclick="showPage('patterns')" data-page="patterns">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    Patterns
+  </div>
+  <div class="nav-item" onclick="showPage('coach')" data-page="coach">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Coach
+  </div>
+  <div class="nav-item" onclick="showPage('tradelog')" data-page="tradelog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Trade Log
+  </div>
+  <div class="nav-item" onclick="showPage('portfolio')" data-page="portfolio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    Portfolio
+  </div>
+  <div class="sidebar-footer">
+    <div class="trade-count" id="sidebarCount">No data loaded</div>
+    <button class="hide-toggle" id="hideAmountsBtn" onclick="toggleHideAmounts()">
+      <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span id="hideAmountsLabel">Hide Amounts</span>
+    </button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="main">
+
+  <!-- ═══ IMPORT PAGE ═══ -->
+  <div class="page active" id="page-import">
+    <div class="page-title">📂 Import Trade Data</div>
+    <p style="color:var(--tx2);margin-bottom:20px;font-size:14px">
+      Export your Trading Log from Google Sheets as CSV, then drop it here or paste the data.
+    </p>
+    <div class="import-zone" id="dropZone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <h3>Drop CSV file here</h3>
+      <p>or click to browse</p>
+    </div>
+    <input type="file" id="fileInput" accept=".csv" style="display:none">
+    <div class="import-or">— or paste CSV data below —</div>
+    <textarea class="import-paste" id="pasteArea" placeholder="Paste your CSV data here...&#10;Entry Date & Time,Entry Date,TradingView Link,Strategy,Market (Coin),..."></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="importFromPaste()">📥 Import Pasted Data</button>
+      <button class="btn" onclick="loadFromStorage()">💾 Load Saved Data</button>
+      <button class="btn btn-danger" onclick="clearData()">🗑 Clear Data</button>
+    </div>
+    <div class="import-status" id="importStatus"></div>
+  </div>
+
+  <!-- ═══ DASHBOARD PAGE ═══ -->
+  <div class="page" id="page-dashboard">
+    <div class="page-title">📊 Dashboard</div>
+    <div id="dashNoData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <h3>No data loaded</h3><p>Import your trades to see the dashboard</p>
+    </div>
+    <div id="dashContent" style="display:none">
+      <div class="metric-grid" id="dashMetrics"></div>
+      <div class="chart-container">
+        <h3>Equity Curve</h3>
+        <canvas id="equityChart" height="280"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3>Monthly P/L</h3>
+        <canvas id="monthlyChart" height="200"></canvas>
+      </div>
+      <h3 class="section-title">Recent Trades</h3>
+      <div class="tbl-wrap" id="recentTable"></div>
+    </div>
+  </div>
+
+  <!-- ═══ ANALYSIS PAGE ═══ -->
+  <div class="page" id="page-analysis">
+    <div class="page-title">📈 Performance Analysis</div>
+    <div id="analysisNoData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <h3>No data loaded</h3><p>Import your trades to see analysis</p>
+    </div>
+    <div id="analysisContent" style="display:none">
+      <div class="compare-row" id="longShortCompare"></div>
+      <h3 class="section-title">📈 Long Strategies</h3>
+      <div class="grid-2">
+        <div class="chart-container"><h3>Win Rate (Long)</h3><canvas id="longStratWRChart" height="250"></canvas></div>
+        <div class="chart-container"><h3>P/L (Long)</h3><canvas id="longStratPLChart" height="250"></canvas></div>
+      </div>
+      <h3 class="section-title">📉 Short Strategies</h3>
+      <div class="grid-2">
+        <div class="chart-container"><h3>Win Rate (Short)</h3><canvas id="shortStratWRChart" height="250"></canvas></div>
+        <div class="chart-container"><h3>P/L (Short)</h3><canvas id="shortStratPLChart" height="250"></canvas></div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-container"><h3>Win Rate by Market</h3><canvas id="marketChart" height="250"></canvas></div>
+        <div class="chart-container"><h3>P/L by Market</h3><canvas id="marketPLChart" height="250"></canvas></div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-container"><h3>Performance by Day of Week</h3><canvas id="dowChart" height="200"></canvas></div>
+        <div class="chart-container"><h3>Performance by Hour</h3><canvas id="hourChart" height="200"></canvas></div>
+      </div>
+      <div class="chart-container"><h3>Monthly P/L Breakdown</h3><canvas id="monthlyBreakdown" height="220"></canvas></div>
+      <h3 class="section-title">Risk Analysis</h3>
+      <div class="metric-grid" id="riskMetrics"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PATTERNS PAGE ═══ -->
+  <div class="page" id="page-patterns">
+    <div class="page-title">🔍 Patterns & Insights</div>
+    <div id="patternsNoData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <h3>No data loaded</h3><p>Import your trades to discover patterns</p>
+    </div>
+    <div id="patternsContent" style="display:none">
+      <h3 class="section-title">Streak Analysis</h3>
+      <div class="metric-grid" id="streakMetrics"></div>
+      <div class="chart-container"><h3>Performance After Consecutive Wins/Losses (Tilt Detection)</h3><canvas id="tiltChart" height="220"></canvas></div>
+      <h3 class="section-title">Emotional Correlation</h3>
+      <div class="grid-2">
+        <div class="chart-container"><h3>Emotional Score vs Win Rate</h3><canvas id="emotionWinChart" height="220"></canvas></div>
+        <div class="chart-container"><h3>Emotional Score vs Avg P/L</h3><canvas id="emotionPLChart" height="220"></canvas></div>
+      </div>
+      <h3 class="section-title">Duration Analysis</h3>
+      <div class="chart-container"><h3>Trade Duration vs Net P/L</h3><canvas id="durationChart" height="220"></canvas></div>
+      <h3 class="section-title">Session Performance</h3>
+      <div class="metric-grid" id="sessionMetrics"></div>
+    </div>
+  </div>
+
+  <!-- ═══ COACH PAGE ═══ -->
+  <div class="page" id="page-coach">
+    <div class="page-title">🎯 Coach — Actionable Feedback</div>
+    <div id="coachNoData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <h3>No data loaded</h3><p>Import your trades to get coaching feedback</p>
+    </div>
+    <div id="coachContent" style="display:none">
+      <div style="margin-bottom:20px">
+        <h3 class="section-title" style="color:var(--green)">💪 Your Strengths</h3>
+        <div id="coachStrengths"></div>
+      </div>
+      <div style="margin-bottom:20px">
+        <h3 class="section-title" style="color:var(--red)">⚠️ Areas to Improve</h3>
+        <div id="coachWeaknesses"></div>
+      </div>
+      <div>
+        <h3 class="section-title" style="color:var(--blue)">📋 Detailed Insights</h3>
+        <div id="coachInsights"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TRADE LOG PAGE ═══ -->
+  <div class="page" id="page-tradelog">
+    <div class="page-title">📝 Trade Log</div>
+    <div id="logNoData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <h3>No data loaded</h3><p>Import your trades to see the log</p>
+    </div>
+    <div id="logContent" style="display:none">
+      <div class="filter-row">
+        <label>Strategy:</label><select id="fStrategy" onchange="renderTradeLog()"><option value="">All</option></select>
+        <label>Market:</label><select id="fMarket" onchange="renderTradeLog()"><option value="">All</option></select>
+        <label>Side:</label><select id="fSide" onchange="renderTradeLog()"><option value="">All</option><option>Long</option><option>Short</option></select>
+        <label>Result:</label><select id="fResult" onchange="renderTradeLog()"><option value="">All</option><option>W</option><option>L</option></select>
+        <label>From:</label><input type="date" id="fFrom" onchange="renderTradeLog()">
+        <label>To:</label><input type="date" id="fTo" onchange="renderTradeLog()">
+        <input type="text" id="fSearch" placeholder="Search market..." oninput="renderTradeLog()" style="width:140px">
+      </div>
+      <div class="tbl-wrap" id="tradeLogTable" style="max-height:calc(100vh - 200px);overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <!-- ═══ PORTFOLIO PAGE ═══ -->
+  <div class="page" id="page-portfolio">
+    <div class="page-title">💼 Portfolio</div>
+    <div class="portfolio-tabs">
+      <button class="tab active" onclick="switchPortfolioTab('personal')" id="tabPersonal">Personal</button>
+      <button class="tab" onclick="switchPortfolioTab('family')" id="tabFamily">Family</button>
+    </div>
+    <div class="metric-grid" id="portfolioMetrics"></div>
+    <div class="portfolio-form" id="portfolioForm">
+      <input type="text" id="pfAsset" placeholder="Asset (e.g. BTC)" style="width:110px">
+      <select id="pfType"><option value="crypto">Crypto</option><option value="stock">Stock</option></select>
+      <input type="number" id="pfQty" placeholder="Qty" step="any" style="width:90px">
+      <input type="number" id="pfBuyPrice" placeholder="Buy Price" step="any" style="width:110px">
+      <input type="number" id="pfCurPrice" placeholder="Current Price" step="any" style="width:120px">
+      <select id="pfParticipant" style="display:none">
+        <option value="">Participant...</option>
+        <option>Krasi</option><option>Kalina</option><option>Damyana</option><option>Ani</option>
+      </select>
+      <button class="btn btn-primary" id="pfSubmitBtn" onclick="submitHolding()">+ Add</button>
+      <button class="btn" id="pfCancelBtn" onclick="cancelEdit()" style="display:none">Cancel</button>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <button class="btn" onclick="refreshCryptoPrices()" id="pfRefreshBtn" style="font-size:12px;padding:5px 12px">🔄 Refresh Prices</button>
+        <span id="pfLastUpdate" style="font-size:11px;color:var(--tx3)"></span>
+      </span>
+    </div>
+    <div class="tbl-wrap" id="portfolioTable" style="max-height:calc(100vh - 340px);overflow-y:auto"></div>
+    <div class="grid-2" id="portfolioCharts" style="display:none">
+      <div class="chart-container"><h3>Allocation by Asset</h3><canvas id="pfAllocChart" height="280"></canvas></div>
+      <div class="chart-container"><h3>P/L by Asset</h3><canvas id="pfPLChart" height="280"></canvas></div>
+    </div>
+    <div id="portfolioAnalysis" style="display:none">
+      <h3 class="section-title">📊 Portfolio Analysis</h3>
+      <div class="metric-grid" id="pfAnalysisCards"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chat Coach -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()">🎯</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-header-title"><div class="chat-avatar">C<span class="chat-avatar-status"></span></div> Coach</div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" type="text" placeholder="Ask about your trades..." onkeydown="if(event.key==='Enter')chatSend()">
+    <button class="chat-send" onclick="chatSend()">➤</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   TRADING JOURNAL ANALYST
+   Single-file app — no external dependencies
+   ═══════════════════════════════════════════ */
+
+let TRADES = [];
+let STARTING_CAPITAL = 30000;
+let HIDE_AMOUNTS = localStorage.getItem('tj_hide_amounts') === 'true';
+
+/* ── Navigation ── */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + id);
+  if (pg) pg.classList.add('active');
+  const nav = document.querySelector(`.nav-item[data-page="${id}"]`);
+  if (nav) nav.classList.add('active');
+  if (id === 'portfolio') renderPage(id);
+  else if (TRADES.length > 0 && id !== 'import') renderPage(id);
+}
+
+/* ── Hide Amounts Toggle ── */
+function toggleHideAmounts() {
+  HIDE_AMOUNTS = !HIDE_AMOUNTS;
+  localStorage.setItem('tj_hide_amounts', HIDE_AMOUNTS);
+  const btn = document.getElementById('hideAmountsBtn');
+  btn.classList.toggle('active', HIDE_AMOUNTS);
+  document.getElementById('hideAmountsLabel').textContent = HIDE_AMOUNTS ? 'Show Amounts' : 'Hide Amounts';
+  // Re-render active page
+  const activePage = document.querySelector('.page.active');
+  if (activePage) {
+    const id = activePage.id.replace('page-', '');
+    renderPage(id);
+  }
+}
+function initHideToggle() {
+  const btn = document.getElementById('hideAmountsBtn');
+  if (HIDE_AMOUNTS) {
+    btn.classList.add('active');
+    document.getElementById('hideAmountsLabel').textContent = 'Show Amounts';
+  }
+}
+
+/* ── CSV Parser (handles multi-line quoted fields from Google Sheets) ── */
+function parseCSV(text) {
+  // Step 1: Parse full CSV respecting quoted fields with embedded newlines
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+
+  // Step 2: Find header row — must have actual column names
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(15, rows.length); i++) {
+    const rowText = rows[i].join(' ').toLowerCase();
+    if ((rowText.includes('entry date') || rowText.includes('entry price')) &&
+        (rowText.includes('market') || rowText.includes('strategy') || rowText.includes('long/short'))) {
+      headerIdx = i; break;
+    }
+  }
+  if (headerIdx === -1) return [];
+
+  const headers = rows[headerIdx].map(h => h.replace(/\n/g, ' ').trim());
+  const trades = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const vals = rows[i];
+    if (vals.length < 3 || vals.every(v => !v.trim())) continue;
+    const obj = {};
+    headers.forEach((h, j) => { obj[h] = (vals[j] || '').trim(); });
+    trades.push(obj);
+  }
+  return trades;
+}
+
+function parseCSVRows(text) {
+  const rows = [];
+  let row = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') {
+      if (inQuotes && text[i + 1] === '"') { current += '"'; i++; } // escaped quote
+      else { inQuotes = !inQuotes; }
+    } else if (c === ',' && !inQuotes) {
+      row.push(current); current = '';
+    } else if ((c === '\n' || c === '\r') && !inQuotes) {
+      if (c === '\r' && text[i + 1] === '\n') i++; // skip \r\n
+      row.push(current); current = '';
+      if (row.length > 1 || row.some(v => v.trim())) rows.push(row);
+      row = [];
+    } else {
+      current += c;
+    }
+  }
+  row.push(current);
+  if (row.length > 1 || row.some(v => v.trim())) rows.push(row);
+  return rows;
+}
+
+/* ── Column Mapper ── */
+function mapTrade(raw) {
+  const g = (patterns) => {
+    for (const p of patterns) {
+      const key = Object.keys(raw).find(k => k.toLowerCase().includes(p.toLowerCase()));
+      if (key && raw[key] !== '') return raw[key];
+    }
+    return '';
+  };
+  const num = (v) => { const n = parseFloat(String(v).replace(/[$,]/g, '')); return isNaN(n) ? 0 : n; };
+  const parseDate = (s) => {
+    if (!s) return null;
+    // Try dd/mm/yyyy hh:mm:ss format first
+    const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):?(\d{2})?:?(\d{2})?/);
+    if (m) return new Date(+m[3], +m[2]-1, +m[1], +m[4]||0, +m[5]||0, +m[6]||0);
+    // Try ISO / US formats
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const entryDateStr = g(['Entry Date & Time', 'Entry Date']);
+  const exitDateStr = g(['Exit date and time', 'Exit Date']);
+  const entryDate = parseDate(entryDateStr);
+  const exitDate = parseDate(exitDateStr);
+
+  return {
+    entryDate, exitDate,
+    entryDateStr, exitDateStr,
+    tvLink: g(['TradingView']),
+    strategy: g(['Strategy']),
+    market: g(['Market', 'Coin', 'Symbol']),
+    side: g(['Long/Short', 'Side', 'Direction']),
+    entryPrice: num(g(['Entry Price'])),
+    positionSize: num(g(['Position Size ($)', 'Position Size'])),
+    positionUnits: num(g(['Position Size (Units)', 'Units'])),
+    accountRisk: g(['Account Risk']),
+    stopLoss: num(g(['Stop Loss'])),
+    takeProfit: num(g(['Take Profit'])),
+    rRatio: num(g(['R'])),
+    fees: num(g(['Fees'])),
+    exitPrice: num(g(['Exit Price'])),
+    grossPL: num(g(['Gross P/L', 'Gross PL'])),
+    netPL: num(g(['Net P/L', 'Net PL'])),
+    winLoss: g(['Win / Loss', 'Win/Loss', 'W/L', 'Result']),
+    cumulativePL: num(g(['Cumulative P/L', 'Cumulative PL'])),
+    balance: num(g(['Account Balance', 'Balance'])),
+    duration: num(g(['Trade Duration', 'Duration'])),
+    emotional: num(g(['Emotional', 'Emotion'])),
+    reason: g(['Reason', 'Comment', 'Notes']),
+  };
+}
+
+/* ── Import Functions ── */
+function importData(csvText) {
+  const raw = parseCSV(csvText);
+  if (raw.length === 0) { showImportStatus('No valid data found.', 'error'); return; }
+  TRADES = raw.map(mapTrade).filter(t => t.entryDate && (t.winLoss === 'W' || t.winLoss === 'L' || t.netPL !== 0));
+  TRADES.sort((a, b) => a.entryDate - b.entryDate);
+  // Detect starting capital from first balance
+  if (TRADES.length > 0 && TRADES[0].balance > 0) {
+    STARTING_CAPITAL = TRADES[0].balance - TRADES[0].netPL;
+  }
+  localStorage.setItem('tj_trades', csvText);
+  updateSidebarCount();
+  showImportStatus(`Successfully imported ${TRADES.length} trades!`, 'success');
+  showPage('dashboard');
+}
+
+function importFromPaste() {
+  const text = document.getElementById('pasteArea').value.trim();
+  if (!text) { showImportStatus('Please paste CSV data first.', 'error'); return; }
+  importData(text);
+}
+
+function loadFromStorage() {
+  const saved = localStorage.getItem('tj_trades');
+  if (saved) { importData(saved); }
+  else { showImportStatus('No saved data found.', 'error'); }
+}
+
+function clearData() {
+  TRADES = [];
+  localStorage.removeItem('tj_trades');
+  updateSidebarCount();
+  showImportStatus('Data cleared.', 'error');
+}
+
+function showImportStatus(msg, type) {
+  const el = document.getElementById('importStatus');
+  el.textContent = msg; el.className = 'import-status ' + type;
+}
+
+function updateSidebarCount() {
+  const el = document.getElementById('sidebarCount');
+  if (TRADES.length === 0) el.innerHTML = 'No data loaded';
+  else {
+    const wins = TRADES.filter(t => t.winLoss === 'W').length;
+    el.innerHTML = `<strong>${TRADES.length}</strong> trades loaded<br>${wins}W / ${TRADES.length - wins}L`;
+  }
+}
+
+/* ── Drag & Drop ── */
+const dz = document.getElementById('dropZone');
+const fi = document.getElementById('fileInput');
+dz.addEventListener('click', () => fi.click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) { const r = new FileReader(); r.onload = ev => importData(ev.target.result); r.readAsText(file); }
+});
+fi.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) { const r = new FileReader(); r.onload = ev => importData(ev.target.result); r.readAsText(file); }
+});
+
+/* ═══════════════════════════════════════════
+   RENDERING
+   ═══════════════════════════════════════════ */
+
+function renderPage(id) {
+  if (id === 'dashboard') renderDashboard();
+  else if (id === 'analysis') renderAnalysis();
+  else if (id === 'patterns') renderPatterns();
+  else if (id === 'coach') renderCoach();
+  else if (id === 'tradelog') renderTradeLog();
+  else if (id === 'portfolio') { renderPortfolio(); updatePriceTimestamp(); autoRefreshIfStale(); }
+}
+
+/* ── Helpers ── */
+function fmt$(v) { if (HIDE_AMOUNTS) return '•••'; return (v >= 0 ? '$' : '-$') + Math.abs(v).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}); }
+function fmtPrice(v, d) { const dd = d != null ? d : 2; return '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits:dd, maximumFractionDigits:dd}); }
+function fmtPct(v) { return (v * 100).toFixed(1) + '%'; }
+function valClass(v) { return v > 0 ? 'val-green' : v < 0 ? 'val-red' : 'val-neutral'; }
+function groupBy(arr, fn) {
+  const m = {};
+  arr.forEach(t => { const k = fn(t); if (!m[k]) m[k] = []; m[k].push(t); });
+  return m;
+}
+function stats(trades) {
+  const wins = trades.filter(t => t.winLoss === 'W');
+  const losses = trades.filter(t => t.winLoss === 'L');
+  const totalPL = trades.reduce((s, t) => s + t.netPL, 0);
+  const avgWin = wins.length ? wins.reduce((s, t) => s + t.netPL, 0) / wins.length : 0;
+  const avgLoss = losses.length ? Math.abs(losses.reduce((s, t) => s + t.netPL, 0) / losses.length) : 0;
+  const winRate = trades.length ? wins.length / trades.length : 0;
+  const profitFactor = avgLoss > 0 ? (avgWin * wins.length) / (avgLoss * losses.length) : 0;
+  const expectancy = trades.length ? totalPL / trades.length : 0;
+  const avgR = trades.filter(t => t.rRatio > 0).length ? trades.filter(t => t.rRatio > 0).reduce((s,t) => s + t.rRatio, 0) / trades.filter(t => t.rRatio > 0).length : 0;
+  const maxWin = wins.length ? Math.max(...wins.map(t => t.netPL)) : 0;
+  const maxLoss = losses.length ? Math.min(...losses.map(t => t.netPL)) : 0;
+  return { wins: wins.length, losses: losses.length, total: trades.length, totalPL, avgWin, avgLoss, winRate, profitFactor, expectancy, avgR, maxWin, maxLoss };
+}
+
+/* ═══ DASHBOARD ═══ */
+function renderDashboard() {
+  if (TRADES.length === 0) { show('dashNoData'); hide('dashContent'); return; }
+  hide('dashNoData'); show('dashContent');
+  const s = stats(TRADES);
+  const totalVolume = TRADES.reduce((sum, t) => sum + t.positionSize, 0);
+  document.getElementById('dashMetrics').innerHTML = [
+    metricCard('Net P/L', fmt$(s.totalPL), valClass(s.totalPL)),
+    metricCard('Win Rate', fmtPct(s.winRate), s.winRate >= 0.5 ? 'val-green' : 'val-red', `${s.wins}W / ${s.losses}L`),
+    metricCard('Profit Factor', s.profitFactor.toFixed(2), s.profitFactor >= 1 ? 'val-green' : 'val-red'),
+    metricCard('Expectancy', fmt$(s.expectancy), valClass(s.expectancy), 'per trade'),
+    metricCard('Avg R', s.avgR.toFixed(2), s.avgR >= 1.5 ? 'val-green' : 'val-yellow'),
+    metricCard('Total Trades', s.total, 'val-blue'),
+    metricCard('Total Volume', fmt$(totalVolume), 'val-neutral'),
+    metricCard('Largest Win', fmt$(s.maxWin), 'val-green'),
+    metricCard('Largest Loss', fmt$(s.maxLoss), 'val-red'),
+  ].join('');
+
+  drawEquityCurve();
+  drawMonthlyPL('monthlyChart');
+  renderRecentTrades();
+}
+
+function metricCard(label, value, cls, sub) {
+  return `<div class="metric-card"><div class="label">${label}</div><div class="value ${cls||''}">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+}
+
+function renderRecentTrades() {
+  const recent = TRADES.slice(-20).reverse();
+  let html = '<table><thead><tr><th>Date</th><th>Market</th><th>Side</th><th>Strategy</th><th>Entry</th><th>Exit</th><th>Net P/L</th><th>R</th><th>Result</th></tr></thead><tbody>';
+  recent.forEach(t => {
+    const cls = t.winLoss === 'W' ? 'win' : 'loss';
+    html += `<tr><td>${fmtDate(t.entryDate)}</td><td>${t.market}</td><td>${t.side}</td><td>${t.strategy}</td>
+      <td>${fmtPrice(t.entryPrice,4)}</td><td>${fmtPrice(t.exitPrice,4)}</td>
+      <td class="${cls}">${fmt$(t.netPL)}</td><td>${t.rRatio.toFixed(1)}</td><td class="${cls}">${t.winLoss}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('recentTable').innerHTML = html;
+}
+
+function fmtDate(d) { return d ? d.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : ''; }
+
+/* ═══ EQUITY CURVE ═══ */
+function drawEquityCurve() {
+  const canvas = document.getElementById('equityChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 280;
+  ctx.clearRect(0, 0, W, 280);
+
+  const balances = [STARTING_CAPITAL];
+  TRADES.forEach(t => balances.push(balances[balances.length-1] + t.netPL));
+
+  const min = Math.min(...balances) * 0.98;
+  const max = Math.max(...balances) * 1.02;
+  const range = max - min || 1;
+  const pad = {l:60, r:20, t:20, b:30};
+  const cw = W - pad.l - pad.r;
+  const ch = 280 - pad.t - pad.b;
+
+  // Grid
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (ch / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(fmt$(max - (range/4)*i), pad.l - 8, y + 4);
+  }
+
+  // Starting capital line
+  const startY = pad.t + ch - ((STARTING_CAPITAL - min) / range) * ch;
+  ctx.setLineDash([5,5]); ctx.strokeStyle = '#484f58'; ctx.beginPath();
+  ctx.moveTo(pad.l, startY); ctx.lineTo(W-pad.r, startY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Line
+  ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 1.5; ctx.beginPath();
+  balances.forEach((b, i) => {
+    const x = pad.l + (i / (balances.length - 1)) * cw;
+    const y = pad.t + ch - ((b - min) / range) * ch;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Fill
+  const grad = ctx.createLinearGradient(0, pad.t, 0, 280 - pad.b);
+  grad.addColorStop(0, 'rgba(88,166,255,.15)'); grad.addColorStop(1, 'rgba(88,166,255,0)');
+  ctx.fillStyle = grad; ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath(); ctx.fill();
+}
+
+/* ═══ MONTHLY P/L BAR CHART ═══ */
+function drawMonthlyPL(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 200;
+  ctx.clearRect(0, 0, W, 200);
+
+  const monthly = {};
+  TRADES.forEach(t => {
+    if (!t.entryDate) return;
+    const k = t.entryDate.getFullYear() + '-' + String(t.entryDate.getMonth()+1).padStart(2,'0');
+    monthly[k] = (monthly[k] || 0) + t.netPL;
+  });
+  const keys = Object.keys(monthly).sort();
+  const vals = keys.map(k => monthly[k]);
+  drawBarChart(ctx, W, 200, keys, vals, k => {
+    const [y,m] = k.split('-');
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1] + ' ' + y.slice(2);
+  });
+}
+
+/* ═══ BAR CHART UTILITY ═══ */
+function drawBarChart(ctx, W, H, labels, values, fmtLabel) {
+  const pad = {l:60, r:20, t:20, b:40};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const max = Math.max(...values.map(Math.abs), 1);
+  const barW = Math.min(40, (cw / labels.length) * 0.7);
+  const gap = cw / labels.length;
+  const zeroY = pad.t + ch / 2;
+
+  // Grid
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, zeroY); ctx.lineTo(W-pad.r, zeroY); ctx.stroke();
+  ctx.fillStyle = '#8b949e'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText(fmt$(max), pad.l-8, pad.t+8);
+  ctx.fillText(fmt$(-max), pad.l-8, H-pad.b-2);
+  ctx.fillText('$0', pad.l-8, zeroY+4);
+
+  labels.forEach((l, i) => {
+    const v = values[i];
+    const x = pad.l + gap * i + gap/2 - barW/2;
+    const barH = (Math.abs(v) / max) * (ch/2);
+    const y = v >= 0 ? zeroY - barH : zeroY;
+    ctx.fillStyle = v >= 0 ? '#238636' : '#da3633';
+    ctx.fillRect(x, y, barW, barH);
+    // Label
+    ctx.fillStyle = '#8b949e'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(fmtLabel ? fmtLabel(l) : l, x + barW/2, H - pad.b + 14);
+    // Value on bar
+    ctx.fillStyle = v >= 0 ? '#3fb950' : '#f85149'; ctx.font = '10px sans-serif';
+    ctx.fillText(fmt$(v), x + barW/2, v >= 0 ? y - 4 : y + barH + 12);
+  });
+}
+
+/* ═══ HORIZONTAL BAR CHART ═══ */
+function drawHBarChart(ctx, W, H, labels, values, colors) {
+  const pad = {l:100, r:60, t:10, b:10};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const max = Math.max(...values, 1);
+  const barH = Math.min(28, (ch / labels.length) * 0.7);
+  const gap = ch / labels.length;
+
+  labels.forEach((l, i) => {
+    const v = values[i];
+    const y = pad.t + gap * i + gap/2 - barH/2;
+    const barW = (v / max) * cw;
+    ctx.fillStyle = colors ? colors[i] : '#58a6ff';
+    ctx.fillRect(pad.l, y, barW, barH);
+    ctx.fillStyle = '#e6edf3'; ctx.font = '12px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(l.length > 12 ? l.slice(0,12) + '..' : l, pad.l - 8, y + barH/2 + 4);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#8b949e';
+    ctx.fillText(typeof v === 'number' && v % 1 !== 0 ? v.toFixed(1) + '%' : String(v), pad.l + barW + 6, y + barH/2 + 4);
+  });
+}
+
+/* ═══ PL HORIZONTAL BAR ═══ */
+function drawPLHBarChart(ctx, W, H, labels, values) {
+  const pad = {l:100, r:60, t:10, b:10};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const max = Math.max(...values.map(Math.abs), 1);
+  const barH = Math.min(28, (ch / labels.length) * 0.7);
+  const gap = ch / labels.length;
+  const centerX = pad.l + cw / 2;
+
+  // Center line
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(centerX, pad.t); ctx.lineTo(centerX, H - pad.b); ctx.stroke();
+
+  labels.forEach((l, i) => {
+    const v = values[i];
+    const y = pad.t + gap * i + gap/2 - barH/2;
+    const barW = (Math.abs(v) / max) * (cw / 2);
+    const x = v >= 0 ? centerX : centerX - barW;
+    ctx.fillStyle = v >= 0 ? '#238636' : '#da3633';
+    ctx.fillRect(x, y, barW, barH);
+    ctx.fillStyle = '#e6edf3'; ctx.font = '12px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(l.length > 12 ? l.slice(0,12) + '..' : l, pad.l - 8, y + barH/2 + 4);
+    ctx.fillStyle = v >= 0 ? '#3fb950' : '#f85149'; ctx.textAlign = v >= 0 ? 'left' : 'right'; ctx.font = '10px sans-serif';
+    ctx.fillText(fmt$(v), v >= 0 ? x + barW + 4 : x - 4, y + barH/2 + 4);
+  });
+}
+
+function drawPieChart(canvasId, labels, values, colors) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  const H = 280;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+  const total = values.reduce((a, b) => a + b, 0);
+  if (total === 0) return;
+
+  const cx = W * 0.35, cy = H / 2, r = Math.min(cx - 20, cy - 20);
+  let angle = -Math.PI / 2;
+
+  // Draw slices
+  values.forEach((v, i) => {
+    const slice = (v / total) * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, angle, angle + slice);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    // Slice border
+    ctx.strokeStyle = '#0d1117'; ctx.lineWidth = 2; ctx.stroke();
+    angle += slice;
+  });
+
+  // Inner circle for donut effect
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#161b22'; ctx.fill();
+
+  // Total in center
+  ctx.fillStyle = '#e6edf3'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(fmt$(total), cx, cy - 8);
+  ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif';
+  ctx.fillText('Total Value', cx, cy + 10);
+
+  // Legend on right
+  const lx = W * 0.68, ly = 20;
+  const lh = Math.min(24, (H - 40) / labels.length);
+  labels.forEach((l, i) => {
+    const y = ly + i * lh;
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillRect(lx, y, 12, 12);
+    ctx.fillStyle = '#e6edf3'; ctx.font = '12px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(l, lx + 18, y);
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif';
+    ctx.fillText(fmtPct(v = values[i] / total) + ' · ' + fmt$(values[i]), lx + 18, y + 13);
+  });
+}
+
+/* ═══ ANALYSIS PAGE ═══ */
+function renderAnalysis() {
+  if (TRADES.length === 0) { show('analysisNoData'); hide('analysisContent'); return; }
+  hide('analysisNoData'); show('analysisContent');
+
+  // Long vs Short
+  const longs = TRADES.filter(t => t.side.toLowerCase().includes('long'));
+  const shorts = TRADES.filter(t => t.side.toLowerCase().includes('short'));
+  const ls = stats(longs), ss = stats(shorts);
+  const longStratNames=[...new Set(TRADES.filter(t=>(t.strategy||'').toLowerCase().includes('long')).map(t=>t.strategy))].join(', ');
+  const shortStratNames=[...new Set(TRADES.filter(t=>(t.strategy||'').toLowerCase().includes('short')).map(t=>t.strategy))].join(', ');
+  document.getElementById('longShortCompare').innerHTML = `
+    <div class="compare-card"><div class="label">Long Trades</div><div class="big val-green">${ls.total}</div>
+      <div class="sub">Win Rate: ${fmtPct(ls.winRate)} | P/L: ${fmt$(ls.totalPL)}</div></div>
+    <div class="compare-card"><div class="label">Short Trades</div><div class="big val-red">${ss.total}</div>
+      <div class="sub">Win Rate: ${fmtPct(ss.winRate)} | P/L: ${fmt$(ss.totalPL)}</div></div>`;
+
+  // Strategy breakdown — consolidated by base name + side, max 4 each
+  function baseStrat(s, side){
+    const l=(s||'').toLowerCase();
+    const isLong=side.toLowerCase().includes('long');
+    const suffix=isLong?'Long':'Short';
+    if(l.includes('momo')) return 'Momo '+suffix;
+    if(l.includes('mr')) return 'MR '+suffix;
+    return s||'Other';
+  }
+  const longStrats = TRADES.filter(t => t.side.toLowerCase().includes('long'));
+  const shortStrats = TRADES.filter(t => t.side.toLowerCase().includes('short'));
+  drawFilteredGroupedCharts(longStrats, t => baseStrat(t.strategy, t.side), 'longStratWRChart', 'longStratPLChart', 4);
+  drawFilteredGroupedCharts(shortStrats, t => baseStrat(t.strategy, t.side), 'shortStratWRChart', 'shortStratPLChart', 4);
+  // Market breakdown
+  drawGroupedCharts('market', t => t.market || 'Unknown', 'marketChart', 'marketPLChart');
+  // Day of week
+  drawDOWChart();
+  // Hour chart
+  drawHourChart();
+  // Monthly breakdown
+  drawMonthlyBreakdownChart();
+  // Risk metrics
+  renderRiskMetrics();
+}
+
+function drawFilteredGroupedCharts(filteredTrades, keyFn, wrCanvasId, plCanvasId, maxItems) {
+  if(filteredTrades.length===0) return;
+  const groups = groupBy(filteredTrades, keyFn);
+  const sorted = Object.entries(groups).sort((a,b) => b[1].length - a[1].length).slice(0, maxItems||10);
+  const labels = sorted.map(([k]) => k);
+  const winRates = sorted.map(([, trades]) => {
+    const w = trades.filter(t => t.winLoss === 'W').length;
+    return (w / trades.length) * 100;
+  });
+  const pls = sorted.map(([, trades]) => trades.reduce((s, t) => s + t.netPL, 0));
+  const c1 = document.getElementById(wrCanvasId);
+  const ctx1 = c1.getContext('2d');
+  const W = c1.parentElement.clientWidth - 40;
+  const H = Math.max(250, labels.length * 35 + 20);
+  c1.width = W; c1.height = H;
+  ctx1.clearRect(0, 0, W, H);
+  drawHBarChart(ctx1, W, H, labels, winRates, winRates.map(wr => wr >= 50 ? '#238636' : '#da3633'));
+  const c2 = document.getElementById(plCanvasId);
+  const ctx2 = c2.getContext('2d');
+  c2.width = W; c2.height = H;
+  ctx2.clearRect(0, 0, W, H);
+  drawPLHBarChart(ctx2, W, H, labels, pls);
+}
+
+function drawGroupedCharts(name, keyFn, wrCanvasId, plCanvasId) {
+  const groups = groupBy(TRADES, keyFn);
+  // Sort by trade count descending, take top 10
+  const sorted = Object.entries(groups).sort((a,b) => b[1].length - a[1].length).slice(0, 10);
+  const labels = sorted.map(([k]) => k);
+  const winRates = sorted.map(([, trades]) => {
+    const w = trades.filter(t => t.winLoss === 'W').length;
+    return (w / trades.length) * 100;
+  });
+  const pls = sorted.map(([, trades]) => trades.reduce((s, t) => s + t.netPL, 0));
+
+  const c1 = document.getElementById(wrCanvasId);
+  const ctx1 = c1.getContext('2d');
+  const W = c1.parentElement.clientWidth - 40;
+  const H = Math.max(250, labels.length * 35 + 20);
+  c1.width = W; c1.height = H;
+  ctx1.clearRect(0, 0, W, H);
+  const colors = winRates.map(wr => wr >= 50 ? '#238636' : '#da3633');
+  drawHBarChart(ctx1, W, H, labels, winRates, colors);
+
+  const c2 = document.getElementById(plCanvasId);
+  const ctx2 = c2.getContext('2d');
+  c2.width = W; c2.height = H;
+  ctx2.clearRect(0, 0, W, H);
+  drawPLHBarChart(ctx2, W, H, labels, pls);
+}
+
+function drawDOWChart() {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const byDay = days.map((_,i) => TRADES.filter(t => t.entryDate && t.entryDate.getDay() === i));
+  const canvas = document.getElementById('dowChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 200;
+  ctx.clearRect(0, 0, W, 200);
+  const vals = byDay.map(arr => arr.reduce((s,t) => s + t.netPL, 0));
+  drawBarChart(ctx, W, 200, days, vals, d => d);
+}
+
+function drawHourChart() {
+  const hours = {};
+  TRADES.forEach(t => {
+    if (!t.entryDate) return;
+    const h = t.entryDate.getHours();
+    if (!hours[h]) hours[h] = [];
+    hours[h].push(t);
+  });
+  const allHours = Object.keys(hours).map(Number).sort((a,b)=>a-b);
+  const labels = allHours.map(h => h + ':00');
+  const vals = allHours.map(h => hours[h].reduce((s,t)=>s+t.netPL,0));
+  const canvas = document.getElementById('hourChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 200;
+  ctx.clearRect(0, 0, W, 200);
+  drawBarChart(ctx, W, 200, labels, vals, l => l);
+}
+
+function drawMonthlyBreakdownChart() {
+  const canvas = document.getElementById('monthlyBreakdown');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 220;
+  ctx.clearRect(0, 0, W, 220);
+  const monthly = {};
+  TRADES.forEach(t => {
+    if (!t.entryDate) return;
+    const k = t.entryDate.getFullYear() + '-' + String(t.entryDate.getMonth()+1).padStart(2,'0');
+    if (!monthly[k]) monthly[k] = {wins:0,losses:0,pl:0};
+    if (t.winLoss === 'W') monthly[k].wins++; else monthly[k].losses++;
+    monthly[k].pl += t.netPL;
+  });
+  const keys = Object.keys(monthly).sort();
+  const vals = keys.map(k => monthly[k].pl);
+  drawBarChart(ctx, W, 220, keys, vals, k => {
+    const [y,m] = k.split('-');
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1] + "'" + y.slice(2);
+  });
+}
+
+function renderRiskMetrics() {
+  const s = stats(TRADES);
+  const riskTrades = TRADES.filter(t => t.accountRisk);
+  const avgRisk = riskTrades.length ? riskTrades.reduce((sum, t) => sum + parseFloat(String(t.accountRisk).replace('%',''))/100, 0) / riskTrades.length : 0;
+  const avgPosSize = TRADES.filter(t=>t.positionSize>0).length ? TRADES.filter(t=>t.positionSize>0).reduce((s,t)=>s+t.positionSize,0)/TRADES.filter(t=>t.positionSize>0).length : 0;
+  document.getElementById('riskMetrics').innerHTML = [
+    metricCard('Avg Account Risk', fmtPct(avgRisk), avgRisk <= 0.02 ? 'val-green' : 'val-red'),
+    metricCard('Avg Position Size', fmt$(avgPosSize), 'val-neutral'),
+    metricCard('Avg R:R', s.avgR.toFixed(2), s.avgR >= 1.5 ? 'val-green' : 'val-yellow'),
+    metricCard('Max Win', fmt$(s.maxWin), 'val-green'),
+    metricCard('Max Loss', fmt$(s.maxLoss), 'val-red'),
+    metricCard('Win/Loss Ratio', (s.avgWin / (s.avgLoss || 1)).toFixed(2), s.avgWin >= s.avgLoss ? 'val-green' : 'val-red', `${fmt$(s.avgWin)} / ${fmt$(s.avgLoss)}`),
+  ].join('');
+}
+
+/* ═══ PATTERNS PAGE ═══ */
+function renderPatterns() {
+  if (TRADES.length === 0) { show('patternsNoData'); hide('patternsContent'); return; }
+  hide('patternsNoData'); show('patternsContent');
+
+  // Streaks
+  let maxWinStreak = 0, maxLossStreak = 0, curWin = 0, curLoss = 0;
+  TRADES.forEach(t => {
+    if (t.winLoss === 'W') { curWin++; curLoss = 0; maxWinStreak = Math.max(maxWinStreak, curWin); }
+    else { curLoss++; curWin = 0; maxLossStreak = Math.max(maxLossStreak, curLoss); }
+  });
+  document.getElementById('streakMetrics').innerHTML = [
+    metricCard('Max Win Streak', maxWinStreak, 'val-green'),
+    metricCard('Max Loss Streak', maxLossStreak, 'val-red'),
+    metricCard('Current Streak', curWin > 0 ? curWin + 'W' : curLoss + 'L', curWin > 0 ? 'val-green' : 'val-red'),
+  ].join('');
+
+  // Tilt detection
+  drawTiltChart();
+  // Emotional correlation
+  drawEmotionCharts();
+  // Duration
+  drawDurationChart();
+  // Session metrics
+  renderSessionMetrics();
+}
+
+function drawTiltChart() {
+  const canvas = document.getElementById('tiltChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 220;
+  ctx.clearRect(0, 0, W, 220);
+
+  // After N consecutive wins/losses, what's the win rate of the next trade?
+  const afterWins = {};
+  const afterLosses = {};
+  let streak = 0; let lastResult = '';
+  for (let i = 0; i < TRADES.length - 1; i++) {
+    const t = TRADES[i];
+    if (t.winLoss === lastResult) streak++;
+    else { streak = 1; lastResult = t.winLoss; }
+    const next = TRADES[i+1];
+    if (lastResult === 'W') {
+      if (!afterWins[streak]) afterWins[streak] = {w:0,l:0};
+      next.winLoss === 'W' ? afterWins[streak].w++ : afterWins[streak].l++;
+    } else {
+      if (!afterLosses[streak]) afterLosses[streak] = {w:0,l:0};
+      next.winLoss === 'W' ? afterLosses[streak].w++ : afterLosses[streak].l++;
+    }
+  }
+
+  const maxStreak = 6;
+  const labels = [];
+  const winRatesAfterW = [];
+  const winRatesAfterL = [];
+  for (let i = 1; i <= maxStreak; i++) {
+    labels.push(String(i));
+    const aw = afterWins[i];
+    winRatesAfterW.push(aw ? (aw.w / (aw.w + aw.l)) * 100 : 0);
+    const al = afterLosses[i];
+    winRatesAfterL.push(al ? (al.w / (al.w + al.l)) * 100 : 0);
+  }
+
+  const pad = {l:50, r:20, t:30, b:40};
+  const cw = W - pad.l - pad.r;
+  const ch = 220 - pad.t - pad.b;
+  const barW = (cw / labels.length) * 0.35;
+  const gap = cw / labels.length;
+
+  // 50% baseline
+  const y50 = pad.t + ch - (50/100)*ch;
+  ctx.strokeStyle = '#484f58'; ctx.setLineDash([4,4]); ctx.beginPath();
+  ctx.moveTo(pad.l, y50); ctx.lineTo(W-pad.r, y50); ctx.stroke();
+  ctx.setLineDash([]); ctx.fillStyle = '#8b949e'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  ctx.fillText('50%', pad.l-8, y50+4);
+  ctx.fillText('100%', pad.l-8, pad.t+4);
+  ctx.fillText('0%', pad.l-8, pad.t+ch+4);
+
+  labels.forEach((l, i) => {
+    const x = pad.l + gap * i + gap/2;
+    // After wins bar
+    const h1 = (winRatesAfterW[i] / 100) * ch;
+    ctx.fillStyle = '#238636';
+    ctx.fillRect(x - barW - 1, pad.t + ch - h1, barW, h1);
+    // After losses bar
+    const h2 = (winRatesAfterL[i] / 100) * ch;
+    ctx.fillStyle = '#da3633';
+    ctx.fillRect(x + 1, pad.t + ch - h2, barW, h2);
+    // Label
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(l, x, 220 - pad.b + 16);
+  });
+
+  // Legend
+  ctx.fillStyle = '#238636'; ctx.fillRect(pad.l, 6, 12, 12);
+  ctx.fillStyle = '#e6edf3'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('After N wins', pad.l + 16, 16);
+  ctx.fillStyle = '#da3633'; ctx.fillRect(pad.l + 120, 6, 12, 12);
+  ctx.fillStyle = '#e6edf3';
+  ctx.fillText('After N losses', pad.l + 136, 16);
+  ctx.fillStyle = '#8b949e'; ctx.textAlign = 'center';
+  ctx.fillText('Consecutive streak length', pad.l + cw/2, 220 - 4);
+}
+
+function drawEmotionCharts() {
+  const emoTrades = TRADES.filter(t => t.emotional > 0);
+  if (emoTrades.length === 0) return;
+
+  // Group by emotional score
+  const byScore = {};
+  emoTrades.forEach(t => {
+    const s = Math.round(t.emotional);
+    if (!byScore[s]) byScore[s] = [];
+    byScore[s].push(t);
+  });
+  const scores = Object.keys(byScore).map(Number).sort((a,b)=>a-b);
+
+  // Win rate by emotion
+  const c1 = document.getElementById('emotionWinChart');
+  const ctx1 = c1.getContext('2d');
+  const W1 = c1.parentElement.clientWidth - 40;
+  c1.width = W1; c1.height = 220;
+  ctx1.clearRect(0, 0, W1, 220);
+  const winRates = scores.map(s => {
+    const w = byScore[s].filter(t => t.winLoss === 'W').length;
+    return (w / byScore[s].length) * 100;
+  });
+  const colors = winRates.map(wr => wr >= 50 ? '#238636' : '#da3633');
+  drawSimpleBars(ctx1, W1, 220, scores.map(String), winRates, colors, '%');
+
+  // P/L by emotion
+  const c2 = document.getElementById('emotionPLChart');
+  const ctx2 = c2.getContext('2d');
+  const W2 = c2.parentElement.clientWidth - 40;
+  c2.width = W2; c2.height = 220;
+  ctx2.clearRect(0, 0, W2, 220);
+  const avgPLs = scores.map(s => byScore[s].reduce((sum,t)=>sum+t.netPL,0)/byScore[s].length);
+  drawBarChart(ctx2, W2, 220, scores.map(String), avgPLs, l => 'Score ' + l);
+}
+
+function drawSimpleBars(ctx, W, H, labels, values, colors, suffix) {
+  const pad = {l:50, r:20, t:20, b:40};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const max = Math.max(...values, 1);
+  const barW = Math.min(40, (cw / labels.length) * 0.7);
+  const gap = cw / labels.length;
+
+  labels.forEach((l, i) => {
+    const v = values[i];
+    const x = pad.l + gap * i + gap/2 - barW/2;
+    const barH = (v / max) * ch;
+    ctx.fillStyle = colors ? colors[i] : '#58a6ff';
+    ctx.fillRect(x, pad.t + ch - barH, barW, barH);
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(l, x + barW/2, H - pad.b + 14);
+    ctx.fillStyle = '#e6edf3'; ctx.font = '10px sans-serif';
+    ctx.fillText(v.toFixed(1) + (suffix||''), x + barW/2, pad.t + ch - barH - 4);
+  });
+}
+
+function drawDurationChart() {
+  const canvas = document.getElementById('durationChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.height = 220; canvas.width = W;
+  ctx.clearRect(0, 0, W, 220);
+
+  const durTrades = TRADES.filter(t => t.duration > 0);
+  if (durTrades.length === 0) return;
+
+  // Bucket by duration ranges
+  const buckets = [
+    {label:'< 0.5h', min:0, max:0.5},
+    {label:'0.5-1h', min:0.5, max:1},
+    {label:'1-2h', min:1, max:2},
+    {label:'2-4h', min:2, max:4},
+    {label:'4-8h', min:4, max:8},
+    {label:'8h+', min:8, max:Infinity}
+  ];
+  const labels = buckets.map(b => b.label);
+  const avgPLs = buckets.map(b => {
+    const trades = durTrades.filter(t => t.duration >= b.min && t.duration < b.max);
+    return trades.length ? trades.reduce((s,t)=>s+t.netPL,0)/trades.length : 0;
+  });
+  drawBarChart(ctx, W, 220, labels, avgPLs, l => l);
+}
+
+function renderSessionMetrics() {
+  // Asian: 0-8 UTC, European: 8-16 UTC, US: 16-24 UTC (rough)
+  const sessions = {Asian: [], European: [], US: []};
+  TRADES.forEach(t => {
+    if (!t.entryDate) return;
+    const h = t.entryDate.getHours();
+    if (h < 8) sessions.Asian.push(t);
+    else if (h < 16) sessions.European.push(t);
+    else sessions.US.push(t);
+  });
+  const cards = Object.entries(sessions).map(([name, trades]) => {
+    const s = stats(trades);
+    return metricCard(name + ' Session', fmtPct(s.winRate), s.winRate >= 0.5 ? 'val-green' : 'val-red',
+      `${s.total} trades | P/L: ${fmt$(s.totalPL)}`);
+  });
+  document.getElementById('sessionMetrics').innerHTML = cards.join('');
+}
+
+/* ═══ COACH PAGE ═══ */
+function renderCoach() {
+  if (TRADES.length === 0) { show('coachNoData'); hide('coachContent'); return; }
+  hide('coachNoData'); show('coachContent');
+
+  const s = stats(TRADES);
+  const strengths = [];
+  const weaknesses = [];
+  const insights = [];
+
+  // Win rate analysis
+  if (s.winRate >= 0.55) {
+    strengths.push(insightCard('positive', 'Solid Win Rate',
+      `Your win rate is ${fmtPct(s.winRate)} — above the 50% threshold. You're picking the right direction more often than not.`,
+      'Keep refining your entry criteria to maintain this edge.'));
+  } else if (s.winRate < 0.45) {
+    weaknesses.push(insightCard('negative', 'Low Win Rate',
+      `Your win rate is ${fmtPct(s.winRate)}. You need either higher R:R to compensate or better entry filtering.`,
+      'Review your entry criteria — consider adding a confirmation signal before entering.'));
+  }
+
+  // Win/Loss size ratio
+  const wlRatio = s.avgWin / (s.avgLoss || 1);
+  if (wlRatio < 1) {
+    weaknesses.push(insightCard('negative', 'Losses Bigger Than Wins',
+      `Avg win (${fmt$(s.avgWin)}) is ${((1-wlRatio)*100).toFixed(0)}% smaller than avg loss (${fmt$(s.avgLoss)}). Even with ${fmtPct(s.winRate)} win rate, your expectancy is ${fmt$(s.expectancy)}/trade.`,
+      'Tighten stop losses OR let winners run longer. Target at least 1:1 win/loss ratio.'));
+  } else {
+    strengths.push(insightCard('positive', 'Winners > Losers',
+      `Your avg win (${fmt$(s.avgWin)}) is larger than avg loss (${fmt$(s.avgLoss)}). Win/loss ratio: ${wlRatio.toFixed(2)}.`,
+      'Great risk management. Keep this ratio above 1.0.'));
+  }
+
+  // Expectancy
+  if (s.expectancy < 0) {
+    weaknesses.push(insightCard('negative', 'Negative Expectancy',
+      `At ${fmt$(s.expectancy)}/trade, you're losing money on average per trade. Over ${s.total} trades this amounts to ${fmt$(s.totalPL)}.`,
+      'Focus on either improving win rate OR increasing your R:R. Even a small improvement in either will flip you positive.'));
+  } else {
+    strengths.push(insightCard('positive', 'Positive Expectancy',
+      `At ${fmt$(s.expectancy)}/trade, you have an edge. Keep trading consistently and the math works in your favor.`,
+      'Stick to your strategy and avoid overtrading.'));
+  }
+
+  // Strategy analysis
+  const byStrat = groupBy(TRADES, t => t.strategy || 'Unknown');
+  const stratStats = Object.entries(byStrat).map(([name, trades]) => ({name, ...stats(trades)}))
+    .filter(s => s.total >= 10).sort((a,b) => b.total - a.total);
+
+  stratStats.forEach(st => {
+    if (st.totalPL < -100 && st.total >= 20) {
+      insights.push(insightCard('warning', `Strategy "${st.name}" is Losing Money`,
+        `${st.total} trades, ${fmtPct(st.winRate)} win rate, net P/L: ${fmt$(st.totalPL)}, expectancy: ${fmt$(st.expectancy)}/trade.`,
+        `Consider reducing size or adding filters for this strategy. If expectancy stays negative after 50+ trades, consider dropping it.`));
+    } else if (st.totalPL > 100 && st.total >= 20) {
+      insights.push(insightCard('positive', `Strategy "${st.name}" is Profitable`,
+        `${st.total} trades, ${fmtPct(st.winRate)} win rate, net P/L: ${fmt$(st.totalPL)}, expectancy: ${fmt$(st.expectancy)}/trade.`,
+        `This is one of your best strategies. Consider increasing position size here (within risk limits).`));
+    }
+  });
+
+  // Overtrading analysis
+  const byDate = groupBy(TRADES, t => t.entryDate ? t.entryDate.toDateString() : 'unknown');
+  const tradeCounts = Object.values(byDate).map(arr => arr.length);
+  const avgPerDay = tradeCounts.reduce((s,v)=>s+v,0) / tradeCounts.length;
+  const heavyDays = Object.entries(byDate).filter(([,arr]) => arr.length >= 5);
+  if (heavyDays.length > 0) {
+    const heavyStats = stats(heavyDays.flatMap(([,arr]) => arr));
+    const lightDays = Object.entries(byDate).filter(([,arr]) => arr.length < 5);
+    const lightStats = stats(lightDays.flatMap(([,arr]) => arr));
+    if (heavyStats.winRate < lightStats.winRate) {
+      insights.push(insightCard('warning', 'Overtrading Hurts Your Performance',
+        `On days with 5+ trades (${heavyDays.length} days): ${fmtPct(heavyStats.winRate)} win rate, ${fmt$(heavyStats.expectancy)}/trade. On lighter days: ${fmtPct(lightStats.winRate)} win rate, ${fmt$(lightStats.expectancy)}/trade.`,
+        `Limit yourself to 3-4 quality trades per day. Quality over quantity.`));
+    }
+  }
+
+  // Emotional analysis
+  const emoTrades = TRADES.filter(t => t.emotional > 0);
+  if (emoTrades.length > 20) {
+    const lowEmo = emoTrades.filter(t => t.emotional <= 4);
+    const highEmo = emoTrades.filter(t => t.emotional >= 7);
+    if (lowEmo.length > 10 && highEmo.length > 10) {
+      const lowStats = stats(lowEmo);
+      const highStats = stats(highEmo);
+      if (lowStats.winRate < highStats.winRate) {
+        insights.push(insightCard('warning', 'Low Emotional State Hurts Trading',
+          `When emotional score ≤ 4: ${fmtPct(lowStats.winRate)} win rate, ${fmt$(lowStats.expectancy)}/trade. When ≥ 7: ${fmtPct(highStats.winRate)} win rate, ${fmt$(highStats.expectancy)}/trade.`,
+          'Consider not trading when your emotional state is below 5. Take a break, journal, or reduce size.'));
+      }
+    }
+  }
+
+  // Long vs Short
+  const longs = TRADES.filter(t => t.side.toLowerCase().includes('long'));
+  const shorts = TRADES.filter(t => t.side.toLowerCase().includes('short'));
+  if (longs.length > 20 && shorts.length > 20) {
+    const ls = stats(longs), ss = stats(shorts);
+    if (ls.totalPL > 0 && ss.totalPL < 0) {
+      insights.push(insightCard('warning', 'Shorts Are Losing Money',
+        `Long P/L: ${fmt$(ls.totalPL)} (${fmtPct(ls.winRate)} WR) vs Short P/L: ${fmt$(ss.totalPL)} (${fmtPct(ss.winRate)} WR).`,
+        'Consider reducing short exposure or only shorting with higher-conviction setups.'));
+    } else if (ss.totalPL > 0 && ls.totalPL < 0) {
+      insights.push(insightCard('warning', 'Longs Are Losing Money',
+        `Short P/L: ${fmt$(ss.totalPL)} (${fmtPct(ss.winRate)} WR) vs Long P/L: ${fmt$(ls.totalPL)} (${fmtPct(ls.winRate)} WR).`,
+        'Consider reducing long exposure or waiting for better long setups.'));
+    }
+  }
+
+  // Duration insight
+  const durTrades = TRADES.filter(t => t.duration > 0);
+  if (durTrades.length > 20) {
+    const quick = durTrades.filter(t => t.duration <= 1);
+    const medium = durTrades.filter(t => t.duration > 1 && t.duration <= 4);
+    const long_ = durTrades.filter(t => t.duration > 4);
+    const best = [{name:'Quick (<1h)', s:stats(quick)}, {name:'Medium (1-4h)', s:stats(medium)}, {name:'Long (4h+)', s:stats(long_)}]
+      .filter(x => x.s.total >= 10).sort((a,b) => b.s.expectancy - a.s.expectancy);
+    if (best.length > 1 && best[0].s.expectancy > best[best.length-1].s.expectancy) {
+      insights.push(insightCard('blue', 'Optimal Trade Duration',
+        `${best[0].name} trades: ${fmt$(best[0].s.expectancy)}/trade. ${best[best.length-1].name} trades: ${fmt$(best[best.length-1].s.expectancy)}/trade.`,
+        `Your best results come from ${best[0].name.toLowerCase()} trades. Consider focusing on this timeframe.`));
+    }
+  }
+
+  // Profit factor
+  if (s.profitFactor > 0 && s.profitFactor < 1) {
+    insights.push(insightCard('negative', 'Profit Factor Below 1.0',
+      `Your profit factor is ${s.profitFactor.toFixed(2)}, meaning you lose ${fmtPrice(1/s.profitFactor,2)} for every $1 you make.`,
+      'You need PF > 1.0 to be profitable. Focus on cutting losers faster and letting winners ride.'));
+  }
+
+  document.getElementById('coachStrengths').innerHTML = strengths.join('') || '<p style="color:var(--tx2);padding:12px">Import more data to discover your strengths.</p>';
+  document.getElementById('coachWeaknesses').innerHTML = weaknesses.join('') || '<p style="color:var(--tx2);padding:12px">Looking good! No major issues detected.</p>';
+  document.getElementById('coachInsights').innerHTML = insights.join('') || '<p style="color:var(--tx2);padding:12px">Import more data for detailed insights.</p>';
+}
+
+function insightCard(type, title, body, action) {
+  return `<div class="insight-card ${type}"><h4>${title}</h4><p>${body}</p>${action ? `<div class="action">→ ${action}</div>` : ''}</div>`;
+}
+
+/* ═══ TRADE LOG PAGE ═══ */
+function renderTradeLog() {
+  if (TRADES.length === 0) { show('logNoData'); hide('logContent'); return; }
+  hide('logNoData'); show('logContent');
+
+  // Populate filter dropdowns once
+  populateFilters();
+
+  // Apply filters
+  let filtered = [...TRADES];
+  const fStrat = document.getElementById('fStrategy').value;
+  const fMarket = document.getElementById('fMarket').value;
+  const fSide = document.getElementById('fSide').value;
+  const fResult = document.getElementById('fResult').value;
+  const fFrom = document.getElementById('fFrom').value;
+  const fTo = document.getElementById('fTo').value;
+  const fSearch = document.getElementById('fSearch').value.toLowerCase();
+
+  if (fStrat) filtered = filtered.filter(t => t.strategy === fStrat);
+  if (fMarket) filtered = filtered.filter(t => t.market === fMarket);
+  if (fSide) filtered = filtered.filter(t => t.side.toLowerCase().includes(fSide.toLowerCase()));
+  if (fResult) filtered = filtered.filter(t => t.winLoss === fResult);
+  if (fFrom) filtered = filtered.filter(t => t.entryDate && t.entryDate >= new Date(fFrom));
+  if (fTo) filtered = filtered.filter(t => t.entryDate && t.entryDate <= new Date(fTo + 'T23:59:59'));
+  if (fSearch) filtered = filtered.filter(t => t.market.toLowerCase().includes(fSearch));
+
+  filtered = filtered.reverse(); // Most recent first
+
+  const fStats = stats(filtered);
+  let html = `<div style="margin-bottom:10px;font-size:13px;color:var(--tx2)">
+    Showing <strong style="color:var(--tx)">${filtered.length}</strong> trades |
+    WR: <span class="${fStats.winRate>=0.5?'win':'loss'}">${fmtPct(fStats.winRate)}</span> |
+    P/L: <span class="${fStats.totalPL>=0?'win':'loss'}">${fmt$(fStats.totalPL)}</span> |
+    Exp: <span class="${fStats.expectancy>=0?'win':'loss'}">${fmt$(fStats.expectancy)}/trade</span>
+  </div>`;
+  html += '<table><thead><tr><th>Date</th><th>Market</th><th>Side</th><th>Strategy</th><th>Entry</th><th>Exit</th><th>Size</th><th>Net P/L</th><th>R</th><th>Result</th><th>Emotion</th><th>Duration</th></tr></thead><tbody>';
+  filtered.slice(0, 200).forEach(t => {
+    const cls = t.winLoss === 'W' ? 'win' : 'loss';
+    html += `<tr>
+      <td>${fmtDate(t.entryDate)}</td>
+      <td>${t.tvLink ? `<a href="${t.tvLink}" target="_blank">${t.market}</a>` : t.market}</td>
+      <td>${t.side}</td><td>${t.strategy}</td>
+      <td>${fmtPrice(t.entryPrice,4)}</td><td>${fmtPrice(t.exitPrice,4)}</td>
+      <td>${fmt$(t.positionSize)}</td>
+      <td class="${cls}">${fmt$(t.netPL)}</td>
+      <td>${t.rRatio.toFixed(1)}</td>
+      <td class="${cls}">${t.winLoss}</td>
+      <td>${t.emotional || '-'}</td>
+      <td>${t.duration ? t.duration.toFixed(1)+'h' : '-'}</td>
+    </tr>`;
+  });
+  if (filtered.length > 200) html += `<tr><td colspan="12" style="text-align:center;color:var(--tx2);padding:12px">Showing first 200 of ${filtered.length} trades</td></tr>`;
+  html += '</tbody></table>';
+  document.getElementById('tradeLogTable').innerHTML = html;
+}
+
+let filtersPopulated = false;
+function populateFilters() {
+  if (filtersPopulated) return;
+  filtersPopulated = true;
+  const strategies = [...new Set(TRADES.map(t => t.strategy).filter(Boolean))].sort();
+  const markets = [...new Set(TRADES.map(t => t.market).filter(Boolean))].sort();
+  const fStrat = document.getElementById('fStrategy');
+  strategies.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; fStrat.appendChild(o); });
+  const fMarket = document.getElementById('fMarket');
+  markets.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; fMarket.appendChild(o); });
+}
+
+/* ── Show/Hide helpers ── */
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+/* ═══════════════════════════════════════════
+   CHAT COACH ENGINE
+   ═══════════════════════════════════════════ */
+let chatOpen = false, chatInited = false;
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chatPanel').classList.toggle('open',chatOpen);
+  document.getElementById('chatFab').classList.toggle('has-panel',chatOpen);
+  if(chatOpen){
+    if(!chatInited){chatInit();chatInited=true;}
+    setTimeout(()=>document.getElementById('chatInput').focus(),100);
+  }
+}
+
+function chatInit(){
+  if(TRADES.length===0){
+    chatAddMsg('bot',"Hey, welcome! I'm your personal <strong>Trading Coach</strong>. Before we can dive into your performance, you'll need to import your trade data. Once I have that, I can break down your strengths, weaknesses, and give you specific areas to work on.",[
+      {label:'Import Data',action:'go to import'}
+    ]);
+  } else {
+    const s=stats(TRADES);
+    const plColor=s.totalPL>=0?'green':'red';
+    const vibe=s.totalPL>=0?`You're in the green — nice work.`:`You're slightly in the red, but that's exactly why I'm here.`;
+    chatAddMsg('bot',
+      `Hey, good to see you. I've analyzed <strong>${s.total} trades</strong> in your journal — ${s.wins} winners and ${s.losses} losses so far.<br><br>`+
+      `Your overall win rate sits at <strong>${fmtPct(s.winRate)}</strong> with a net P/L of <strong class="${plColor}">${fmt$(s.totalPL)}</strong>. ${vibe}<br><br>`+
+      `Ask me anything — your stats, what's working, what's not, specific strategies, or how to improve. I'll always give you the honest numbers.`,
+      [{label:'Full Stats',action:'stats'},{label:'What Am I Doing Wrong?',action:'weaknesses'},{label:'How to Improve',action:'improve'},{label:'Commands',action:'help'}]
+    );
+  }
+}
+
+function chatAddMsg(type,html,actions){
+  const box=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className='chat-msg chat-msg-'+type;
+  let h='<div class="chat-msg-text">'+html+'</div>';
+  if(actions&&actions.length){
+    h+='<div class="chat-msg-actions">';
+    actions.forEach(a=>{h+='<button class="chat-action" onclick="chatRunAction(\''+esc(a.action)+'\')">'+esc(a.label)+'</button>';});
+    h+='</div>';
+  }
+  div.innerHTML=h;box.appendChild(div);box.scrollTop=box.scrollHeight;
+}
+
+function chatRunAction(a){document.getElementById('chatInput').value=a;chatSend();}
+
+function chatSend(){
+  const inp=document.getElementById('chatInput');
+  const raw=inp.value.trim();if(!raw)return;
+  inp.value='';
+  chatAddMsg('user',esc(raw));
+  coachProcess(raw);
+}
+
+/* ── Coach Command Router ── */
+function coachProcess(input){
+  if(TRADES.length===0){
+    chatAddMsg('bot',"Hold on — I don't have any trade data to work with yet. Import your CSV first, and then we can start breaking down your performance together.",[{label:'Import Data',action:'go to import'}]);
+    return;
+  }
+  const q=input.toLowerCase().trim();
+  const s=stats(TRADES);
+
+  // Helper: find strategy by fuzzy name in any input string
+  function findStrat(text){
+    const t=text.toLowerCase().replace(/\b(doing|performing|going|looking|strategy|strat|how is|how's|analyze|tell me about|about|check)\b/g,'').trim();
+    const byStrat=groupBy(TRADES,tr=>tr.strategy||'Unknown');
+    const keys=Object.keys(byStrat);
+    // exact includes match first
+    let match=keys.find(k=>t.includes(k.toLowerCase()));
+    if(!match) match=keys.find(k=>k.toLowerCase().includes(t));
+    if(!match){
+      // word overlap matching
+      const words=t.split(/\s+/).filter(w=>w.length>1);
+      match=keys.find(k=>{const kl=k.toLowerCase();return words.filter(w=>kl.includes(w)).length>=Math.max(1,words.length-1);});
+    }
+    return match?{name:match,trades:byStrat[match]}:null;
+  }
+  // Helper: find market by fuzzy name
+  function findMarket(text){
+    const t=text.toLowerCase().replace(/\b(doing|performing|going|looking|market|coin|ticker|how is|how's|tell me about|about|check)\b/g,'').trim();
+    const byM=groupBy(TRADES,tr=>tr.market||'Unknown');
+    const keys=Object.keys(byM);
+    let match=keys.find(k=>k.toLowerCase()===t);
+    if(!match) match=keys.find(k=>k.toLowerCase().includes(t));
+    if(!match) match=keys.find(k=>t.includes(k.toLowerCase()));
+    return match?{name:match,trades:byM[match]}:null;
+  }
+
+  // Navigation
+  const navMatch=q.match(/^(?:go to|show|open)\s+(.+)/i);
+  if(navMatch){
+    const pages={import:'import',dashboard:'dashboard',analysis:'analysis',patterns:'patterns',coach:'coach',tradelog:'tradelog','trade log':'tradelog',log:'tradelog'};
+    const target=Object.keys(pages).find(k=>navMatch[1].toLowerCase().includes(k));
+    if(target){showPage(pages[target]);chatAddMsg('bot',`Done — I've switched you over to the <strong>${target}</strong> page.`);return;}
+  }
+
+  // Stats / Summary
+  if(/^(stats|summary|overview|how am i doing|my stats|my numbers|performance)/.test(q)){
+    const plVerdict=s.totalPL>=0
+      ?`You're net positive, which is a solid foundation to build on.`
+      :`You're slightly net negative across ${s.total} trades. The good news? Your win rate is above 50%, so the issue is likely in your risk/reward, not your entries.`;
+    const pfVerdict=s.profitFactor>=1
+      ?`Your profit factor is above 1.0, meaning your winners are outweighing your losers in dollar terms.`
+      :`Your profit factor is below 1.0 (${s.profitFactor.toFixed(2)}), which means on aggregate your losses are eating into your wins. This is the key metric to fix.`;
+    chatAddMsg('bot',
+      `Here's your full performance overview across <strong>${s.total} trades</strong>:<br><br>`+
+      `<strong>Win Rate:</strong> ${fmtPct(s.winRate)} (${s.wins}W / ${s.losses}L)<br>`+
+      `<strong>Net P/L:</strong> <span class="${s.totalPL>=0?'':'red'}">${fmt$(s.totalPL)}</span><br>`+
+      `<strong>Expectancy:</strong> <span class="${s.expectancy>=0?'':'red'}">${fmt$(s.expectancy)}</span> per trade<br>`+
+      `<strong>Profit Factor:</strong> <span class="${s.profitFactor>=1?'':'red'}">${s.profitFactor.toFixed(2)}</span><br>`+
+      `<strong>Avg R:</strong> ${s.avgR.toFixed(2)}<br>`+
+      `<strong>Largest Win:</strong> ${fmt$(s.maxWin)} &nbsp;|&nbsp; <strong>Largest Loss:</strong> <span class="red">${fmt$(s.maxLoss)}</span><br><br>`+
+      plVerdict+` `+pfVerdict,
+      [{label:'What Am I Doing Wrong?',action:'weaknesses'},{label:'Rank My Strategies',action:'best strategy'},{label:'Recent Trades',action:'last 20 trades'}]
+    );return;
+  }
+
+  // Weaknesses
+  if(/weakness|weak|doing wrong|problem|issue|where.*losing|why.*los|what.*wrong|struggling|bleed/.test(q)){
+    let msg=`Alright, let me be straight with you. Here's what the data says is hurting your performance:<br><br>`;
+    const issues=[];
+    // 1. Win/Loss size ratio
+    const wlRatio=s.avgWin/(s.avgLoss||1);
+    if(wlRatio<1){
+      const pctBigger=((1-wlRatio)*100).toFixed(0);
+      issues.push(`<strong class="red">Your losses are bigger than your wins</strong><br>`+
+        `Your average win is ${fmt$(s.avgWin)}, but your average loss is ${fmt$(s.avgLoss)} — that's ${pctBigger}% bigger. Even with a ${fmtPct(s.winRate)} win rate, those larger losses are dragging you down. `+
+        `You need to either tighten your stop losses, or let your winners run further. Ideally, your average win should be at least 1.5x your average loss.`);
+    }
+    // 2. Negative expectancy
+    if(s.expectancy<0){
+      issues.push(`<strong class="red">Negative expectancy — you're bleeding per trade</strong><br>`+
+        `Right now, every trade you take has an expected value of ${fmt$(s.expectancy)}. Over ${s.total} trades, that adds up to ${fmt$(s.totalPL)}. `+
+        `This tells me the combination of your win rate and your average win/loss ratio isn't where it needs to be. The fix is usually improving R:R rather than trying to win more often.`);
+    }
+    // 3. Worst strategies
+    const byStrat=groupBy(TRADES,t=>t.strategy||'Unknown');
+    const worstStrats=Object.entries(byStrat).map(([name,trades])=>({name,...stats(trades)}))
+      .filter(x=>x.total>=10&&x.totalPL<-50).sort((a,b)=>a.totalPL-b.totalPL);
+    if(worstStrats.length>0){
+      const w=worstStrats[0];
+      issues.push(`<strong class="yellow">Your "${w.name}" strategy is a major drag</strong><br>`+
+        `You've taken ${w.total} trades with this setup and it's down ${fmt$(w.totalPL)} total (${fmt$(w.expectancy)} per trade). `+
+        `With a ${fmtPct(w.winRate)} win rate, the setup itself might be valid, but the entries or risk management need work. `+
+        `I'd recommend either adding stricter confirmation filters, reducing your size on this strategy, or pausing it entirely until you've backtested improvements.`);
+    }
+    // 4. Overtrading
+    const byDate=groupBy(TRADES,t=>t.entryDate?t.entryDate.toDateString():'?');
+    const heavyDays=Object.entries(byDate).filter(([,arr])=>arr.length>=5);
+    const lightDays=Object.entries(byDate).filter(([,arr])=>arr.length<5);
+    if(heavyDays.length>0&&lightDays.length>0){
+      const hStats=stats(heavyDays.flatMap(([,a])=>a));
+      const lStats=stats(lightDays.flatMap(([,a])=>a));
+      if(hStats.winRate<lStats.winRate){
+        issues.push(`<strong class="yellow">Overtrading is costing you money</strong><br>`+
+          `On days where you take 5 or more trades, your win rate drops to ${fmtPct(hStats.winRate)} and you average ${fmt$(hStats.expectancy)} per trade. `+
+          `Compare that to lighter days (fewer than 5 trades) where you hit ${fmtPct(lStats.winRate)} and average ${fmt$(lStats.expectancy)} per trade. `+
+          `The pattern is clear — quality beats quantity. I'd suggest capping yourself at 3-4 setups per day and only taking your highest-conviction plays.`);
+      }
+    }
+    // 5. Emotional
+    const emoTrades=TRADES.filter(t=>t.emotional>0);
+    if(emoTrades.length>20){
+      const lowEmo=emoTrades.filter(t=>t.emotional<=4);
+      const highEmo=emoTrades.filter(t=>t.emotional>=7);
+      if(lowEmo.length>10&&highEmo.length>10){
+        const ls2=stats(lowEmo),hs=stats(highEmo);
+        if(ls2.winRate<hs.winRate){
+          issues.push(`<strong class="yellow">Your emotional state directly impacts results</strong><br>`+
+            `When you rate your emotional state at 4 or below, your win rate is ${fmtPct(ls2.winRate)} with ${fmt$(ls2.expectancy)} per trade. `+
+            `When you're feeling good (7+), it jumps to ${fmtPct(hs.winRate)} and ${fmt$(hs.expectancy)} per trade. `+
+            `This isn't a coincidence — your mental state affects your decision-making. Consider having a hard rule: don't trade when you're below a 5.`);
+        }
+      }
+    }
+    if(issues.length===0) issues.push(`Honestly, your numbers look solid. I don't see any major red flags in the data. Keep doing what you're doing and stay disciplined.`);
+    msg+=issues.map((x,i)=>`<strong>${i+1}.</strong> ${x}`).join('<br><br>');
+    chatAddMsg('bot',msg,[{label:'How Do I Fix This?',action:'improve'},{label:'Worst Strategy',action:'worst strategy'},{label:'See Coach Page',action:'go to coach'}]);
+    return;
+  }
+
+  // Strengths
+  if(/strength|good at|doing right|best thing|what.*work/.test(q)){
+    let msg=`Let's focus on what's working for you — it's important to know your edge:<br><br>`;
+    const points=[];
+    if(s.winRate>=0.55) points.push(`<strong>You have a solid directional read</strong><br>A ${fmtPct(s.winRate)} win rate tells me you're picking the right direction more often than not. That's a genuine skill — many traders never get above 50%. The key now is making sure your winners are large enough relative to your losers.`);
+    if(s.avgWin>=s.avgLoss) points.push(`<strong>Your winners outsize your losers</strong><br>Average win of ${fmt$(s.avgWin)} vs average loss of ${fmt$(s.avgLoss)} — that's exactly what you want to see. You're managing risk well on the loss side and letting winners develop.`);
+    const byStrat=groupBy(TRADES,t=>t.strategy||'Unknown');
+    const bestStrats=Object.entries(byStrat).map(([name,trades])=>({name,...stats(trades)}))
+      .filter(x=>x.total>=10&&x.totalPL>0).sort((a,b)=>b.totalPL-a.totalPL);
+    if(bestStrats.length>0){
+      const b=bestStrats[0];
+      points.push(`<strong>"${b.name}" is your money maker</strong><br>`+
+        `${b.total} trades, ${fmtPct(b.winRate)} win rate, ${fmt$(b.totalPL)} total profit (${fmt$(b.expectancy)} per trade). `+
+        `This is clearly your best edge — consider allocating more capital here and being more selective with other setups.`);
+    }
+    const byMarket=groupBy(TRADES,t=>t.market||'Unknown');
+    const bestMarkets=Object.entries(byMarket).map(([name,trades])=>({name,...stats(trades)}))
+      .filter(x=>x.total>=5&&x.totalPL>0).sort((a,b)=>b.totalPL-a.totalPL);
+    if(bestMarkets.length>0){
+      const m=bestMarkets[0];
+      points.push(`<strong>You trade ${m.name} well</strong><br>${m.total} trades with ${fmt$(m.totalPL)} profit. You clearly understand how this market moves — lean into it.`);
+    }
+    if(points.length===0) points.push(`With more trade data, I'll be able to identify your specific strengths more clearly. Keep journaling!`);
+    msg+=points.map((x,i)=>`${i+1}. ${x}`).join('<br><br>');
+    chatAddMsg('bot',msg,[{label:'Rank My Strategies',action:'best strategy'},{label:'Best Markets',action:'best market'},{label:'Full Stats',action:'stats'}]);
+    return;
+  }
+
+  // Best / Worst Strategy
+  if(/best strat|top strat|rank.*strat|compare.*strat/.test(q)){
+    const byStrat=groupBy(TRADES,t=>t.strategy||'Unknown');
+    const ranked=Object.entries(byStrat).map(([name,trades])=>({name,...stats(trades)}))
+      .filter(x=>x.total>=5).sort((a,b)=>b.totalPL-a.totalPL);
+    if(ranked.length===0){chatAddMsg('bot',`I need more trades to rank your strategies meaningfully. Keep trading and journaling!`);return;}
+    let msg=`Here's how your strategies stack up, ranked by total P/L. I'd pay close attention to where the profitable ones differ from the losing ones:<br><br>`;
+    ranked.slice(0,5).forEach((st,i)=>{
+      const icon=st.totalPL>=0?'✅':'❌';
+      msg+=`${icon} <strong>${st.name}</strong> — ${st.total} trades, ${fmtPct(st.winRate)} WR, <span class="${st.totalPL>=0?'':'red'}">${fmt$(st.totalPL)}</span>, ${fmt$(st.expectancy)}/trade<br>`;
+    });
+    const profitable=ranked.filter(x=>x.totalPL>0);
+    const losing2=ranked.filter(x=>x.totalPL<0);
+    if(profitable.length>0&&losing2.length>0){
+      msg+=`<br>You have <strong>${profitable.length} profitable</strong> and <strong>${losing2.length} unprofitable</strong> strategies. Consider doubling down on what works and cutting what doesn't.`;
+    }
+    const chips=ranked.slice(0,3).map(st=>({label:'Deep Dive: '+st.name.substring(0,12),action:'strategy '+st.name}));
+    chatAddMsg('bot',msg,chips);return;
+  }
+  if(/worst strat/.test(q)){
+    const byStrat=groupBy(TRADES,t=>t.strategy||'Unknown');
+    const ranked=Object.entries(byStrat).map(([name,trades])=>({name,...stats(trades)}))
+      .filter(x=>x.total>=5).sort((a,b)=>a.totalPL-b.totalPL);
+    if(ranked.length===0){chatAddMsg('bot',`Not enough data to rank strategies yet.`);return;}
+    let msg=`These are the strategies dragging your P/L down the most. Be honest with yourself about whether these setups have a real edge:<br><br>`;
+    ranked.slice(0,5).forEach((st,i)=>{
+      msg+=`${i+1}. <strong>${st.name}</strong> — ${st.total} trades, ${fmtPct(st.winRate)} WR, <span class="red">${fmt$(st.totalPL)}</span>, ${fmt$(st.expectancy)}/trade<br>`;
+    });
+    msg+=`<br>A losing strategy doesn't always mean a bad idea — sometimes it's about entry timing, position sizing, or exit rules. But if it's consistently negative over 50+ trades, you need to either overhaul it or drop it.`;
+    chatAddMsg('bot',msg,[{label:'Rank All Strategies',action:'best strategy'},{label:'How to Improve',action:'improve'}]);return;
+  }
+
+  // Best / Worst Market
+  if(/best market|best coin|top market/.test(q)){
+    const byM=groupBy(TRADES,t=>t.market||'Unknown');
+    const ranked=Object.entries(byM).map(([name,trades])=>({name,...stats(trades)}))
+      .filter(x=>x.total>=3).sort((a,b)=>b.totalPL-a.totalPL);
+    let msg=`Here are the markets where you've performed best. These are the instruments where your read on price action seems strongest:<br><br>`;
+    ranked.slice(0,8).forEach((m,i)=>{
+      const icon=m.totalPL>=0?'✅':'❌';
+      msg+=`${icon} <strong>${m.name}</strong> — ${m.total} trades, ${fmtPct(m.winRate)} WR, <span class="${m.totalPL>=0?'':'red'}">${fmt$(m.totalPL)}</span><br>`;
+    });
+    chatAddMsg('bot',msg,[{label:'Worst Markets',action:'worst market'},{label:'Analysis Page',action:'go to analysis'}]);return;
+  }
+  if(/worst market|worst coin/.test(q)){
+    const byM=groupBy(TRADES,t=>t.market||'Unknown');
+    const ranked=Object.entries(byM).map(([name,trades])=>({name,...stats(trades)}))
+      .filter(x=>x.total>=3).sort((a,b)=>a.totalPL-b.totalPL);
+    let msg=`These are the markets costing you the most. Consider whether you truly understand how these instruments move, or if you're just chasing setups:<br><br>`;
+    ranked.slice(0,8).forEach((m,i)=>{
+      msg+=`${i+1}. <strong>${m.name}</strong> — ${m.total} trades, ${fmtPct(m.winRate)} WR, <span class="red">${fmt$(m.totalPL)}</span><br>`;
+    });
+    chatAddMsg('bot',msg,[{label:'Best Markets',action:'best market'}]);return;
+  }
+
+  // Strategy analysis (improved fuzzy matching)
+  const stratPatterns=[
+    /(?:strategy|strat)\s+(.+)/i,
+    /(?:how is|how's|hows)\s+(.+?)(?:\s+doing|\s+performing|\s+going|\s+looking)?$/i,
+    /(?:tell me about|analyze|check|review)\s+(.+?)(?:\s+strategy)?$/i,
+    /(?:show me|breakdown|break down)\s+(.+)/i
+  ];
+  for(const pat of stratPatterns){
+    const m=q.match(pat);
+    if(m){
+      const found=findStrat(m[1]);
+      if(found){
+        const st=stats(found.trades);
+        const trades=found.trades;
+        const longs=trades.filter(t=>t.side.toLowerCase().includes('long'));
+        const shorts=trades.filter(t=>t.side.toLowerCase().includes('short'));
+        const verdict=st.totalPL>=0
+          ?`Overall, this strategy is <strong>profitable</strong>. It's earning you ${fmt$(st.expectancy)} per trade on average. That said, always look for ways to tighten your edge — can you filter out the weaker setups within this strategy?`
+          :`This strategy is currently <strong>losing money</strong>. At ${fmt$(st.expectancy)} per trade, it's dragging your overall P/L down. You should seriously consider whether the entry criteria need refinement, or whether to reduce position size until you've identified the problem.`;
+        let msg=`Let me break down <strong>"${found.name}"</strong> for you:<br><br>`+
+          `<strong>Total Trades:</strong> ${st.total} (${st.wins} wins, ${st.losses} losses)<br>`+
+          `<strong>Win Rate:</strong> <span class="${st.winRate>=0.5?'':'red'}">${fmtPct(st.winRate)}</span><br>`+
+          `<strong>Net P/L:</strong> <span class="${st.totalPL>=0?'':'red'}">${fmt$(st.totalPL)}</span><br>`+
+          `<strong>Expectancy:</strong> <span class="${st.expectancy>=0?'':'red'}">${fmt$(st.expectancy)}</span> per trade<br>`+
+          `<strong>Avg R:</strong> ${st.avgR.toFixed(2)}<br>`+
+          `<strong>Avg Win:</strong> ${fmt$(st.avgWin)} &nbsp;|&nbsp; <strong>Avg Loss:</strong> <span class="red">${fmt$(st.avgLoss)}</span><br>`;
+        if(longs.length>0&&shorts.length>0){
+          const ls2=stats(longs),ss2=stats(shorts);
+          msg+=`<br><strong>Directional split:</strong> Long (${ls2.total} trades, ${fmtPct(ls2.winRate)} WR) vs Short (${ss2.total} trades, ${fmtPct(ss2.winRate)} WR).<br>`;
+          if(ls2.totalPL>ss2.totalPL+50) msg+=`Longs are clearly more profitable here — you might want to be more selective when shorting this setup.<br>`;
+          else if(ss2.totalPL>ls2.totalPL+50) msg+=`Shorts are performing better — consider whether longs are worth the risk with this strategy.<br>`;
+        }
+        msg+=`<br>${verdict}`;
+        chatAddMsg('bot',msg,[{label:'Rank All Strategies',action:'best strategy'},{label:'Worst Strategies',action:'worst strategy'},{label:'Full Stats',action:'stats'}]);
+        return;
+      }
+      // Maybe it's a market
+      const mFound=findMarket(m[1]);
+      if(mFound){
+        const ms=stats(mFound.trades);
+        const verdict=ms.totalPL>=0
+          ?`You're profitable on ${mFound.name} — you seem to have a good read on how this market moves. Keep it in your watchlist.`
+          :`You're underwater on ${mFound.name}. It might be worth reviewing whether this market suits your trading style, or if you need different entry criteria here.`;
+        chatAddMsg('bot',
+          `Here's your breakdown for <strong>${mFound.name}</strong>:<br><br>`+
+          `<strong>Total Trades:</strong> ${ms.total} (${ms.wins}W / ${ms.losses}L)<br>`+
+          `<strong>Win Rate:</strong> <span class="${ms.winRate>=0.5?'':'red'}">${fmtPct(ms.winRate)}</span><br>`+
+          `<strong>Net P/L:</strong> <span class="${ms.totalPL>=0?'':'red'}">${fmt$(ms.totalPL)}</span><br>`+
+          `<strong>Expectancy:</strong> <span class="${ms.expectancy>=0?'':'red'}">${fmt$(ms.expectancy)}</span> per trade<br><br>`+
+          verdict,
+          [{label:'Best Markets',action:'best market'},{label:'Worst Markets',action:'worst market'}]
+        );return;
+      }
+    }
+  }
+
+  // Market analysis (fuzzy)
+  const mktMatch=q.match(/(?:market|coin|ticker)\s+(.+)/i);
+  if(mktMatch){
+    const mFound=findMarket(mktMatch[1]);
+    if(mFound){
+      const ms=stats(mFound.trades);
+      const verdict=ms.totalPL>=0
+        ?`Good news — you're net positive on this market. Your approach is working here.`
+        :`You're net negative on this one. Take a look at whether you're entering at the right levels or if the timing is off.`;
+      chatAddMsg('bot',
+        `Here's your performance on <strong>${mFound.name}</strong>:<br><br>`+
+        `<strong>Total Trades:</strong> ${ms.total} (${ms.wins}W / ${ms.losses}L)<br>`+
+        `<strong>Win Rate:</strong> <span class="${ms.winRate>=0.5?'':'red'}">${fmtPct(ms.winRate)}</span><br>`+
+        `<strong>Net P/L:</strong> <span class="${ms.totalPL>=0?'':'red'}">${fmt$(ms.totalPL)}</span><br>`+
+        `<strong>Expectancy:</strong> <span class="${ms.expectancy>=0?'':'red'}">${fmt$(ms.expectancy)}</span> per trade<br><br>`+
+        verdict,
+        [{label:'Best Markets',action:'best market'},{label:'Worst Markets',action:'worst market'}]
+      );return;
+    }
+  }
+
+  // Long vs Short
+  if(/long.*short|short.*long|longs|shorts|direction|side/.test(q)){
+    const longs=TRADES.filter(t=>t.side.toLowerCase().includes('long'));
+    const shorts=TRADES.filter(t=>t.side.toLowerCase().includes('short'));
+    const ls2=stats(longs),ss2=stats(shorts);
+    let verdict='';
+    if(ls2.totalPL>=0&&ss2.totalPL<0) verdict=`Your longs are profitable but your shorts are bleeding money. This is a significant finding — it suggests you have a natural bias or better read on long setups. Consider reducing your short exposure or applying stricter filters before shorting.`;
+    else if(ss2.totalPL>=0&&ls2.totalPL<0) verdict=`Your shorts are working but your longs are struggling. You might naturally be a better short seller, or your long entry criteria need refinement.`;
+    else if(ls2.totalPL>=0&&ss2.totalPL>=0) verdict=`Both sides are profitable — that's excellent. You're a well-rounded trader who can play both directions effectively.`;
+    else verdict=`Both sides are underwater, which tells me the issue isn't directional bias — it's likely in your overall entry/exit rules or position sizing.`;
+    chatAddMsg('bot',
+      `Let's compare how you perform on each side of the market:<br><br>`+
+      `📈 <strong>Longs:</strong> ${ls2.total} trades, ${fmtPct(ls2.winRate)} WR, <span class="${ls2.totalPL>=0?'':'red'}">${fmt$(ls2.totalPL)}</span> P/L, ${fmt$(ls2.expectancy)}/trade<br>`+
+      `📉 <strong>Shorts:</strong> ${ss2.total} trades, ${fmtPct(ss2.winRate)} WR, <span class="${ss2.totalPL>=0?'':'red'}">${fmt$(ss2.totalPL)}</span> P/L, ${fmt$(ss2.expectancy)}/trade<br><br>`+
+      verdict,
+      [{label:'Analysis Page',action:'go to analysis'},{label:'Full Stats',action:'stats'}]
+    );return;
+  }
+
+  // Overtrading
+  if(/overtrad|too many|trade count|how many|frequency/.test(q)){
+    const byDate=groupBy(TRADES,t=>t.entryDate?t.entryDate.toDateString():'?');
+    const counts=Object.values(byDate).map(a=>a.length);
+    const avg=counts.reduce((s2,v)=>s2+v,0)/counts.length;
+    const maxCount=Math.max(...counts);
+    const heavyDays=Object.entries(byDate).filter(([,a])=>a.length>=5);
+    const lightDays=Object.entries(byDate).filter(([,a])=>a.length<5);
+    let msg=`Let's talk about your trading frequency — this is something a lot of traders overlook:<br><br>`+
+      `You average <strong>${avg.toFixed(1)} trades per day</strong>, with a max of <strong>${maxCount}</strong> in a single day. You've had <strong>${heavyDays.length} days</strong> where you took 5 or more trades.<br><br>`;
+    if(heavyDays.length>0&&lightDays.length>0){
+      const hS=stats(heavyDays.flatMap(([,a])=>a));
+      const lS=stats(lightDays.flatMap(([,a])=>a));
+      msg+=`<strong>Heavy days (5+ trades):</strong> ${fmtPct(hS.winRate)} WR, ${fmt$(hS.expectancy)}/trade<br>`+
+        `<strong>Light days (&lt;5 trades):</strong> ${fmtPct(lS.winRate)} WR, ${fmt$(lS.expectancy)}/trade<br><br>`;
+      if(hS.winRate<lS.winRate){
+        msg+=`The data is clear — you trade worse when you're overactive. On lighter days, your win rate is ${((lS.winRate-hS.winRate)*100).toFixed(1)} percentage points higher and you make ${fmt$(lS.expectancy-hS.expectancy)} more per trade. `+
+          `This is a discipline issue, not a skill issue. Set a daily maximum and stick to it.`;
+      } else {
+        msg+=`Interestingly, you don't show a significant drop-off on heavier days. That said, monitor this — overtrading can creep up on you, especially during volatile markets.`;
+      }
+    }
+    chatAddMsg('bot',msg,[{label:'What Am I Doing Wrong?',action:'weaknesses'},{label:'How to Improve',action:'improve'}]);
+    return;
+  }
+
+  // Emotions / Tilt
+  if(/emotion|tilt|mental|feeling|mood|psych|mindset/.test(q)){
+    const emoTrades=TRADES.filter(t=>t.emotional>0);
+    if(emoTrades.length<10){chatAddMsg('bot',`I don't have enough emotional log data to analyze yet. Make sure you're filling in the Emotional Log column for each trade — it's one of the most valuable things you can track.`);return;}
+    const byScore=groupBy(emoTrades,t=>Math.round(t.emotional));
+    const scores=Object.keys(byScore).map(Number).sort((a,b)=>a-b);
+    let msg=`Your emotional data is fascinating — let me walk you through it. Here's how your performance breaks down by emotional state:<br><br>`;
+    scores.forEach(sc=>{
+      const st2=stats(byScore[sc]);
+      const icon=st2.expectancy>=0?'✅':'❌';
+      msg+=`${icon} <strong>Score ${sc}:</strong> ${st2.total} trades, ${fmtPct(st2.winRate)} WR, ${fmt$(st2.expectancy)}/trade<br>`;
+    });
+    const low=emoTrades.filter(t=>t.emotional<=4),high=emoTrades.filter(t=>t.emotional>=7);
+    if(low.length>5&&high.length>5){
+      const ls2=stats(low),hs=stats(high);
+      msg+=`<br><strong>Low state (≤4):</strong> ${fmtPct(ls2.winRate)} WR, ${fmt$(ls2.expectancy)}/trade<br>`+
+        `<strong>High state (≥7):</strong> ${fmtPct(hs.winRate)} WR, ${fmt$(hs.expectancy)}/trade<br><br>`;
+      const midEmo=emoTrades.filter(t=>t.emotional>=4&&t.emotional<=6);
+      const midS=midEmo.length>5?stats(midEmo):null;
+      if(hs.winRate>ls2.winRate&&(hs.winRate-ls2.winRate)>0.05){
+        const diff=((hs.winRate-ls2.winRate)*100).toFixed(1);
+        msg+=`There's a <strong>${diff} percentage point gap</strong> between your high and low emotional states. `+
+          `When you're not in the right headspace, your execution suffers — worse entries, premature exits, revenge trades. `+
+          `My advice: create a pre-session checklist. If your emotional score is below 5, either sit out or trade half size.`;
+      } else if(ls2.winRate>hs.winRate&&(ls2.winRate-hs.winRate)>0.05){
+        const diff=((ls2.winRate-hs.winRate)*100).toFixed(1);
+        msg+=`This is really important — <strong>higher emotional intensity is hurting your trading.</strong> `+
+          `When your emotional score is 7 or above, your win rate drops to ${fmtPct(hs.winRate)} and you lose ${fmt$(hs.expectancy)} per trade. `+
+          `That's ${diff} percentage points worse than calmer states. `+
+          (midS&&midS.winRate>hs.winRate?`Your sweet spot is the mid-range (4-6): ${fmtPct(midS.winRate)} WR, ${fmt$(midS.expectancy)}/trade. `:``)+
+          `High emotional scores often correlate with revenge trading, FOMO, or frustration. `+
+          `When you notice yourself getting worked up, step away. Your best trades come when you're calm and focused.`;
+      } else {
+        msg+=`Your performance is fairly consistent across emotional states — that's actually a sign of solid discipline. Keep monitoring it though, as patterns can emerge over time.`;
+      }
+    }
+    chatAddMsg('bot',msg,[{label:'Patterns Page',action:'go to patterns'},{label:'What Am I Doing Wrong?',action:'weaknesses'}]);
+    return;
+  }
+
+  // Duration
+  if(/duration|hold|holding time|how long/.test(q)){
+    const dur=TRADES.filter(t=>t.duration>0);
+    if(dur.length<10){chatAddMsg('bot',`I need more trade duration data to give you a proper analysis. Make sure your entry and exit times are being recorded.`);return;}
+    const buckets=[
+      {label:'Under 30 min',min:0,max:0.5},{label:'30 min – 1 hour',min:0.5,max:1},{label:'1 – 2 hours',min:1,max:2},
+      {label:'2 – 4 hours',min:2,max:4},{label:'4 – 8 hours',min:4,max:8},{label:'8+ hours',min:8,max:Infinity}
+    ];
+    let msg=`Let's look at how trade duration affects your results. This can reveal whether you're exiting too early or holding too long:<br><br>`;
+    let best={label:'',exp:-Infinity};
+    buckets.forEach(b=>{
+      const trades=dur.filter(t=>t.duration>=b.min&&t.duration<b.max);
+      if(trades.length<3)return;
+      const st2=stats(trades);
+      const icon=st2.expectancy>=0?'✅':'❌';
+      msg+=`${icon} <strong>${b.label}:</strong> ${st2.total} trades, ${fmtPct(st2.winRate)} WR, ${fmt$(st2.expectancy)}/trade<br>`;
+      if(st2.expectancy>best.exp){best={label:b.label,exp:st2.expectancy};}
+    });
+    msg+=`<br>Your sweet spot is <strong>${best.label}</strong> trades, averaging ${fmt$(best.exp)} per trade. `+
+      `This suggests you perform best when you give your trades that amount of time to develop. Try to structure your entries and targets to align with this duration window.`;
+    chatAddMsg('bot',msg,[{label:'Patterns Page',action:'go to patterns'}]);
+    return;
+  }
+
+  // Recent trades / last N / this week / this month
+  const recentMatch=q.match(/(?:last|recent)\s*(\d+)?|this\s+(week|month)|today/i);
+  if(recentMatch){
+    let filtered=TRADES;
+    let label='Recent';
+    if(recentMatch[2]==='week'){
+      const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
+      filtered=TRADES.filter(t=>t.entryDate&&t.entryDate>=weekAgo);label='This Week';
+    } else if(recentMatch[2]==='month'){
+      const monthAgo=new Date();monthAgo.setMonth(monthAgo.getMonth()-1);
+      filtered=TRADES.filter(t=>t.entryDate&&t.entryDate>=monthAgo);label='This Month';
+    } else if(q.includes('today')){
+      const today=new Date().toDateString();
+      filtered=TRADES.filter(t=>t.entryDate&&t.entryDate.toDateString()===today);label='Today';
+    } else {
+      const n=parseInt(recentMatch[1])||20;
+      filtered=TRADES.slice(-n);label=`Last ${filtered.length} Trades`;
+    }
+    if(filtered.length===0){chatAddMsg('bot',`No trades found for "${label}". The data might not cover this time period.`);return;}
+    const rs=stats(filtered);
+    const trend=rs.totalPL>=0?`You're on a positive run — keep the discipline up and don't let confidence turn into overconfidence.`:`You've been in a rough patch. That's normal — what matters is how you respond. Review these trades for patterns and avoid revenge trading.`;
+    chatAddMsg('bot',
+      `Here's a snapshot of your <strong>${label.toLowerCase()}</strong>:<br><br>`+
+      `<strong>Trades:</strong> ${rs.total} (${rs.wins}W / ${rs.losses}L)<br>`+
+      `<strong>Win Rate:</strong> <span class="${rs.winRate>=0.5?'':'red'}">${fmtPct(rs.winRate)}</span><br>`+
+      `<strong>Net P/L:</strong> <span class="${rs.totalPL>=0?'':'red'}">${fmt$(rs.totalPL)}</span><br>`+
+      `<strong>Expectancy:</strong> <span class="${rs.expectancy>=0?'':'red'}">${fmt$(rs.expectancy)}</span> per trade<br><br>`+
+      trend,
+      [{label:'Full Stats',action:'stats'},{label:'Trade Log',action:'go to tradelog'}]
+    );return;
+  }
+
+  // Risk / Position sizing
+  if(/risk|position siz|drawdown/.test(q)){
+    const withRisk=TRADES.filter(t=>t.accountRisk);
+    const avgRisk=withRisk.length?withRisk.reduce((s2,t)=>s2+parseFloat(String(t.accountRisk).replace('%',''))/100,0)/withRisk.length:0;
+    const avgPos=TRADES.filter(t=>t.positionSize>0);
+    const avgPosSize=avgPos.length?avgPos.reduce((s2,t)=>s2+t.positionSize,0)/avgPos.length:0;
+    let peak=STARTING_CAPITAL,maxDD=0,bal=STARTING_CAPITAL;
+    TRADES.forEach(t=>{bal+=t.netPL;if(bal>peak)peak=bal;const dd=peak-bal;if(dd>maxDD)maxDD=dd;});
+    const ddPct=((maxDD/peak)*100).toFixed(1);
+    chatAddMsg('bot',
+      `Let's look at your risk management — this is arguably more important than your entries:<br><br>`+
+      `<strong>Avg Account Risk:</strong> <span class="${avgRisk<=0.02?'':'red'}">${(avgRisk*100).toFixed(1)}%</span> per trade<br>`+
+      `<strong>Avg Position Size:</strong> ${fmt$(avgPosSize)}<br>`+
+      `<strong>Max Drawdown:</strong> <span class="red">${fmt$(maxDD)}</span> (${ddPct}% from peak)<br>`+
+      `<strong>Largest Single Loss:</strong> <span class="red">${fmt$(s.maxLoss)}</span><br>`+
+      `<strong>Win/Loss Size Ratio:</strong> ${(s.avgWin/(s.avgLoss||1)).toFixed(2)}x (${fmt$(s.avgWin)} avg win vs ${fmt$(s.avgLoss)} avg loss)<br><br>`+
+      (maxDD>STARTING_CAPITAL*0.15?`Your max drawdown of ${fmt$(maxDD)} is significant — that's ${ddPct}% of your peak equity. Most professionals try to keep this under 10-15%. Consider whether you're sizing too aggressively.`
+        :`Your drawdown is within reasonable bounds. Good risk discipline overall.`),
+      [{label:'Full Stats',action:'stats'},{label:'What Am I Doing Wrong?',action:'weaknesses'}]
+    );return;
+  }
+
+  // Improve / Advice
+  if(/improve|advice|tip|recommend|what should|fix|better|how.*get.*better|help me/.test(q)){
+    let msg=`Here's my honest assessment — these are the highest-impact changes you can make based on your actual data:<br><br>`;
+    const tips=[];
+    let tipNum=1;
+    if(s.avgLoss>s.avgWin){
+      tips.push(`<strong>${tipNum}. Fix your risk-to-reward ratio</strong><br>`+
+        `Right now your average loss (${fmt$(s.avgLoss)}) is larger than your average win (${fmt$(s.avgWin)}). This is the single biggest thing holding you back. `+
+        `For every trade, make sure your take profit is at least 1.5x the distance of your stop loss. Consider trailing your stops on winners instead of taking fixed profits.`);
+      tipNum++;
+    }
+    const byStrat=groupBy(TRADES,t=>t.strategy||'Unknown');
+    const losing=Object.entries(byStrat).map(([n,t])=>({n,...stats(t)})).filter(x=>x.total>=10&&x.expectancy<-2).sort((a,b)=>a.totalPL-b.totalPL);
+    if(losing.length>0){
+      tips.push(`<strong>${tipNum}. Rethink or retire "${losing[0].n}"</strong><br>`+
+        `This strategy has ${losing[0].total} trades with ${fmt$(losing[0].expectancy)} per trade — it's consistently losing. `+
+        `Either add stricter confirmation filters (like waiting for a retest, or requiring volume confirmation), or stop trading it entirely and redirect that capital to your profitable setups.`);
+      tipNum++;
+    }
+    const byDate=groupBy(TRADES,t=>t.entryDate?t.entryDate.toDateString():'?');
+    const heavy=Object.entries(byDate).filter(([,a])=>a.length>=5);
+    if(heavy.length>3){
+      tips.push(`<strong>${tipNum}. Trade less, earn more</strong><br>`+
+        `You had ${heavy.length} days with 5+ trades, and the data shows your performance drops on those days. `+
+        `Set a hard rule: maximum 3-4 trades per day. Before each trade, ask yourself "Is this an A+ setup?" If not, pass.`);
+      tipNum++;
+    }
+    if(s.profitFactor<1){
+      tips.push(`<strong>${tipNum}. Get your profit factor above 1.0</strong><br>`+
+        `Currently at ${s.profitFactor.toFixed(2)}, which means your losses are outweighing your gains in absolute dollar terms. `+
+        `This is usually fixed by a combination of: cutting losers faster (tighter stops), letting winners breathe (wider targets), and being more selective with entries.`);
+      tipNum++;
+    }
+    tips.push(`<strong>${tipNum}. Keep journaling — you're already ahead</strong><br>`+
+      `The fact that you have ${s.total} logged trades puts you ahead of 90% of traders who never review their data. `+
+      `Keep logging your emotional state, your reasons for entering, and review your journal weekly. The patterns in your data will become your biggest edge.`);
+    msg+=tips.join('<br><br>');
+    chatAddMsg('bot',msg,[{label:'What Am I Doing Wrong?',action:'weaknesses'},{label:'Rank My Strategies',action:'best strategy'},{label:'Coach Page',action:'go to coach'}]);
+    return;
+  }
+
+  // Help
+  if(/^help$|^commands$|what can you|what do you|how.*use|menu/.test(q)){
+    chatAddMsg('bot',
+      `I'm here to help you become a better trader by analyzing your actual data. Here's what you can ask me:<br><br>`+
+      `<strong>Performance:</strong> "stats", "how am I doing", "summary"<br>`+
+      `<strong>Weaknesses:</strong> "what am I doing wrong", "weaknesses", "why am I losing"<br>`+
+      `<strong>Strengths:</strong> "what am I good at", "strengths"<br>`+
+      `<strong>Strategies:</strong> "best strategy", "worst strategy", "how is MR Long doing"<br>`+
+      `<strong>Markets:</strong> "best market", "worst market", "how is BTC doing"<br>`+
+      `<strong>Direction:</strong> "long vs short", "longs", "shorts"<br>`+
+      `<strong>Frequency:</strong> "am I overtrading", "trade count"<br>`+
+      `<strong>Emotions:</strong> "emotions", "tilt", "mental state"<br>`+
+      `<strong>Timing:</strong> "duration", "holding time"<br>`+
+      `<strong>Recent:</strong> "last 10 trades", "this week", "this month"<br>`+
+      `<strong>Risk:</strong> "risk", "drawdown", "position sizing"<br>`+
+      `<strong>Coaching:</strong> "how to improve", "advice"<br>`+
+      `<strong>Navigate:</strong> "go to dashboard", "show analysis"<br><br>`+
+      `Or just ask me a question naturally — I'll do my best to understand what you're looking for.`,
+      [{label:'Full Stats',action:'stats'},{label:'What Am I Doing Wrong?',action:'weaknesses'},{label:'How to Improve',action:'improve'}]
+    );return;
+  }
+
+  // Greeting
+  if(/^(hey|hi|hello|yo|sup|what'?s up|gm|good morning|good evening)/i.test(q)){
+    const plWord=s.totalPL>=0?'green':'red';
+    chatAddMsg('bot',
+      `Hey! Good to have you here. You're sitting at <span class="${plWord}">${fmt$(s.totalPL)}</span> across ${s.total} trades with a ${fmtPct(s.winRate)} win rate. What do you want to dig into today?`,
+      [{label:'Full Stats',action:'stats'},{label:'What Am I Doing Wrong?',action:'weaknesses'},{label:'How to Improve',action:'improve'}]
+    );return;
+  }
+
+  // Fallback: try fuzzy match against strategies then markets
+  const allStrats=[...new Set(TRADES.map(t=>t.strategy).filter(Boolean))];
+  const stratFuzzy=allStrats.find(s2=>s2.toLowerCase().includes(q)||q.includes(s2.toLowerCase()));
+  if(stratFuzzy){coachProcess('strategy '+stratFuzzy);return;}
+  const allMarkets=[...new Set(TRADES.map(t=>t.market).filter(Boolean))];
+  const mktFuzzy=allMarkets.find(m2=>m2.toLowerCase()===q||q.includes(m2.toLowerCase()));
+  if(mktFuzzy){coachProcess('market '+mktFuzzy);return;}
+
+  chatAddMsg('bot',
+    `I'm not quite sure what you mean by "<strong>${esc(input)}</strong>". I work best when you ask about specific things like your stats, weaknesses, a particular strategy, or how to improve. Type <strong>help</strong> to see everything I can do.`,
+    [{label:'Help',action:'help'},{label:'Full Stats',action:'stats'},{label:'What Am I Doing Wrong?',action:'weaknesses'}]
+  );
+}
+
+/* ═══════════════════════════════════════════
+   PORTFOLIO
+   ═══════════════════════════════════════════ */
+let PORTFOLIO = [];
+let portfolioTab = 'personal';
+let editingHoldingId = null;
+
+function loadPortfolio() {
+  try { PORTFOLIO = JSON.parse(localStorage.getItem('tj_portfolio')) || []; }
+  catch(e) { PORTFOLIO = []; }
+  if (PORTFOLIO.length === 0) {
+    const today = new Date().toISOString().slice(0, 10);
+    PORTFOLIO = [
+      { id: 1, section: 'personal', participant: '', asset: 'BTC', type: 'crypto', qty: 0.5, avgPrice: 64000, currentPrice: 68000, date: today },
+      { id: 2, section: 'personal', participant: '', asset: 'TSLA', type: 'stock', qty: 10, avgPrice: 180, currentPrice: 195, date: today },
+      { id: 3, section: 'personal', participant: '', asset: 'ZEC', type: 'crypto', qty: 50, avgPrice: 25, currentPrice: 30, date: today }
+    ];
+    savePortfolio();
+  }
+}
+
+function savePortfolio() {
+  localStorage.setItem('tj_portfolio', JSON.stringify(PORTFOLIO));
+}
+
+/* ── Live Crypto Prices (CoinGecko) ── */
+const CRYPTO_ID_MAP = {
+  'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'ZEC': 'zcash',
+  'ADA': 'cardano', 'DOT': 'polkadot', 'DOGE': 'dogecoin', 'XRP': 'ripple',
+  'AVAX': 'avalanche-2', 'MATIC': 'matic-network', 'LINK': 'chainlink',
+  'LTC': 'litecoin', 'UNI': 'uniswap', 'ATOM': 'cosmos', 'NEAR': 'near',
+  'APT': 'aptos', 'SUI': 'sui', 'ARB': 'arbitrum', 'OP': 'optimism',
+  'FIL': 'filecoin', 'AAVE': 'aave', 'MKR': 'maker', 'SNX': 'synthetix-network-token',
+  'SHIB': 'shiba-inu', 'PEPE': 'pepe', 'BNB': 'binancecoin', 'TRX': 'tron',
+  'TON': 'the-open-network', 'XLM': 'stellar', 'ALGO': 'algorand', 'ICP': 'internet-computer',
+  'USDT': 'tether', 'USDC': 'usd-coin', 'DAI': 'dai', 'BUSD': 'binance-usd'
+};
+
+function getCryptoTickers() {
+  const tickers = new Set();
+  PORTFOLIO.forEach(h => {
+    if (h.type === 'crypto' && CRYPTO_ID_MAP[h.asset]) tickers.add(h.asset);
+  });
+  return [...tickers];
+}
+
+function getStockTickers() {
+  const tickers = new Set();
+  PORTFOLIO.forEach(h => { if (h.type === 'stock') tickers.add(h.asset); });
+  return [...tickers];
+}
+
+async function fetchStockPrice(ticker) {
+  const yahooUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + ticker + '?interval=1d&range=1d';
+  const proxies = [
+    url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+  ];
+  for (const makeUrl of proxies) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      const resp = await fetch(makeUrl(yahooUrl), { signal: ctrl.signal });
+      clearTimeout(timer);
+      const data = await resp.json();
+      const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (price && price > 0) return price;
+    } catch(e) { /* try next proxy */ }
+  }
+  return null;
+}
+
+async function refreshCryptoPrices() {
+  const cryptoTickers = getCryptoTickers();
+  const stockTickers = getStockTickers();
+  if (cryptoTickers.length === 0 && stockTickers.length === 0) return;
+
+  const btn = document.getElementById('pfRefreshBtn');
+  btn.textContent = '⏳ Updating...'; btn.disabled = true;
+  let updated = 0;
+
+  // Crypto — CoinGecko
+  if (cryptoTickers.length > 0) {
+    try {
+      const ids = cryptoTickers.map(t => CRYPTO_ID_MAP[t]).join(',');
+      const resp = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+      const data = await resp.json();
+      PORTFOLIO.forEach(h => {
+        if (h.type !== 'crypto') return;
+        const cgId = CRYPTO_ID_MAP[h.asset];
+        if (cgId && data[cgId] && data[cgId].usd) { h.currentPrice = data[cgId].usd; updated++; }
+      });
+    } catch (e) { console.error('Crypto price error:', e); }
+  }
+
+  // Stocks — Yahoo Finance via CORS proxy
+  if (stockTickers.length > 0) {
+    for (const ticker of stockTickers) {
+      try {
+        const price = await fetchStockPrice(ticker);
+        if (price && price > 0) {
+          PORTFOLIO.forEach(h => { if (h.type === 'stock' && h.asset === ticker) { h.currentPrice = price; updated++; } });
+        }
+      } catch (e) { console.warn(`Stock price failed for ${ticker}:`, e.message); }
+    }
+  }
+
+  if (updated > 0) {
+    savePortfolio();
+    localStorage.setItem('tj_prices_updated', Date.now().toString());
+    renderPortfolio();
+  }
+  btn.textContent = '🔄 Refresh Prices';
+  btn.disabled = false;
+  updatePriceTimestamp();
+}
+
+function updatePriceTimestamp() {
+  const el = document.getElementById('pfLastUpdate');
+  if (!el) return;
+  const ts = localStorage.getItem('tj_prices_updated');
+  if (!ts) { el.textContent = ''; return; }
+  const d = new Date(parseInt(ts));
+  const now = new Date();
+  const diffH = Math.floor((now - d) / 3600000);
+  const diffM = Math.floor((now - d) / 60000);
+  let ago;
+  if (diffM < 1) ago = 'just now';
+  else if (diffM < 60) ago = diffM + 'm ago';
+  else if (diffH < 24) ago = diffH + 'h ago';
+  else ago = Math.floor(diffH / 24) + 'd ago';
+  el.textContent = 'Updated: ' + ago;
+  el.style.color = diffH >= 12 ? 'var(--yellow)' : 'var(--tx3)';
+}
+
+function autoRefreshIfStale() {
+  const ts = localStorage.getItem('tj_prices_updated');
+  const staleMs = 12 * 60 * 60 * 1000; // 12 hours
+  if (!ts || (Date.now() - parseInt(ts)) > staleMs) {
+    if (getCryptoTickers().length > 0) refreshCryptoPrices();
+  }
+}
+
+function switchPortfolioTab(tab) {
+  portfolioTab = tab;
+  document.getElementById('tabPersonal').classList.toggle('active', tab === 'personal');
+  document.getElementById('tabFamily').classList.toggle('active', tab === 'family');
+  document.getElementById('pfParticipant').style.display = tab === 'family' ? '' : 'none';
+  renderPortfolio();
+}
+
+function submitHolding() {
+  const asset = document.getElementById('pfAsset').value.trim().toUpperCase();
+  const type = document.getElementById('pfType').value;
+  const qty = parseFloat(document.getElementById('pfQty').value);
+  const avgPrice = parseFloat(document.getElementById('pfBuyPrice').value);
+  const currentPrice = parseFloat(document.getElementById('pfCurPrice').value);
+  const participant = portfolioTab === 'family' ? document.getElementById('pfParticipant').value : '';
+
+  if (!asset) return alert('Enter an asset name');
+  if (isNaN(qty) || qty <= 0) return alert('Enter a valid quantity');
+  if (isNaN(avgPrice) || avgPrice <= 0) return alert('Enter a valid buy price');
+  if (isNaN(currentPrice) || currentPrice <= 0) return alert('Enter a valid current price');
+  if (portfolioTab === 'family' && !participant) return alert('Select a participant');
+
+  if (editingHoldingId) {
+    // Update existing
+    const h = PORTFOLIO.find(x => x.id === editingHoldingId);
+    if (h) {
+      h.asset = asset; h.type = type; h.qty = qty;
+      h.avgPrice = avgPrice; h.currentPrice = currentPrice;
+      h.participant = participant;
+    }
+    editingHoldingId = null;
+  } else {
+    // Add new
+    PORTFOLIO.push({
+      id: Date.now(), section: portfolioTab, participant,
+      asset, type, qty, avgPrice, currentPrice,
+      date: new Date().toISOString().slice(0, 10)
+    });
+  }
+  savePortfolio();
+  clearForm();
+  renderPortfolio();
+}
+
+function editHolding(id) {
+  const h = PORTFOLIO.find(x => x.id === id);
+  if (!h) return;
+  editingHoldingId = id;
+  // Switch to correct tab if needed
+  if (h.section !== portfolioTab) switchPortfolioTab(h.section);
+  // Populate form
+  document.getElementById('pfAsset').value = h.asset;
+  document.getElementById('pfType').value = h.type;
+  document.getElementById('pfQty').value = h.qty;
+  document.getElementById('pfBuyPrice').value = h.avgPrice;
+  document.getElementById('pfCurPrice').value = h.currentPrice;
+  if (portfolioTab === 'family') document.getElementById('pfParticipant').value = h.participant;
+  // Update button states
+  document.getElementById('pfSubmitBtn').textContent = '💾 Save';
+  document.getElementById('pfCancelBtn').style.display = '';
+  document.getElementById('pfAsset').focus();
+  // Scroll form into view
+  document.getElementById('portfolioForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function cancelEdit() {
+  editingHoldingId = null;
+  clearForm();
+}
+
+function clearForm() {
+  document.getElementById('pfAsset').value = '';
+  document.getElementById('pfQty').value = '';
+  document.getElementById('pfBuyPrice').value = '';
+  document.getElementById('pfCurPrice').value = '';
+  document.getElementById('pfType').value = 'crypto';
+  if (portfolioTab === 'family') document.getElementById('pfParticipant').value = '';
+  document.getElementById('pfSubmitBtn').textContent = '+ Add';
+  document.getElementById('pfCancelBtn').style.display = 'none';
+}
+
+function removeHolding(id) {
+  const h = PORTFOLIO.find(x => x.id === id);
+  if (!h || !confirm(`Delete ${h.asset} holding?`)) return;
+  PORTFOLIO = PORTFOLIO.filter(x => x.id !== id);
+  savePortfolio();
+  renderPortfolio();
+}
+
+function renderPortfolio() {
+  const filtered = PORTFOLIO.filter(h => h.section === portfolioTab);
+
+  // Compute totals
+  let totalValue = 0, totalInvested = 0;
+  filtered.forEach(h => {
+    totalValue += h.qty * h.currentPrice;
+    totalInvested += h.qty * h.avgPrice;
+  });
+  const totalPL = totalValue - totalInvested;
+  const totalPLPct = totalInvested > 0 ? totalPL / totalInvested : 0;
+
+  // Metrics
+  document.getElementById('portfolioMetrics').innerHTML =
+    metricCard('Total Value', fmt$(totalValue), '', '') +
+    metricCard('Total Invested', fmt$(totalInvested), '', '') +
+    metricCard('Total P/L', fmt$(totalPL), valClass(totalPL), fmtPct(totalPLPct)) +
+    metricCard('Holdings', filtered.length, '', '');
+
+  // Table
+  const tbl = document.getElementById('portfolioTable');
+
+  if (filtered.length === 0) {
+    tbl.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx2)">
+      <p style="font-size:14px">No holdings yet. Add your first ${portfolioTab === 'family' ? 'family ' : ''}holding above.</p>
+    </div>`;
+    return;
+  }
+
+  const thParticipant = portfolioTab === 'family' ? '<th>Participant</th>' : '';
+
+  if (portfolioTab === 'personal') {
+    let rows = filtered.map(h => {
+      const val = h.qty * h.currentPrice;
+      const inv = h.qty * h.avgPrice;
+      const pl = val - inv;
+      const plPct = inv > 0 ? pl / inv : 0;
+      return `<tr>
+        <td><strong>${h.asset}</strong></td>
+        <td>${h.type}</td>
+        <td>${h.qty}</td>
+        <td>${fmtPrice(h.avgPrice,2)}</td>
+        <td>${fmtPrice(h.currentPrice,2)}</td>
+        <td>${fmt$(val)}</td>
+        <td class="${valClass(pl)}">${fmt$(pl)}</td>
+        <td class="${valClass(pl)}">${fmtPct(plPct)}</td>
+        <td>
+          <button class="btn" onclick="editHolding(${h.id})" style="font-size:11px;padding:3px 8px">✏️</button>
+          <button class="btn btn-danger" onclick="removeHolding(${h.id})" style="font-size:11px;padding:3px 8px">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    tbl.innerHTML = `<table><thead><tr>
+      <th>Asset</th><th>Type</th><th>Qty</th><th>Avg Price</th><th>Current</th><th>Value</th><th>P/L</th><th>P/L%</th><th>Actions</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+  } else {
+    // Family: group by participant
+    const participants = ['Krasi', 'Kalina', 'Damyana', 'Ani'];
+    let html = '';
+
+    participants.forEach(name => {
+      const pHoldings = filtered.filter(h => h.participant === name);
+      if (pHoldings.length === 0) return;
+
+      let pValue = 0, pInvested = 0;
+      pHoldings.forEach(h => { pValue += h.qty * h.currentPrice; pInvested += h.qty * h.avgPrice; });
+      const pPL = pValue - pInvested;
+      const pPLPct = pInvested > 0 ? pPL / pInvested : 0;
+
+      html += `<div class="pf-participant-hdr">${name} — Value: ${fmt$(pValue)} · P/L: <span class="${valClass(pPL)}">${fmt$(pPL)} (${fmtPct(pPLPct)})</span></div>`;
+      html += `<table><thead><tr>
+        <th>Asset</th><th>Type</th><th>Qty</th><th>Avg Price</th><th>Current</th><th>Value</th><th>P/L</th><th>P/L%</th><th>Actions</th>
+      </tr></thead><tbody>`;
+
+      pHoldings.forEach(h => {
+        const val = h.qty * h.currentPrice;
+        const inv = h.qty * h.avgPrice;
+        const pl = val - inv;
+        const plPct = inv > 0 ? pl / inv : 0;
+        html += `<tr>
+          <td><strong>${h.asset}</strong></td>
+          <td>${h.type}</td>
+          <td>${h.qty}</td>
+          <td>${fmtPrice(h.avgPrice,2)}</td>
+          <td>${fmtPrice(h.currentPrice,2)}</td>
+          <td>${fmt$(val)}</td>
+          <td class="${valClass(pl)}">${fmt$(pl)}</td>
+          <td class="${valClass(pl)}">${fmtPct(plPct)}</td>
+          <td>
+            <button class="btn" onclick="editHolding(${h.id})" style="font-size:11px;padding:3px 8px">✏️</button>
+            <button class="btn btn-danger" onclick="removeHolding(${h.id})" style="font-size:11px;padding:3px 8px">✕</button>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+    });
+
+    tbl.innerHTML = html;
+  }
+
+  // ── Charts & Analysis ──
+  const chartsEl = document.getElementById('portfolioCharts');
+  const analysisEl = document.getElementById('portfolioAnalysis');
+
+  if (filtered.length === 0) {
+    chartsEl.style.display = 'none';
+    analysisEl.style.display = 'none';
+    return;
+  }
+
+  chartsEl.style.display = '';
+  analysisEl.style.display = '';
+
+  // Group by asset
+  const byAsset = {};
+  filtered.forEach(h => {
+    if (!byAsset[h.asset]) byAsset[h.asset] = { value: 0, invested: 0, type: h.type };
+    byAsset[h.asset].value += h.qty * h.currentPrice;
+    byAsset[h.asset].invested += h.qty * h.avgPrice;
+  });
+  const assetNames = Object.keys(byAsset).sort((a, b) => byAsset[b].value - byAsset[a].value);
+  const assetValues = assetNames.map(a => byAsset[a].value);
+  const assetPL = assetNames.map(a => byAsset[a].value - byAsset[a].invested);
+  const PIE_COLORS = ['#238636','#1f6feb','#d29922','#bc8cff','#db6d28','#39d353','#da3633','#58a6ff'];
+
+  // Pie chart — allocation
+  drawPieChart('pfAllocChart', assetNames, assetValues, PIE_COLORS);
+
+  // P/L bar chart
+  const plCanvas = document.getElementById('pfPLChart');
+  if (plCanvas) {
+    const plCtx = plCanvas.getContext('2d');
+    const plW = plCanvas.parentElement.clientWidth - 40;
+    plCanvas.width = plW; plCanvas.height = 250;
+    plCtx.clearRect(0, 0, plW, 250);
+    drawPLHBarChart(plCtx, plW, 250, assetNames, assetPL);
+  }
+
+  // Analysis cards
+  let best = { name: '-', pct: -Infinity }, worst = { name: '-', pct: Infinity }, largest = { name: '-', val: 0 };
+  let cryptoVal = 0, stockVal = 0;
+  assetNames.forEach(a => {
+    const d = byAsset[a];
+    const pl = d.value - d.invested;
+    const pct = d.invested > 0 ? pl / d.invested : 0;
+    if (pct > best.pct) best = { name: a, pct };
+    if (pct < worst.pct) worst = { name: a, pct };
+    if (d.value > largest.val) largest = { name: a, val: d.value };
+    if (d.type === 'crypto') cryptoVal += d.value; else stockVal += d.value;
+  });
+  const totalVal = cryptoVal + stockVal;
+  const cryptoPct = totalVal > 0 ? cryptoVal / totalVal : 0;
+  const stockPct = totalVal > 0 ? stockVal / totalVal : 0;
+
+  document.getElementById('pfAnalysisCards').innerHTML =
+    metricCard('Best Performer', best.name, 'val-green', fmtPct(best.pct)) +
+    metricCard('Worst Performer', worst.name, 'val-red', fmtPct(worst.pct)) +
+    metricCard('Crypto Allocation', fmtPct(cryptoPct), 'val-blue', fmt$(cryptoVal)) +
+    metricCard('Stock Allocation', fmtPct(stockPct), 'val-yellow', fmt$(stockVal)) +
+    metricCard('Largest Position', largest.name, '', fmt$(largest.val));
+}
+
+/* ── Auto-load saved data on startup ── */
+window.addEventListener('DOMContentLoaded', () => {
+  initHideToggle();
+  loadPortfolio();
+  const saved = localStorage.getItem('tj_trades');
+  if (saved) {
+    importData(saved);
+  }
+});
+</script>
+</body>
+</html>
