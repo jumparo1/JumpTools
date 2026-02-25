@@ -4,6 +4,45 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trading Journal Analyst</title>
+<!-- Auth Gate -->
+<style id="authCSS">
+html{overflow:hidden}
+#authGate{position:fixed;inset:0;z-index:99999;background:#0d1117;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+#authGate .auth-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px 36px;width:340px;text-align:center}
+#authGate h2{color:#e6edf3;margin-bottom:6px;font-size:1.4rem}
+#authGate .auth-sub{color:#8b949e;font-size:.85rem;margin-bottom:24px}
+#authGate input{width:100%;padding:10px 14px;margin-bottom:12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:.95rem;outline:none}
+#authGate input:focus{border-color:#58a6ff}
+#authGate button{width:100%;padding:10px;background:#238636;border:none;border-radius:8px;color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+#authGate button:hover{background:#2ea043}
+#authGate .auth-err{color:#f85149;font-size:.8rem;margin-top:8px;min-height:18px}
+</style>
+<script>
+(function(){
+  var users=['jumparo'];
+  var storedUser=sessionStorage.getItem('jt_user');
+  if(sessionStorage.getItem('jt_auth')==='ok'&&storedUser&&users.indexOf(storedUser)!==-1)return;
+  var H='e4c4b39a9eba7912b04d982fdd0057906871a4b4395ca564fd4a10a8d79a4f9f';
+  async function sha(s){var b=new TextEncoder().encode(s);var h=await crypto.subtle.digest('SHA-256',b);return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('')}
+  document.addEventListener('DOMContentLoaded',function(){
+    var su=sessionStorage.getItem('jt_user');
+    if(sessionStorage.getItem('jt_auth')==='ok'&&su&&users.indexOf(su)!==-1){var g=document.getElementById('authGate');if(g)g.remove();return;}
+    var d=document.createElement('div');d.id='authGate';
+    d.innerHTML='<div class="auth-box"><h2>🔐 JumpTrading</h2><p class="auth-sub">Enter your credentials to continue</p><input id="authUser" placeholder="Username" autocomplete="username"><input id="authPass" type="password" placeholder="Password" autocomplete="current-password"><button id="authBtn">Sign In</button><div class="auth-err" id="authErr"></div></div>';
+    document.body.prepend(d);
+    async function tryLogin(){
+      var u=document.getElementById('authUser').value.trim().toLowerCase();
+      var p=document.getElementById('authPass').value;
+      var ph=await sha(p);
+      if(users.indexOf(u)!==-1&&ph===H){sessionStorage.setItem('jt_auth','ok');sessionStorage.setItem('jt_user',u);d.remove();document.getElementById('authCSS').remove();}
+      else{document.getElementById('authErr').textContent='Invalid username or password';}
+    }
+    document.getElementById('authBtn').addEventListener('click',tryLogin);
+    document.getElementById('authPass').addEventListener('keydown',function(e){if(e.key==='Enter')tryLogin();});
+    document.getElementById('authUser').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('authPass').focus();});
+  });
+})();
+</script>
 <style>
 /* ── Reset & Base ── */
 *{margin:0;padding:0;box-sizing:border-box}
@@ -192,12 +231,16 @@ tr:hover td{background:var(--bg2)}
   cursor:pointer;font-size:14px;transition:background .15s}
 .chat-send:hover{background:var(--green)}
 </style>
+<!-- Firebase SDK (compat mode — no build tools needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
 
 <!-- Sidebar -->
 <div class="sidebar">
   <div class="logo">Trading Journal<span>Analyst</span></div>
+  <span id="tj-conn" title="Firebase: Connecting..." style="font-size:10px;color:var(--tx3);margin:-12px 0 8px 16px;display:block;cursor:default">●</span>
   <div class="nav-item active" onclick="showPage('import')" data-page="import">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Import Data
@@ -446,6 +489,126 @@ let TRADES = [];
 let STARTING_CAPITAL = 30000;
 let HIDE_AMOUNTS = localStorage.getItem('tj_hide_amounts') === 'true';
 
+/* ── Firebase Setup ── */
+const firebaseConfig = {
+  apiKey: "AIzaSyAyK2aZBu29kX-7rHzZIs308MsekpgNvEo",
+  authDomain: "fundhq-8feae.firebaseapp.com",
+  databaseURL: "https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "fundhq-8feae",
+  storageBucket: "fundhq-8feae.firebasestorage.app",
+  messagingSenderId: "305591584755",
+  appId: "1:305591584755:web:ccbe80fbdac2282b743486"
+};
+let tjDbRef = null;
+let tjConnected = false;
+let tjFirebaseLoading = true; // true until first Firebase data arrives
+try {
+  if (typeof firebase !== 'undefined') {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    tjDbRef = firebase.database().ref('tradingJournal');
+  }
+} catch(e) { console.warn('Firebase init failed:', e); }
+
+function updateConnDot() {
+  const dot = document.getElementById('tj-conn');
+  if (!dot) return;
+  dot.style.color = tjConnected ? 'var(--green)' : 'var(--red)';
+  dot.title = tjConnected ? 'Firebase: Connected' : 'Firebase: Offline';
+}
+
+/* ── Firebase Real-time Listeners ── */
+let fbTradesLoaded = false, fbPortfolioLoaded = false;
+
+function initFirebaseListeners() {
+  if (!tjDbRef) { tjFirebaseLoading = false; return; }
+
+  // Connection status
+  firebase.database().ref('.info/connected').on('value', snap => {
+    tjConnected = snap.val() === true;
+    updateConnDot();
+  });
+
+  // Trades (raw CSV text)
+  tjDbRef.child('trades').on('value', snap => {
+    const csv = snap.val();
+    fbTradesLoaded = true;
+    if (csv && typeof csv === 'string') {
+      localStorage.setItem('tj_trades', csv);
+      importData(csv);
+    }
+    checkFirebaseReady();
+  });
+
+  // Portfolio (keyed object → array)
+  tjDbRef.child('portfolio').on('value', snap => {
+    const data = snap.val();
+    fbPortfolioLoaded = true;
+    if (data) {
+      PORTFOLIO = Object.values(data);
+      localStorage.setItem('tj_portfolio', JSON.stringify(PORTFOLIO));
+      renderPortfolio();
+    }
+    checkFirebaseReady();
+  });
+
+  // Settings
+  tjDbRef.child('settings/hide_amounts').on('value', snap => {
+    const val = snap.val();
+    if (val !== null) {
+      HIDE_AMOUNTS = val === true || val === 'true';
+      localStorage.setItem('tj_hide_amounts', HIDE_AMOUNTS);
+      const btn = document.getElementById('hideAmountsBtn');
+      if (btn) {
+        btn.classList.toggle('active', HIDE_AMOUNTS);
+        document.getElementById('hideAmountsLabel').textContent = HIDE_AMOUNTS ? 'Show Amounts' : 'Hide Amounts';
+      }
+    }
+  });
+
+  tjDbRef.child('settings/prices_updated').on('value', snap => {
+    const val = snap.val();
+    if (val) {
+      localStorage.setItem('tj_prices_updated', val.toString());
+      updatePriceTimestamp();
+    }
+  });
+}
+
+function checkFirebaseReady() {
+  if (fbTradesLoaded && fbPortfolioLoaded) {
+    tjFirebaseLoading = false;
+    // One-time migration: if Firebase has no data but localStorage does, push up
+    migrateToFirebase();
+  }
+}
+
+function migrateToFirebase() {
+  if (!tjDbRef) return;
+  // Migrate trades if Firebase empty but localStorage has data
+  tjDbRef.child('trades').once('value', snap => {
+    if (!snap.val()) {
+      const localTrades = localStorage.getItem('tj_trades');
+      if (localTrades) tjDbRef.child('trades').set(localTrades);
+    }
+  });
+  // Migrate portfolio if Firebase empty but localStorage has data
+  tjDbRef.child('portfolio').once('value', snap => {
+    if (!snap.val()) {
+      const localPortfolio = localStorage.getItem('tj_portfolio');
+      if (localPortfolio) {
+        try {
+          const arr = JSON.parse(localPortfolio);
+          if (arr.length > 0) {
+            const batch = {};
+            arr.forEach(h => { batch[h.id] = h; });
+            tjDbRef.child('portfolio').set(batch);
+          }
+        } catch(e) {}
+      }
+    }
+  });
+}
+
 /* ── Navigation ── */
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -462,6 +625,7 @@ function showPage(id) {
 function toggleHideAmounts() {
   HIDE_AMOUNTS = !HIDE_AMOUNTS;
   localStorage.setItem('tj_hide_amounts', HIDE_AMOUNTS);
+  if (tjDbRef) tjDbRef.child('settings/hide_amounts').set(HIDE_AMOUNTS);
   const btn = document.getElementById('hideAmountsBtn');
   btn.classList.toggle('active', HIDE_AMOUNTS);
   document.getElementById('hideAmountsLabel').textContent = HIDE_AMOUNTS ? 'Show Amounts' : 'Hide Amounts';
@@ -598,6 +762,7 @@ function importData(csvText) {
     STARTING_CAPITAL = TRADES[0].balance - TRADES[0].netPL;
   }
   localStorage.setItem('tj_trades', csvText);
+  if (tjDbRef) tjDbRef.child('trades').set(csvText);
   updateSidebarCount();
   showImportStatus(`Successfully imported ${TRADES.length} trades!`, 'success');
   showPage('dashboard');
@@ -618,6 +783,7 @@ function loadFromStorage() {
 function clearData() {
   TRADES = [];
   localStorage.removeItem('tj_trades');
+  if (tjDbRef) tjDbRef.child('trades').remove();
   updateSidebarCount();
   showImportStatus('Data cleared.', 'error');
 }
@@ -2135,6 +2301,11 @@ function loadPortfolio() {
 
 function savePortfolio() {
   localStorage.setItem('tj_portfolio', JSON.stringify(PORTFOLIO));
+  if (tjDbRef) {
+    const batch = {};
+    PORTFOLIO.forEach(h => { batch[h.id] = h; });
+    tjDbRef.child('portfolio').set(batch);
+  }
 }
 
 /* ── Live Crypto Prices (CoinGecko) ── */
@@ -2221,7 +2392,9 @@ async function refreshCryptoPrices() {
 
   if (updated > 0) {
     savePortfolio();
-    localStorage.setItem('tj_prices_updated', Date.now().toString());
+    const priceTs = Date.now().toString();
+    localStorage.setItem('tj_prices_updated', priceTs);
+    if (tjDbRef) tjDbRef.child('settings/prices_updated').set(priceTs);
     renderPortfolio();
   }
   btn.textContent = '🔄 Refresh Prices';
@@ -2510,6 +2683,8 @@ function renderPortfolio() {
 /* ── Auto-load saved data on startup ── */
 window.addEventListener('DOMContentLoaded', () => {
   initHideToggle();
+  initFirebaseListeners();
+  // Load from localStorage immediately (Firebase will override when data arrives)
   loadPortfolio();
   const saved = localStorage.getItem('tj_trades');
   if (saved) {

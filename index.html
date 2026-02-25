@@ -4,6 +4,43 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JumpTrading Tools</title>
+<!-- Auth Gate -->
+<style id="authCSS">
+html{overflow:hidden}
+#authGate{position:fixed;inset:0;z-index:99999;background:#0d1117;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+#authGate .auth-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px 36px;width:340px;text-align:center}
+#authGate h2{color:#e6edf3;margin-bottom:6px;font-size:1.4rem}
+#authGate .auth-sub{color:#8b949e;font-size:.85rem;margin-bottom:24px}
+#authGate input{width:100%;padding:10px 14px;margin-bottom:12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:.95rem;outline:none}
+#authGate input:focus{border-color:#58a6ff}
+#authGate button{width:100%;padding:10px;background:#238636;border:none;border-radius:8px;color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
+#authGate button:hover{background:#2ea043}
+#authGate .auth-err{color:#f85149;font-size:.8rem;margin-top:8px;min-height:18px}
+</style>
+<script>
+(function(){
+  if(sessionStorage.getItem('jt_auth')==='ok')return;
+  var H='e4c4b39a9eba7912b04d982fdd0057906871a4b4395ca564fd4a10a8d79a4f9f';
+  async function sha(s){var b=new TextEncoder().encode(s);var h=await crypto.subtle.digest('SHA-256',b);return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('')}
+  document.addEventListener('DOMContentLoaded',function(){
+    if(sessionStorage.getItem('jt_auth')==='ok'){var g=document.getElementById('authGate');if(g)g.remove();return;}
+    var d=document.createElement('div');d.id='authGate';
+    d.innerHTML='<div class="auth-box"><h2>🔐 JumpTrading</h2><p class="auth-sub">Enter your credentials to continue</p><input id="authUser" placeholder="Username" autocomplete="username"><input id="authPass" type="password" placeholder="Password" autocomplete="current-password"><button id="authBtn">Sign In</button><div class="auth-err" id="authErr"></div></div>';
+    document.body.prepend(d);
+    var users=['jumparo','tihomir'];
+    async function tryLogin(){
+      var u=document.getElementById('authUser').value.trim().toLowerCase();
+      var p=document.getElementById('authPass').value;
+      var ph=await sha(p);
+      if(users.indexOf(u)!==-1&&ph===H){sessionStorage.setItem('jt_auth','ok');sessionStorage.setItem('jt_user',u);d.remove();document.getElementById('authCSS').remove();}
+      else{document.getElementById('authErr').textContent='Invalid username or password';}
+    }
+    document.getElementById('authBtn').addEventListener('click',tryLogin);
+    document.getElementById('authPass').addEventListener('keydown',function(e){if(e.key==='Enter')tryLogin();});
+    document.getElementById('authUser').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('authPass').focus();});
+  });
+})();
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
@@ -31,21 +68,21 @@ footer{margin-top:64px;color:#484f58;font-size:0.8rem;letter-spacing:0.3px}
 <p class="subtitle">Trading analytics & portfolio management suite</p>
 
 <div class="cards">
-  <a class="card" href="fund-hq.html">
+  <a class="card" href="fund-hq.html" data-access="all">
     <span class="card-icon">🏦</span>
     <span class="card-arrow">&#8594;</span>
     <div class="card-title">Fund HQ</div>
     <div class="card-desc">Central dashboard for fund management, tracking, and operations overview.</div>
   </a>
 
-  <a class="card" href="trading-journal.html">
+  <a class="card" href="trading-journal.html" data-access="jumparo">
     <span class="card-icon">📊</span>
     <span class="card-arrow">&#8594;</span>
     <div class="card-title">Trading Journal Analyst</div>
     <div class="card-desc">Full trade journal with analytics, portfolio tracking, equity curves, and AI coaching.</div>
   </a>
 
-  <a class="card" href="backtesting.html">
+  <a class="card" href="backtesting.html" data-access="jumparo">
     <span class="card-icon">🧪</span>
     <span class="card-arrow">&#8594;</span>
     <div class="card-title">Backtesting Tool</div>
@@ -54,5 +91,21 @@ footer{margin-top:64px;color:#484f58;font-size:0.8rem;letter-spacing:0.3px}
 </div>
 
 <footer>JumpTrading &middot; Built for speed</footer>
+<script>
+(function(){
+  function filterCards(){
+    var user=sessionStorage.getItem('jt_user');
+    if(!user)return;
+    document.querySelectorAll('.card[data-access]').forEach(function(c){
+      var access=c.getAttribute('data-access');
+      if(access!=='all'&&access!==user) c.style.display='none';
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',filterCards);
+  else filterCards();
+  var obs=new MutationObserver(function(m){m.forEach(function(r){r.removedNodes.forEach(function(n){if(n.id==='authGate')filterCards();});});});
+  obs.observe(document.body,{childList:true});
+})();
+</script>
 </body>
 </html>
