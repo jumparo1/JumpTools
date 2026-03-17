@@ -724,34 +724,25 @@ tbody tr:hover { background: var(--bg3); }
     <div class="logo" onclick="showPage('dashboard')" style="cursor:pointer;" title="Go to Dashboard"><div class="logo-icon">F</div> Fund HQ</div>
     <div class="logo-sub">Private Investment Fund</div>
 
-    <div class="nav-section">Overview</div>
+    <div class="nav-section">Command Center</div>
     <div class="nav-item active" data-page="dashboard"><span class="icon">&#9632;</span> Dashboard</div>
-    <div class="nav-item" data-page="about"><span class="icon">&#127919;</span> About</div>
 
-    <div class="nav-section">Pipeline</div>
-    <div class="nav-item" data-page="projects"><span class="icon">&#9733;</span> Project Dump <span class="badge" id="badge-projects">0</span></div>
-    <div class="nav-item" data-page="watchlist"><span class="icon">&#128065;</span> Watchlist <span class="badge" id="badge-watchlist">0</span></div>
-    <div class="nav-item" data-page="alerts"><span class="icon">&#128276;</span> Alerts <span class="badge" id="badge-alerts">0</span></div>
-    <div class="nav-item" data-page="portfolio"><span class="icon">&#128176;</span> Portfolio <span class="badge" id="badge-portfolio">0</span></div>
-
-    <div class="nav-section">On-Chain Intel</div>
-    <div class="nav-item" data-page="onchain"><span class="icon">&#128279;</span> On-Chain <span class="badge" id="badge-hl-wallets">0</span></div>
+    <div class="nav-section">Discover</div>
+    <div class="nav-item" data-page="onchain"><span class="icon">&#128279;</span> Intelligence <span class="badge" id="badge-hl-wallets">0</span></div>
+    <div class="nav-item" data-page="marketdata"><span class="icon">&#128200;</span> Market Data</div>
 
     <div class="nav-section">Research</div>
-    <div class="nav-item" data-page="marketdata"><span class="icon">&#128200;</span> Market Data</div>
-    <div class="nav-item" data-page="templates"><span class="icon">&#128196;</span> Templates</div>
+    <div class="nav-item" data-page="watchlist"><span class="icon">&#128065;</span> Watchlist <span class="badge" id="badge-watchlist">0</span></div>
     <div class="nav-item" data-page="reports"><span class="icon">&#128203;</span> Reports <span class="badge" id="badge-reports">0</span></div>
     <div class="nav-item" data-page="catalysts"><span class="icon">&#128197;</span> Catalysts <span class="badge" id="badge-catalysts">0</span></div>
 
-    <div class="nav-section">Technical</div>
-    <div class="nav-item" data-page="technical"><span class="icon">&#128202;</span> Technical</div>
+    <div class="nav-section">Execute</div>
+    <div class="nav-item" data-page="technical"><span class="icon">&#128202;</span> Trading</div>
+    <div class="nav-item" data-page="portfolio"><span class="icon">&#128176;</span> Portfolio <span class="badge" id="badge-portfolio">0</span></div>
 
-    <div class="nav-section">Operations</div>
-    <div class="nav-item" data-page="tasks"><span class="icon">&#9745;</span> Tasks <span class="badge" id="badge-tasks">0</span></div>
-    <div class="nav-item" data-page="roadmap"><span class="icon">&#128506;</span> Roadmap</div>
-    <div class="nav-item" data-page="progress"><span class="icon">&#128197;</span> Progress</div>
+    <div class="nav-section">Alerts</div>
+    <div class="nav-item" data-page="alerts"><span class="icon">&#128276;</span> Signals & Alerts <span class="badge" id="badge-alerts">0</span></div>
 
-    <div class="nav-section">Tools</div>
     <div class="nav-item" data-page="help"><span class="icon">&#128218;</span> Docs</div>
     <div class="nav-item" data-page="settings"><span class="icon">&#9881;</span> Settings</div>
 
@@ -782,12 +773,10 @@ tbody tr:hover { background: var(--bg3); }
       <div class="card" style="margin-bottom:20px;padding:16px 20px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <span style="font-size:13px;color:var(--text3);font-weight:600;margin-right:6px;">Quick Actions</span>
-          <button class="btn btn-sm btn-ghost" onclick="document.querySelector('[data-page=onchain]').click()">&#128279; On-Chain Intel</button>
-          <button class="btn btn-sm btn-ghost" onclick="document.querySelector('[data-page=marketdata]').click()">&#128270; Search Market</button>
-          <button class="btn btn-sm btn-ghost" onclick="document.querySelector('[data-page=templates]').click()">&#128218; Research Templates</button>
+          <button class="btn btn-sm btn-ghost" onclick="showPage('onchain')">&#128279; Intelligence</button>
+          <button class="btn btn-sm btn-ghost" onclick="showPage('marketdata')">&#128270; Search Market</button>
+          <button class="btn btn-sm btn-ghost" onclick="showPage('reports'); setTimeout(function(){ switchReportTab('templates'); },100);">&#128218; Templates</button>
           <button class="btn btn-sm btn-ghost admin-only" onclick="openModal('report')">&#128196; New Report</button>
-          <button class="btn btn-sm btn-ghost admin-only" onclick="openModal('task')">&#10004; New Task</button>
-          <button class="btn btn-sm btn-ghost admin-only" onclick="openModal('project')">&#9889; Quick Dump</button>
         </div>
       </div>
 
@@ -815,7 +804,7 @@ tbody tr:hover { background: var(--bg3); }
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <h3 style="font-size:14px;color:var(--text2);margin:0;">&#9745; Open Tasks</h3>
-            <span class="btn btn-sm btn-ghost" onclick="document.querySelector('[data-page=tasks]').click()" style="font-size:11px;padding:3px 8px;">View All →</span>
+            <span class="btn btn-sm btn-ghost" onclick="showPage('tasks')" style="font-size:11px;padding:3px 8px;">View All →</span>
           </div>
           <div id="dash-tasks"></div>
         </div>
@@ -823,7 +812,7 @@ tbody tr:hover { background: var(--bg3); }
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <h3 style="font-size:14px;color:var(--text2);margin:0;">&#9889; Recent Projects</h3>
-            <span class="btn btn-sm btn-ghost" onclick="document.querySelector('[data-page=projects]').click()" style="font-size:11px;padding:3px 8px;">View All →</span>
+            <span class="btn btn-sm btn-ghost" onclick="showPage('watchlist')" style="font-size:11px;padding:3px 8px;">View All →</span>
           </div>
           <div id="dash-projects"></div>
         </div>
@@ -959,19 +948,28 @@ tbody tr:hover { background: var(--bg3); }
     <!-- ===== ALERTS ===== -->
     <div id="page-alerts" class="page hidden">
       <div class="page-header">
-        <h1>Alerts</h1>
-        <p>Signals from market scans, watchlist checks, and deep dives</p>
+        <h1>Signals & Alerts</h1>
+        <p>On-chain signals, market scans, watchlist alerts &amp; agent intelligence</p>
         <div class="header-actions">
           <button class="btn btn-ghost btn-sm" onclick="requestAlertPermission()" id="btn-notify" style="font-size:11px;">Enable Notifications</button>
           <button class="btn btn-ghost btn-sm" onclick="clearDismissedAlerts()">Clear Read</button>
         </div>
       </div>
-      <div class="alert-filters" id="alert-filters">
-        <button class="task-filter active" data-filter="all" onclick="setAlertFilter('all')">All</button>
-        <button class="task-filter" data-filter="unread" onclick="setAlertFilter('unread')">Unread</button>
-        <button class="task-filter" data-filter="opportunity" onclick="setAlertFilter('opportunity')">Opportunities</button>
+      <div class="tabs" style="margin-bottom:16px;">
+        <button class="tab active" onclick="alertsShowTab('alerts')" id="alerts-tab-alerts">Alerts</button>
+        <button class="tab" onclick="alertsShowTab('signals')" id="alerts-tab-signals">Signals</button>
+        <button class="tab" onclick="alertsShowTab('flows')" id="alerts-tab-flows">Flow Monitor</button>
       </div>
-      <div id="alerts-list"></div>
+      <div id="alerts-panel-alerts">
+        <div class="alert-filters" id="alert-filters">
+          <button class="task-filter active" data-filter="all" onclick="setAlertFilter('all')">All</button>
+          <button class="task-filter" data-filter="unread" onclick="setAlertFilter('unread')">Unread</button>
+          <button class="task-filter" data-filter="opportunity" onclick="setAlertFilter('opportunity')">Opportunities</button>
+        </div>
+        <div id="alerts-list"></div>
+      </div>
+      <div id="alerts-panel-signals" style="display:none;"></div>
+      <div id="alerts-panel-flows" style="display:none;"></div>
     </div>
 
     <!-- ===== RESEARCH ===== -->
@@ -1009,13 +1007,19 @@ tbody tr:hover { background: var(--bg3); }
       <div class="tabs" id="reports-tabs">
         <button class="tab active" onclick="switchReportTab('research')">Research</button>
         <button class="tab" onclick="switchReportTab('substack')">Substack</button>
+        <button class="tab" onclick="switchReportTab('templates')">&#128196; Templates</button>
         <button class="tab" onclick="switchReportTab('trash')">&#128465; Trash <span id="trash-count" style="font-size:11px;color:var(--text3);"></span></button>
       </div>
-      <div class="search-bar">
+      <div id="reports-search-bar" class="search-bar">
         <span class="search-icon">&#128269;</span>
         <input type="text" placeholder="Search reports..." oninput="renderReports(this.value)">
       </div>
       <div id="reports-list"></div>
+      <div id="reports-templates-panel" style="display:none;">
+        <div style="margin-bottom:16px;color:var(--text2);font-size:14px;">Click a template to open the research workspace. Customize sections, run AI analysis, or fill manually.</div>
+        <div class="template-grid" id="templates-list-embedded"></div>
+        <div id="tpl-workspace-embedded" style="display:none;"></div>
+      </div>
     </div>
 
     <!-- ===== CATALYSTS ===== -->
@@ -1182,8 +1186,8 @@ tbody tr:hover { background: var(--bg3); }
     <!-- ===== ON-CHAIN INTEL ===== -->
     <div id="page-onchain" class="page hidden">
       <div class="page-header">
-        <h1>&#128279; On-Chain Intel</h1>
-        <p>Smart money tracking, flow analysis &amp; venue intelligence</p>
+        <h1>&#128279; Intelligence</h1>
+        <p>On-chain alpha, smart money tracking &amp; venue intelligence</p>
       </div>
 
       <!-- Division Tabs -->
@@ -1193,8 +1197,6 @@ tbody tr:hover { background: var(--bg3); }
         <button class="market-tab" onclick="ocShowDivision('hyperliquid')" id="oc-div-hyperliquid">Hyperliquid</button>
         <button class="market-tab" onclick="ocShowDivision('entities')" id="oc-div-entities">Entity Tracker</button>
         <button class="market-tab" onclick="ocShowDivision('dexscreener')" id="oc-div-dexscreener">Dexscreener</button>
-        <button class="market-tab" onclick="ocShowDivision('flows')" id="oc-div-flows">Flow Monitor</button>
-        <button class="market-tab" onclick="ocShowDivision('signals')" id="oc-div-signals">Signal Feed</button>
       </div>
 
       <!-- ON-CHAIN OVERVIEW -->
@@ -1226,11 +1228,10 @@ tbody tr:hover { background: var(--bg3); }
           <div class="card" style="padding:18px 22px;">
             <h3 style="font-size:14px;color:var(--text2);margin:0 0 14px 0;">Quick Access</h3>
             <div style="display:flex;flex-direction:column;gap:8px;">
+              <button class="btn btn-sm btn-ghost" onclick="ocShowDivision('tokenintel')" style="justify-content:flex-start;text-align:left;">&#128270; Token Intel — Multi-source alpha scanner</button>
               <button class="btn btn-sm btn-ghost" onclick="ocShowDivision('hyperliquid')" style="justify-content:flex-start;text-align:left;">&#128011; Hyperliquid — Wallet Scanner, Whales, Perps</button>
               <button class="btn btn-sm btn-ghost" onclick="ocShowDivision('entities')" style="justify-content:flex-start;text-align:left;">&#128373; Entity Tracker — Cross-venue wallet intelligence</button>
               <button class="btn btn-sm btn-ghost" onclick="ocShowDivision('dexscreener')" style="justify-content:flex-start;text-align:left;">&#128142; Dexscreener — DEX token discovery &amp; trending</button>
-              <button class="btn btn-sm btn-ghost" onclick="ocShowDivision('flows')" style="justify-content:flex-start;text-align:left;">&#128200; Flow Monitor — Smart money flow detection</button>
-              <button class="btn btn-sm btn-ghost" onclick="ocShowDivision('signals')" style="justify-content:flex-start;text-align:left;">&#128276; Signal Feed — High-conviction on-chain signals</button>
             </div>
           </div>
           <div class="card" style="padding:18px 22px;">
@@ -1604,8 +1605,8 @@ tbody tr:hover { background: var(--bg3); }
     <!-- ===== TECHNICAL ANALYSIS ===== -->
     <div id="page-technical" class="page hidden">
       <div class="page-header">
-        <h1>&#128202; Technical Analysis</h1>
-        <p>Market structure, trade setups, playbooks &amp; confluence scoring</p>
+        <h1>&#128202; Trading</h1>
+        <p>Setups, playbooks, confluence scoring &amp; trade log</p>
       </div>
 
       <!-- Division Tabs -->
@@ -1898,6 +1899,22 @@ tbody tr:hover { background: var(--bg3); }
             <div class="docs-nav-label">Updates</div>
             <div class="docs-nav-item" onclick="docsNav('changelog')">
               <span class="docs-nav-icon">&#128220;</span> Changelog
+            </div>
+          </div>
+
+          <div class="docs-nav-group">
+            <div class="docs-nav-label">Operations</div>
+            <div class="docs-nav-item" onclick="docsNav('about')">
+              <span class="docs-nav-icon">&#127919;</span> About
+            </div>
+            <div class="docs-nav-item" onclick="docsNav('tasks')">
+              <span class="docs-nav-icon">&#9745;</span> Tasks
+            </div>
+            <div class="docs-nav-item" onclick="docsNav('roadmap')">
+              <span class="docs-nav-icon">&#128506;</span> Roadmap
+            </div>
+            <div class="docs-nav-item" onclick="docsNav('progress')">
+              <span class="docs-nav-icon">&#128197;</span> Progress
             </div>
           </div>
         </nav>
@@ -2455,6 +2472,18 @@ cd ~/deploy && git add . && git commit && git push
             </div>
           </section>
 
+          <!-- ABOUT (embedded from Operations) -->
+          <section class="docs-section" id="docs-s-about" style="display:none;"></section>
+
+          <!-- TASKS (embedded from Operations) -->
+          <section class="docs-section" id="docs-s-tasks" style="display:none;"></section>
+
+          <!-- ROADMAP (embedded from Operations) -->
+          <section class="docs-section" id="docs-s-roadmap" style="display:none;"></section>
+
+          <!-- PROGRESS (embedded from Operations) -->
+          <section class="docs-section" id="docs-s-progress" style="display:none;"></section>
+
         </div><!-- /docs-content -->
       </div><!-- /docs-layout -->
     </div>
@@ -2723,7 +2752,8 @@ const STAGE_COLORS = { 'Sourcing': '#3b82f6', 'Due Diligence': '#f59e0b', 'Term 
 const SECTORS = ['Stocks', 'Crypto', 'AI', 'DeFi', 'AI Crypto', 'Privacy', 'Other'];
 const SECTOR_TAG = { 'Stocks': 'stocks', 'AI': 'ai', 'DeFi': 'defi', 'AI Crypto': 'aicrypto', 'Privacy': 'privacy', 'Other': 'other' };
 
-let DB = { deals: [], projects: [], research: [], reports: [], tasks: [], watchlist: [], progress: [], alerts: [] };
+var DB = { deals: [], projects: [], research: [], reports: [], tasks: [], watchlist: [], progress: [], alerts: [] };
+window.DB = DB;
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function fmtDate(d) { if (!d) return ''; return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
@@ -2749,6 +2779,285 @@ function fmtPct(n) {
   return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
 }
 function pctClass(n) { return n >= 0 ? 'up' : 'down'; }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ═══ CRUD HELPERS — Standardized data access for all collections ═══════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Generic CRUD for DB collections (deals, projects, research, reports, tasks, watchlist, progress, alerts)
+function dbGet(collection, id) {
+  return DB[collection] ? DB[collection].find(function(item) { return item.id === id; }) : null;
+}
+function dbFind(collection, filterFn) {
+  return DB[collection] ? DB[collection].filter(filterFn) : [];
+}
+function dbAdd(collection, item) {
+  if (!item.id) item.id = genId();
+  if (!item.created) item.created = new Date().toISOString();
+  DB[collection].push(item);
+  dbSync(collection, item.id, item);
+  return item;
+}
+function dbUpdate(collection, id, updates) {
+  var item = dbGet(collection, id);
+  if (!item) return null;
+  Object.assign(item, updates);
+  dbSync(collection, id, item);
+  return item;
+}
+function dbRemove(collection, id) {
+  var idx = DB[collection].findIndex(function(item) { return item.id === id; });
+  if (idx < 0) return false;
+  DB[collection].splice(idx, 1);
+  if (typeof dbRef !== 'undefined' && dbRef) {
+    try { dbRef.child(collection).child(id).remove(); } catch(e) {}
+  }
+  return true;
+}
+function dbSync(collection, id, data) {
+  try {
+    if (typeof dbRef !== 'undefined' && dbRef && typeof firebaseReady !== 'undefined' && firebaseReady) {
+      dbRef.child(collection).child(id).set(data);
+    }
+  } catch(e) { /* Firebase not ready */ }
+}
+
+// Entity CRUD (wraps etEntities array with Firebase sync)
+function getEntities(filterFn) {
+  if (typeof etEntities === 'undefined') return [];
+  return filterFn ? etEntities.filter(filterFn) : etEntities.slice();
+}
+function getEntity(id) {
+  if (typeof etEntities === 'undefined') return null;
+  return etEntities.find(function(e) { return e.id === id; });
+}
+function getEntityByAddress(addr) {
+  if (typeof etEntities === 'undefined' || !addr) return null;
+  var lower = addr.toLowerCase();
+  return etEntities.find(function(e) { return (e.address || '').toLowerCase() === lower; });
+}
+function addEntity(data) {
+  if (!data.id) data.id = 'et_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  if (!data.addedAt) data.addedAt = new Date().toISOString();
+  if (!data.venues) data.venues = [];
+  if (!data.type) data.type = 'whale';
+  if (!data.grade) data.grade = 'B';
+  etEntities.push(data);
+  if (typeof etSave === 'function') etSave();
+  return data;
+}
+function updateEntity(id, updates) {
+  var entity = getEntity(id);
+  if (!entity) return null;
+  Object.assign(entity, updates);
+  if (typeof etSave === 'function') etSave();
+  return entity;
+}
+
+// Signal CRUD (wraps ocSignals array)
+function getSignals(filterFn) {
+  if (typeof ocSignals === 'undefined') return [];
+  return filterFn ? ocSignals.filter(filterFn) : ocSignals.slice();
+}
+function addSignal(data) {
+  if (!data.id) data.id = 'sig_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  if (!data.created) data.created = new Date().toISOString();
+  if (!data.status) data.status = 'new';
+  if (typeof ocSignals !== 'undefined') ocSignals.push(data);
+  if (typeof sigSave === 'function') sigSave();
+  return data;
+}
+
+// Watchlist helpers
+function getWatchlist() { return DB.watchlist || []; }
+function getWatchlistItem(symbol) {
+  return DB.watchlist.find(function(w) { return w.symbol === symbol; });
+}
+
+// Report helpers
+function getReports(filterFn) {
+  var reports = DB.reports.filter(function(r) { return !r.deletedAt; });
+  return filterFn ? reports.filter(filterFn) : reports;
+}
+
+// Trade log helpers
+function getTradeLog() {
+  if (typeof tradeLog === 'undefined') return [];
+  return tradeLog.slice();
+}
+function getTradeStats() {
+  var trades = getTradeLog();
+  if (!trades.length) return { total: 0, wins: 0, losses: 0, winRate: 0, totalPnl: 0, avgRR: 0, bestPlaybook: null };
+  var wins = trades.filter(function(t) { return t.pnl > 0; });
+  var losses = trades.filter(function(t) { return t.pnl <= 0; });
+  var totalPnl = trades.reduce(function(s, t) { return s + (t.pnl || 0); }, 0);
+  var avgRR = trades.reduce(function(s, t) { return s + (t.rMultiple || 0); }, 0) / trades.length;
+  // Best playbook by win rate
+  var pbStats = {};
+  trades.forEach(function(t) {
+    if (!t.playbook) return;
+    if (!pbStats[t.playbook]) pbStats[t.playbook] = { wins: 0, total: 0 };
+    pbStats[t.playbook].total++;
+    if (t.pnl > 0) pbStats[t.playbook].wins++;
+  });
+  var bestPlaybook = null, bestWR = 0;
+  Object.keys(pbStats).forEach(function(pb) {
+    var wr = pbStats[pb].wins / pbStats[pb].total;
+    if (wr > bestWR && pbStats[pb].total >= 3) { bestWR = wr; bestPlaybook = pb; }
+  });
+  return { total: trades.length, wins: wins.length, losses: losses.length, winRate: wins.length / trades.length * 100, totalPnl: totalPnl, avgRR: avgRR, bestPlaybook: bestPlaybook };
+}
+
+// Setup helpers
+function getSetups(filterFn) {
+  if (typeof setupList === 'undefined') return [];
+  return filterFn ? setupList.filter(filterFn) : setupList.slice();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ═══ CONVICTION ENGINE — Unified scoring across all agents ═════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Investor Score: Is this a good asset to own? (0-100)
+// Factors: Fundamental Quality (25%), Valuation (20%), Catalyst Strength (15%), On-Chain Conviction (20%), Narrative & Momentum (20%)
+function computeInvestorScore(symbol) {
+  var factors = [];
+
+  // 1. Fundamental Quality (25%) — from existing crypto/stock score
+  var wl = getWatchlistItem(symbol);
+  var fundScore = 50; // default
+  if (wl && wl.scores) {
+    var rawScore = wl.scores.overall || wl.scores.crypto || wl.scores.stock;
+    if (rawScore) fundScore = (rawScore / 5) * 100; // convert 0-5 star to 0-100
+  }
+  factors.push({ name: 'Fundamental', weight: 0.25, score: fundScore, icon: '\u{1F4CA}' });
+
+  // 2. Valuation (20%) — from crypto score "Value" category or stock "Valuation"
+  var valScore = 50;
+  if (wl && wl.scores && wl.scores.categories) {
+    var valCat = wl.scores.categories.find(function(c) { return c.name === 'Value' || c.name === 'Valuation'; });
+    if (valCat) valScore = valCat.score * 100;
+  }
+  factors.push({ name: 'Valuation', weight: 0.20, score: valScore, icon: '\u{1F4B0}' });
+
+  // 3. Catalyst Strength (15%) — count upcoming catalysts for this asset
+  var catScore = 0;
+  if (typeof catList !== 'undefined') {
+    var now = new Date();
+    var upcoming = catList.filter(function(c) {
+      return c.asset && c.asset.toUpperCase() === symbol.toUpperCase() && new Date(c.date) > now;
+    });
+    if (upcoming.length >= 3) catScore = 100;
+    else if (upcoming.length >= 2) catScore = 75;
+    else if (upcoming.length >= 1) catScore = 50;
+    var highImpact = upcoming.filter(function(c) { return c.impact === 'high'; });
+    if (highImpact.length > 0) catScore = Math.min(100, catScore + 25);
+  }
+  factors.push({ name: 'Catalyst', weight: 0.15, score: catScore, icon: '\u{26A1}' });
+
+  // 4. On-Chain Conviction (20%) — tracked entities holding this asset
+  var onchainScore = 0;
+  var entities = getEntities(function(e) { return e.positions && e.positions.some(function(p) { return p.coin && p.coin.toUpperCase() === symbol.toUpperCase(); }); });
+  if (entities.length >= 5) onchainScore = 100;
+  else if (entities.length >= 3) onchainScore = 75;
+  else if (entities.length >= 1) onchainScore = 50;
+  // Boost for high-grade entities
+  var aGrade = entities.filter(function(e) { return e.grade === 'A+' || e.grade === 'A'; });
+  if (aGrade.length > 0) onchainScore = Math.min(100, onchainScore + 15);
+  factors.push({ name: 'On-Chain', weight: 0.20, score: onchainScore, icon: '\u{1F50D}' });
+
+  // 5. Narrative & Momentum (20%) — from momentum score category
+  var momoScore = 50;
+  if (wl && wl.scores && wl.scores.categories) {
+    var momoCat = wl.scores.categories.find(function(c) { return c.name === 'Momentum'; });
+    if (momoCat) momoScore = momoCat.score * 100;
+  }
+  factors.push({ name: 'Momentum', weight: 0.20, score: momoScore, icon: '\u{1F680}' });
+
+  var weighted = factors.reduce(function(sum, f) { return sum + f.score * f.weight; }, 0);
+  return { score: Math.round(weighted), factors: factors, type: 'investor', updatedAt: Date.now() };
+}
+
+// Trader Score: Should I trade this now? (0-100)
+// Factors: Setup Quality (30%), Regime Alignment (20%), Confluence (25%), On-Chain Timing (15%), Execution Readiness (10%)
+function computeTraderScore(symbol) {
+  var factors = [];
+
+  // 1. Setup Quality (30%) — active setups for this asset
+  var setupScore = 0;
+  var setups = getSetups(function(s) { return s.asset && s.asset.toUpperCase() === symbol.toUpperCase() && (s.status === 'watching' || s.status === 'active'); });
+  if (setups.length > 0) {
+    var bestSetup = setups.reduce(function(best, s) { return (s.rr || 0) > (best.rr || 0) ? s : best; }, setups[0]);
+    var rr = bestSetup.rr || 0;
+    if (rr >= 5) setupScore = 100;
+    else if (rr >= 3) setupScore = 80;
+    else if (rr >= 2) setupScore = 60;
+    else if (rr >= 1) setupScore = 30;
+  }
+  factors.push({ name: 'Setup', weight: 0.30, score: setupScore, icon: '\u{1F3AF}' });
+
+  // 2. Regime Alignment (20%)
+  var regimeScore = 50; // neutral default
+  var regimeEl = document.getElementById('ta-btc-regime');
+  if (regimeEl) {
+    var regime = regimeEl.textContent.trim().toLowerCase();
+    if (regime === 'risk-on') regimeScore = 85;
+    else if (regime === 'neutral') regimeScore = 50;
+    else if (regime === 'risk-off') regimeScore = 15;
+  }
+  factors.push({ name: 'Regime', weight: 0.20, score: regimeScore, icon: '\u{1F30D}' });
+
+  // 3. Confluence (25%) — from auto-confluence if available
+  var confScore = 0;
+  if (typeof autoConfluenceScore !== 'undefined') {
+    confScore = typeof autoConfluenceScore === 'number' ? autoConfluenceScore : 0;
+  }
+  factors.push({ name: 'Confluence', weight: 0.25, score: confScore, icon: '\u{1F504}' });
+
+  // 4. On-Chain Timing (15%) — recent signals for this asset
+  var timingScore = 0;
+  var recentSignals = getSignals(function(s) {
+    return s.asset && s.asset.toUpperCase() === symbol.toUpperCase() && s.status === 'new';
+  });
+  if (recentSignals.length >= 3) timingScore = 100;
+  else if (recentSignals.length >= 2) timingScore = 70;
+  else if (recentSignals.length >= 1) timingScore = 40;
+  factors.push({ name: 'Timing', weight: 0.15, score: timingScore, icon: '\u{23F0}' });
+
+  // 5. Execution Readiness (10%) — has position sizing, liquidity
+  var execScore = 50; // default to "ready"
+  factors.push({ name: 'Execution', weight: 0.10, score: execScore, icon: '\u{2705}' });
+
+  var weighted = factors.reduce(function(sum, f) { return sum + f.score * f.weight; }, 0);
+  return { score: Math.round(weighted), factors: factors, type: 'trader', updatedAt: Date.now() };
+}
+
+// Master Conviction Score
+function computeConviction(symbol) {
+  var investor = computeInvestorScore(symbol);
+  var trader = computeTraderScore(symbol);
+  var master = Math.max(investor.score, trader.score);
+  var verdict = 'Low Conviction';
+  var verdictColor = 'var(--red)';
+  if (master >= 75) { verdict = 'High Conviction'; verdictColor = 'var(--green)'; }
+  else if (master >= 50) { verdict = 'Medium Conviction'; verdictColor = 'var(--yellow)'; }
+  return {
+    master: master,
+    investor: investor,
+    trader: trader,
+    verdict: verdict,
+    verdictColor: verdictColor,
+    updatedAt: Date.now()
+  };
+}
+
+// Render conviction badge (reusable component)
+function convictionBadge(score) {
+  var color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)';
+  return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:' + color + '22;color:' + color + ';">' + score + '/100</span>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 
 // ===== MARKET DATA API LAYER =====
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
@@ -4251,6 +4560,7 @@ function renderMarketData() {
       (changeStr ? '<div class="wc-change ' + cls + '">' + changeStr + '</div>' : '') +
       (keyMetric ? '<div class="wc-metric">' + keyMetric + '</div>' : '') +
       (ld.score != null ? '<div class="wc-score">' + renderStars(ld.score, 12) + '<span class="wc-score-num">' + ld.score.toFixed(1) + '</span></div>' : '') +
+      (function() { try { var c = computeInvestorScore(w.symbol); return '<div style="margin-top:4px;">' + convictionBadge(c.score) + '</div>'; } catch(e) { return ''; } })() +
       '</div>';
   }).join('');
 }
@@ -4484,6 +4794,16 @@ function migrateFromLocalStorage() {
 
 // ===== NAVIGATION =====
 function showPage(pageName) {
+  // Redirect legacy pages to new locations
+  var legacyRedirects = {
+    'about': function() { showPage('help'); setTimeout(function(){ docsNav('about'); }, 100); return true; },
+    'tasks': function() { showPage('help'); setTimeout(function(){ docsNav('tasks'); }, 100); return true; },
+    'roadmap': function() { showPage('help'); setTimeout(function(){ docsNav('roadmap'); }, 100); return true; },
+    'progress': function() { showPage('help'); setTimeout(function(){ docsNav('progress'); }, 100); return true; },
+    'projects': function() { showPage('watchlist'); return true; },
+    'templates': function() { showPage('reports'); setTimeout(function(){ switchReportTab('templates'); }, 100); return true; }
+  };
+  if (legacyRedirects[pageName]) return legacyRedirects[pageName]();
   const target = document.getElementById('page-' + pageName);
   if (!target) return false;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -5850,6 +6170,16 @@ function renderTemplates() {
   document.getElementById('tpl-workspace').style.display = 'none';
 }
 
+function renderTemplatesEmbedded() {
+  // Mirror templates into the embedded container inside Reports
+  var src = document.getElementById('templates-list');
+  var dest = document.getElementById('templates-list-embedded');
+  if (src && dest) {
+    renderTemplates();
+    dest.innerHTML = src.innerHTML;
+  }
+}
+
 // ===== GET TEMPLATE (with custom overrides) =====
 function getTemplateDef(templateId) {
   const base = TEMPLATE_DEFS[templateId];
@@ -6573,7 +6903,19 @@ function switchReportTab(tab) {
   currentReportTab = tab;
   document.querySelectorAll('#reports-tabs .tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`#reports-tabs .tab[onclick*="${tab}"]`).classList.add('active');
-  renderReports();
+  var searchBar = document.getElementById('reports-search-bar');
+  var reportsList = document.getElementById('reports-list');
+  var templatesPanel = document.getElementById('reports-templates-panel');
+  if (tab === 'templates') {
+    if (searchBar) searchBar.style.display = 'none';
+    if (reportsList) reportsList.style.display = 'none';
+    if (templatesPanel) { templatesPanel.style.display = ''; renderTemplatesEmbedded(); }
+  } else {
+    if (searchBar) searchBar.style.display = '';
+    if (reportsList) reportsList.style.display = '';
+    if (templatesPanel) templatesPanel.style.display = 'none';
+    renderReports();
+  }
 }
 
 function renderReports(filter = '') {
@@ -7660,6 +8002,33 @@ function fuzzyPageMatch(input) {
 // ===== ALERTS =====
 let currentAlertFilter = 'all';
 
+function alertsShowTab(tab) {
+  ['alerts','signals','flows'].forEach(t => {
+    var panel = document.getElementById('alerts-panel-' + t);
+    var tabBtn = document.getElementById('alerts-tab-' + t);
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+    if (tabBtn) tabBtn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'signals') {
+    // Clone signal feed content from on-chain panel
+    var src = document.getElementById('oc-panel-signals');
+    var dest = document.getElementById('alerts-panel-signals');
+    if (src && dest && !dest.dataset.loaded) {
+      dest.innerHTML = src.innerHTML;
+      dest.dataset.loaded = '1';
+    }
+    if (typeof sigRender === 'function') setTimeout(sigRender, 50);
+  } else if (tab === 'flows') {
+    var src = document.getElementById('oc-panel-flows');
+    var dest = document.getElementById('alerts-panel-flows');
+    if (src && dest && !dest.dataset.loaded) {
+      dest.innerHTML = src.innerHTML;
+      dest.dataset.loaded = '1';
+    }
+    if (typeof flowRender === 'function') setTimeout(flowRender, 50);
+  }
+}
+
 function setAlertFilter(filter) {
   currentAlertFilter = filter;
   document.querySelectorAll('#alert-filters .task-filter').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
@@ -7983,7 +8352,20 @@ function hlLoadFromFirebase() {
 
 // ===== DOCS NAVIGATION (GitBook-style) =====
 function docsNav(page) {
-  var docsPages = ['overview','pipeline','architecture','pamela','hyperliquid','scheduled','agent-roadmap','scoring','apis','models','changelog'];
+  var docsPages = ['overview','pipeline','architecture','pamela','hyperliquid','scheduled','agent-roadmap','scoring','apis','models','changelog','about','tasks','roadmap','progress'];
+  // For embedded ops pages, render their content into the docs section
+  var opsPages = {about: 'page-about', tasks: 'page-tasks', roadmap: 'page-roadmap', progress: 'page-progress'};
+  if (opsPages[page]) {
+    var srcPage = document.getElementById(opsPages[page]);
+    var target = document.getElementById('docs-s-' + page);
+    if (srcPage && target) {
+      target.innerHTML = '<div class="docs-breadcrumb">Operations</div>' + srcPage.innerHTML;
+      // Re-run render functions for dynamic pages
+      if (page === 'tasks' && typeof renderTasks === 'function') setTimeout(function(){ renderTasks(); }, 50);
+      if (page === 'roadmap' && typeof renderRoadmap === 'function') setTimeout(function(){ renderRoadmap(); }, 50);
+      if (page === 'progress' && typeof renderProgress === 'function') setTimeout(function(){ renderProgress(); }, 50);
+    }
+  }
   docsPages.forEach(p => {
     const section = document.getElementById('docs-s-' + p);
     if (section) section.style.display = p === page ? '' : 'none';
@@ -9698,6 +10080,21 @@ function hlToggleSave(addr, acctVal) {
     hlSavedWallets.splice(idx, 1);
   } else {
     hlSavedWallets.push({ address: addr, savedAt: new Date().toISOString(), lastValue: acctVal, label: '' });
+    // Auto-sync to Entity Tracker (unified entity store)
+    if (typeof getEntityByAddress === 'function' && !getEntityByAddress(addr)) {
+      addEntity({
+        name: typeof hlAddr === 'function' ? hlAddr(addr) : addr.slice(0,8) + '...',
+        address: addr,
+        type: 'whale',
+        grade: 'B',
+        venues: ['hyperliquid'],
+        notes: 'Auto-tracked from HL wallet save',
+        accountValue: acctVal || 0,
+        positions: [],
+        positionCount: 0,
+        totalPnl: 0
+      });
+    }
   }
   hlSaveWallets();
   hlRenderSaved();
