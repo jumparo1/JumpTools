@@ -1059,9 +1059,31 @@ tbody tr:hover { background: var(--bg3); }
         </div>
 
         <!-- Agent Memory -->
-        <div class="card" style="padding:20px;">
+        <div class="card" style="padding:20px;margin-bottom:16px;">
           <h3 style="margin-bottom:16px;">Macro Agent Learnings</h3>
           <div id="macro-agent-memories" style="font-size:13px;">Loading...</div>
+        </div>
+
+        <!-- Teach the Agent -->
+        <div class="card" style="padding:20px;">
+          <h3 style="margin-bottom:8px;">Teach the Macro Agent</h3>
+          <p style="color:var(--text2);font-size:12px;margin-bottom:12px;">Paste articles, analysis, frameworks, or data below. The agent stores these as learnings and injects them into its macro analysis. Lyn Alden newsletters, macro threads, Fed analysis &mdash; anything that makes the agent smarter.</p>
+          <div style="margin-bottom:12px;">
+            <select id="macro-teach-type" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;width:100%;margin-bottom:8px;">
+              <option value="framework">Framework (macro model, thesis, mental model)</option>
+              <option value="analysis">Analysis (newsletter, report, thread)</option>
+              <option value="data">Data Point (specific stat, chart reading, metric)</option>
+              <option value="rule">Trading Rule (if X then Y, regime-based rule)</option>
+              <option value="lesson">Lesson Learned (what worked/didn't, post-mortem)</option>
+            </select>
+            <input id="macro-teach-title" placeholder="Title (e.g. 'Lyn Alden March 2026 — Gradual Print thesis')" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;width:100%;box-sizing:border-box;margin-bottom:8px;" />
+            <textarea id="macro-teach-content" placeholder="Paste the content here. Key insights, data points, frameworks, rules. The agent will store this and use it in future macro analysis and Bull/Bear debates." style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:13px;width:100%;box-sizing:border-box;min-height:180px;resize:vertical;line-height:1.7;font-family:inherit;"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-primary" onclick="macroTeachAgent()" style="font-size:13px;padding:8px 20px;">Save to Agent Memory</button>
+            <span id="macro-teach-status" style="font-size:12px;color:var(--text3);"></span>
+          </div>
+          <div id="macro-teach-history" style="margin-top:16px;"></div>
         </div>
       </div>
     </div>
@@ -13808,6 +13830,50 @@ function macroRenderLearning() {
       memEl.innerHTML = '<div style="color:var(--text3);">No learnings yet. The Macro agent stores insights as it detects regime transitions and narrative shifts.</div>';
     }
   }
+}
+
+// ===== TEACH THE MACRO AGENT =====
+function macroTeachAgent() {
+  var type = document.getElementById('macro-teach-type').value;
+  var title = document.getElementById('macro-teach-title').value.trim();
+  var content = document.getElementById('macro-teach-content').value.trim();
+  var statusEl = document.getElementById('macro-teach-status');
+
+  if (!content) { statusEl.textContent = 'Please paste some content.'; statusEl.style.color = 'var(--red)'; return; }
+  if (!title) { title = type + ' — ' + new Date().toLocaleDateString(); }
+
+  var key = 'teach_' + Date.now().toString(36);
+  var entry = {
+    content: (title ? '**' + title + '**: ' : '') + content.substring(0, 5000),
+    type: type,
+    agent: 'macro',
+    tags: [type, 'user-taught'],
+    metadata: { title: title, source: 'user', char_count: content.length },
+    created: new Date().toISOString(),
+    used_count: 0
+  };
+
+  var fbUrl = 'https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app';
+  fetch(fbUrl + '/fundHQ/agentMemory/macro/' + key + '.json', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry)
+  }).then(function(r) {
+    if (r.ok) {
+      statusEl.textContent = 'Saved! Agent will use this in next macro cycle.';
+      statusEl.style.color = 'var(--green)';
+      document.getElementById('macro-teach-title').value = '';
+      document.getElementById('macro-teach-content').value = '';
+      // Refresh learning tab
+      macroLoadData();
+    } else {
+      statusEl.textContent = 'Error saving. Try again.';
+      statusEl.style.color = 'var(--red)';
+    }
+  }).catch(function(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  });
 }
 
 // Initialize macro page data when shown
