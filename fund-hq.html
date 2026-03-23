@@ -2669,26 +2669,114 @@ cd ~/deploy && git add . && git commit && git push
                 </div>
               </div>
 
-              <h2 style="margin-top:28px;">Planned</h2>
+              <h2 style="margin-top:28px;">Data Enrichment (Scorer 60% &rarr; 95%)</h2>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>DefiLlama Revenue</strong> — protocol revenue + 30d growth
+                  <div class="docs-muted">9 protocols live: HYPE $746M/yr, MKR $177M, AAVE $72M, PENDLE +91% growth. Fills revenue_growth_30d</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>CoinGecko Detail</strong> — developer activity + social scores
+                  <div class="docs-muted">Commits, dev_score, community_score, twitter/reddit followers. Fills active_development + social_score</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Coinglass Derivatives</strong> — cross-exchange OI + L/S ratio
+                  <div class="docs-muted">Aggregated open interest, long/short crowding detection. Fills oi_change_24h</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Whale Signal Aggregation</strong> — Sentinel signal count per coin
+                  <div class="docs-muted">Active whale position signals feed into scorer. Fills whale_positions</div>
+                </div>
+              </div>
+
+              <h2 style="margin-top:28px;">Phase 7: Edge &amp; Execution</h2>
               <div class="docs-roadmap-item pending">
                 <div class="docs-roadmap-status">&#9744;</div>
                 <div>
-                  <strong>Execution Agent</strong> — automated trading
-                  <div class="docs-muted">Signal-based trade execution, order management, slippage control via Hyperliquid API</div>
+                  <strong>Push Notifications</strong> — iPhone + Mac alerts
+                  <div class="docs-muted">Firebase Cloud Messaging when HIGH conviction signals fire. Real-time awareness without opening app</div>
                 </div>
               </div>
               <div class="docs-roadmap-item pending">
                 <div class="docs-roadmap-status">&#9744;</div>
                 <div>
-                  <strong>Alternative Data</strong> — GitHub commits, social velocity, dev activity
-                  <div class="docs-muted">Additional data dimensions for scoring model enrichment</div>
+                  <strong>Live Dashboard Monitoring</strong> — real-time signal feed + cost graph
+                  <div class="docs-muted">Signal stream, agent health timeline, daily cost visualization on Dashboard</div>
                 </div>
               </div>
               <div class="docs-roadmap-item pending">
                 <div class="docs-roadmap-status">&#9744;</div>
                 <div>
-                  <strong>Multi-user Infrastructure</strong> — analyst team, PM review
-                  <div class="docs-muted">Role-based access, compliance audit trail, team collaboration</div>
+                  <strong>Coinglass API Key</strong> — unlock full derivatives intelligence
+                  <div class="docs-muted">Cross-exchange OI, liquidation maps, long/short ratio history (free registration)</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Signal Outcome Learning</strong> — threshold evolution
+                  <div class="docs-muted">After 7-day expiry, feed accuracy back into Sentinel thresholds. Agents get smarter over time</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Monthly Report Auto-Schedule</strong> — 1st of month
+                  <div class="docs-muted">Trader worker auto-generates performance report with trading, signals, costs, learnings</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Execution Agent (Paper)</strong> — Hyperliquid paper trading
+                  <div class="docs-muted">Signal-based trade execution on testnet. Entry, stop, target from Claude setups. Track P&amp;L</div>
+                </div>
+              </div>
+
+              <h2 style="margin-top:28px;">Phase 8: Scale</h2>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Execution Agent (Live)</strong> — real Hyperliquid trading
+                  <div class="docs-muted">Live order execution with position sizing, slippage control, risk limits</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Options Sentiment</strong> — Deribit IV, put/call, max pain
+                  <div class="docs-muted">Implied volatility rank, options flow, hedging pattern detection</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Alternative Data</strong> — GitHub commits, social velocity
+                  <div class="docs-muted">Developer activity tracking, social momentum, narrative detection</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Multi-user Infrastructure</strong> — team access
+                  <div class="docs-muted">Tihomir access, role-based permissions, compliance audit trail</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Mobile App</strong> — React Native wrapper
+                  <div class="docs-muted">Native iPhone app with push notifications, quick actions, portfolio view</div>
                 </div>
               </div>
             </div>
