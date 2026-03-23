@@ -729,6 +729,9 @@ tbody tr:hover { background: var(--bg3); }
 
     <div class="nav-item active" data-page="dashboard"><span class="icon">&#9632;</span> Dashboard</div>
 
+    <div class="nav-section"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--orange, #f59e0b);color:#000;font-size:8px;font-weight:700;text-align:center;line-height:14px;margin-right:5px;">M</span> Macro</div>
+    <div class="nav-item" data-page="macro"><span class="icon">&#127758;</span> Macro Intelligence</div>
+
     <div class="nav-section"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--purple, #a78bfa);color:#000;font-size:8px;font-weight:700;text-align:center;line-height:14px;margin-right:5px;">S</span> Sentinel</div>
     <div class="nav-item" data-page="onchain"><span class="icon">&#128279;</span> Intelligence <span class="badge" id="badge-hl-wallets">0</span></div>
     <div class="nav-item" data-page="marketdata"><span class="icon">&#128200;</span> Market Data</div>
@@ -886,6 +889,179 @@ tbody tr:hover { background: var(--bg3); }
         </div>
       </div>
 
+    </div>
+
+    <!-- ===== MACRO INTELLIGENCE ===== -->
+    <div id="page-macro" class="page hidden">
+      <div class="page-header">
+        <h1>Macro Intelligence</h1>
+        <p>Regime analysis, Fed policy, market technicals, narratives &amp; correlation learning</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="market-tabs" style="margin-bottom:20px;">
+        <button class="market-tab active" id="macro-tab-overview" onclick="macroShowTab('overview')">Overview</button>
+        <button class="market-tab" id="macro-tab-fed" onclick="macroShowTab('fed')">Fed &amp; Liquidity</button>
+        <button class="market-tab" id="macro-tab-markets" onclick="macroShowTab('markets')">Markets</button>
+        <button class="market-tab" id="macro-tab-narratives" onclick="macroShowTab('narratives')">Narratives</button>
+        <button class="market-tab" id="macro-tab-learning" onclick="macroShowTab('learning')">Learning</button>
+      </div>
+
+      <!-- OVERVIEW TAB -->
+      <div id="macro-panel-overview">
+        <!-- Regime Badge -->
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:4px;">Current Macro Regime</div>
+              <div id="macro-regime-badge" style="font-size:28px;font-weight:800;color:var(--text);">Loading...</div>
+              <div id="macro-regime-bias" style="font-size:13px;color:var(--text2);margin-top:4px;">--</div>
+            </div>
+            <div style="text-align:right;">
+              <div id="macro-regime-updated" style="font-size:11px;color:var(--text3);">--</div>
+              <button class="btn btn-sm" onclick="macroRefresh()" style="margin-top:8px;font-size:12px;padding:6px 14px;">Refresh</button>
+            </div>
+          </div>
+          <!-- Regime Signals -->
+          <div id="macro-regime-signals" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+
+        <!-- Indicator Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px;">
+          <div class="card" style="padding:16px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Fear &amp; Greed</div>
+            <div id="macro-fng" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-fng-label" style="font-size:12px;color:var(--text2);">--</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">DXY (Dollar)</div>
+            <div id="macro-dxy" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-dxy-trend" style="font-size:12px;color:var(--text2);">--</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">VIX (Volatility)</div>
+            <div id="macro-vix" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-vix-level" style="font-size:12px;color:var(--text2);">--</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">US 10Y Yield</div>
+            <div id="macro-10y" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-10y-impact" style="font-size:12px;color:var(--text2);">--</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">BTC Dominance</div>
+            <div id="macro-btc-dom" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-btc-dom-detail" style="font-size:12px;color:var(--text2);">--</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">DeFi TVL</div>
+            <div id="macro-defi-tvl" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-defi-tvl-change" style="font-size:12px;color:var(--text2);">--</div>
+          </div>
+        </div>
+
+        <!-- Latest Briefing -->
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:12px;">Latest Macro Briefing (AI-Generated)</div>
+          <div id="macro-briefing" style="font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;">Loading briefing...</div>
+          <div id="macro-briefing-time" style="font-size:11px;color:var(--text3);margin-top:12px;">--</div>
+        </div>
+      </div>
+
+      <!-- FED & LIQUIDITY TAB -->
+      <div id="macro-panel-fed" style="display:none;">
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <h3 style="margin-bottom:16px;">Fed Balance Sheet &amp; Liquidity Framework</h3>
+          <p style="color:var(--text2);line-height:1.7;margin-bottom:16px;">Tracking the "gradual print" vs "big print" thesis. Fed balance sheet expansion = liquidity injection = crypto tailwind. The key question: will ongoing fiscal deficits + geopolitical pressures force the Fed into larger QE?</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="background:var(--bg3);border-radius:8px;padding:16px;">
+              <div style="font-size:11px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Gradual Print (Base Case)</div>
+              <ul style="font-size:13px;color:var(--text2);margin:0;padding-left:16px;line-height:1.8;">
+                <li>Fed expanding balance sheet ~$400B/yr</li>
+                <li>Maintaining ample reserves</li>
+                <li>Crypto neutral-to-mildly-positive</li>
+              </ul>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:16px;">
+              <div style="font-size:11px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Big Print (Tail Risk)</div>
+              <ul style="font-size:13px;color:var(--text2);margin:0;padding-left:16px;line-height:1.8;">
+                <li>Triggered by: recession, financial war, or kinetic war</li>
+                <li>$2T+ rapid expansion needed</li>
+                <li>Crypto very bullish (2020-2021 replay)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upcoming Fed Events -->
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <h3 style="margin-bottom:16px;">Upcoming Macro Events</h3>
+          <div id="macro-fed-calendar" style="font-size:13px;color:var(--text2);">Loading...</div>
+        </div>
+
+        <!-- Three Pillar Framework -->
+        <div class="card" style="padding:20px;">
+          <h3 style="margin-bottom:16px;">Three Pillar Portfolio Framework</h3>
+          <p style="color:var(--text2);font-size:13px;line-height:1.7;margin-bottom:16px;">Lyn Alden's framework for navigating fiscal dominance:</p>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <div style="background:var(--bg3);border-radius:8px;padding:16px;border-left:3px solid var(--green);">
+              <div style="font-weight:700;margin-bottom:6px;color:var(--green);">Pillar 1: Equities</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;">Best in disinflationary growth. Focus on profitable companies with pricing power.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:16px;border-left:3px solid var(--yellow);">
+              <div style="font-weight:700;margin-bottom:6px;color:var(--yellow);">Pillar 2: Hard Money</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;">Gold, BTC, commodities, producers. Best in inflation/stagflation. This is our edge.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:8px;padding:16px;border-left:3px solid var(--blue);">
+              <div style="font-weight:700;margin-bottom:6px;color:var(--blue);">Pillar 3: Cash</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;">Short-term bills/notes. Shock absorber during disinflationary contractions. Dry powder.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MARKETS TAB -->
+      <div id="macro-panel-markets" style="display:none;">
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <h3 style="margin-bottom:16px;">Cross-Market Dashboard</h3>
+          <div id="macro-markets-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">Loading...</div>
+        </div>
+
+        <!-- Token Unlocks -->
+        <div class="card" style="padding:20px;">
+          <h3 style="margin-bottom:16px;">Upcoming Token Unlocks (Selling Pressure)</h3>
+          <div id="macro-unlocks-list" style="font-size:13px;">Loading...</div>
+        </div>
+      </div>
+
+      <!-- NARRATIVES TAB -->
+      <div id="macro-panel-narratives" style="display:none;">
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <h3 style="margin-bottom:16px;">Active Narratives</h3>
+          <div id="macro-narratives-list" style="font-size:14px;line-height:1.8;">Loading narrative analysis...</div>
+        </div>
+
+        <!-- Latest Headlines -->
+        <div class="card" style="padding:20px;">
+          <h3 style="margin-bottom:16px;">Latest Headlines</h3>
+          <div id="macro-headlines-list" style="font-size:13px;">Loading...</div>
+        </div>
+      </div>
+
+      <!-- LEARNING TAB -->
+      <div id="macro-panel-learning" style="display:none;">
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <h3 style="margin-bottom:16px;">Regime &rarr; Crypto Performance</h3>
+          <p style="color:var(--text2);font-size:13px;margin-bottom:16px;">How does BTC perform in each macro regime? The Macro Agent tracks this over time to learn which setups predict big moves.</p>
+          <div id="macro-regime-stats" style="font-size:13px;">Loading correlation data...</div>
+        </div>
+
+        <!-- Agent Memory -->
+        <div class="card" style="padding:20px;">
+          <h3 style="margin-bottom:16px;">Macro Agent Learnings</h3>
+          <div id="macro-agent-memories" style="font-size:13px;">Loading...</div>
+        </div>
+      </div>
     </div>
 
     <!-- ===== ABOUT ===== -->
@@ -6805,6 +6981,10 @@ function showPage(pageName) {
     var kb = document.getElementById('settings-birdeye-key'); if (kb && !kb.value) kb.value = localStorage.getItem('birdeyeKey') || '';
     var kc = document.getElementById('settings-coinglass-key'); if (kc && !kc.value) kc.value = localStorage.getItem('coinglassKey') || '';
     if (typeof refreshApiStatus === 'function') refreshApiStatus();
+  }
+  if (pageName === 'macro') {
+    if (!_macroInitialized) { macroLoadData(); _macroInitialized = true; }
+    else macroRenderTab(getCurrentMacroTab());
   }
   if (pageName === 'vcwatchlist') {
     setTimeout(function() {
@@ -13085,6 +13265,314 @@ function regimeRender(data) {
   var refreshBtn = document.getElementById('regime-refresh-btn');
   if (refreshBtn) refreshBtn.innerHTML = '&#x21bb; Refresh Regime';
 }
+
+// ===== MACRO INTELLIGENCE PAGE =====
+
+var macroPageData = {};
+
+function macroShowTab(tab) {
+  ['overview','fed','markets','narratives','learning'].forEach(function(t) {
+    var panel = document.getElementById('macro-panel-' + t);
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+    var tabBtn = document.getElementById('macro-tab-' + t);
+    if (tabBtn) tabBtn.classList.toggle('active', t === tab);
+  });
+  macroRenderTab(tab);
+}
+
+function macroRefresh() {
+  macroLoadData();
+}
+
+function macroLoadData() {
+  // Load all macro data from Firebase
+  var paths = [
+    {path: '/fundHQ/marketData/macro', key: 'macro'},
+    {path: '/fundHQ/macroContext', key: 'context'},
+    {path: '/fundHQ/agentData/macro/latestBriefing', key: 'briefing'},
+    {path: '/fundHQ/agentData/macro/latestNews', key: 'news'},
+    {path: '/fundHQ/agentData/macro/regimeStats', key: 'regimeStats'},
+    {path: '/fundHQ/agentMemory/macro', key: 'memories'},
+  ];
+
+  var fbUrl = 'https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app';
+  paths.forEach(function(p) {
+    fetch(fbUrl + p.path + '.json').then(function(r) { return r.json(); }).then(function(data) {
+      macroPageData[p.key] = data;
+      macroRenderTab(getCurrentMacroTab());
+    }).catch(function() {});
+  });
+}
+
+function getCurrentMacroTab() {
+  var active = document.querySelector('#page-macro .market-tab.active');
+  if (!active) return 'overview';
+  var match = (active.getAttribute('onclick') || '').match(/'(\w+)'/);
+  return match ? match[1] : 'overview';
+}
+
+function macroRenderTab(tab) {
+  if (tab === 'overview') macroRenderOverview();
+  else if (tab === 'fed') macroRenderFed();
+  else if (tab === 'markets') macroRenderMarkets();
+  else if (tab === 'narratives') macroRenderNarratives();
+  else if (tab === 'learning') macroRenderLearning();
+}
+
+function macroRenderOverview() {
+  var ctx = macroPageData.context || {};
+  var macro = macroPageData.macro || {};
+  var briefing = macroPageData.briefing || {};
+
+  // Regime badge
+  var regime = ctx.regime || 'LOADING';
+  var bias = ctx.crypto_bias || '--';
+  var regimeColors = {'RISK-ON': 'var(--green)', 'RISK-OFF': 'var(--red)', 'STAGFLATION': 'var(--orange)', 'NEUTRAL': 'var(--text3)'};
+  var el = document.getElementById('macro-regime-badge');
+  if (el) { el.textContent = regime; el.style.color = regimeColors[regime] || 'var(--text)'; }
+  var biasEl = document.getElementById('macro-regime-bias');
+  if (biasEl) biasEl.textContent = 'Crypto bias: ' + bias;
+  var updEl = document.getElementById('macro-regime-updated');
+  if (updEl && ctx.updated) updEl.textContent = 'Updated ' + new Date(ctx.updated).toLocaleString();
+
+  // Signals
+  var sigEl = document.getElementById('macro-regime-signals');
+  if (sigEl && ctx.signals) {
+    sigEl.innerHTML = (ctx.signals || []).map(function(s) {
+      return '<span style="background:var(--bg4);padding:4px 10px;border-radius:12px;font-size:12px;color:var(--text2);">' + esc(s) + '</span>';
+    }).join('');
+  }
+
+  // Indicator cards
+  var indices = macro.indices || {};
+  var fng = macro.fear_greed || {};
+  var dom = macro.btc_dominance || {};
+  var tvl = macro.defi_tvl || {};
+
+  // Fear & Greed
+  var fngEl = document.getElementById('macro-fng');
+  if (fngEl && fng.value !== undefined) {
+    fngEl.textContent = fng.value;
+    fngEl.style.color = fng.value >= 60 ? 'var(--green)' : fng.value <= 25 ? 'var(--red)' : 'var(--yellow)';
+  }
+  var fngLabel = document.getElementById('macro-fng-label');
+  if (fngLabel) fngLabel.textContent = fng.classification || '--';
+
+  // DXY
+  var dxy = indices.dxy || {};
+  var dxyEl = document.getElementById('macro-dxy');
+  if (dxyEl && dxy.value) dxyEl.textContent = dxy.value;
+  var dxyTrend = document.getElementById('macro-dxy-trend');
+  if (dxyTrend) dxyTrend.textContent = dxy.impact || dxy.trend || '--';
+
+  // VIX
+  var vix = indices.vix || {};
+  var vixEl = document.getElementById('macro-vix');
+  if (vixEl && vix.value) {
+    vixEl.textContent = vix.value;
+    vixEl.style.color = vix.value > 25 ? 'var(--red)' : vix.value < 15 ? 'var(--green)' : 'var(--yellow)';
+  }
+  var vixLevel = document.getElementById('macro-vix-level');
+  if (vixLevel) vixLevel.textContent = vix.level || '--';
+
+  // US 10Y
+  var y10 = indices.us10y || {};
+  var y10El = document.getElementById('macro-10y');
+  if (y10El && y10.value) y10El.textContent = y10.value + '%';
+  var y10Impact = document.getElementById('macro-10y-impact');
+  if (y10Impact) y10Impact.textContent = y10.impact || '--';
+
+  // BTC Dominance
+  var btcDom = document.getElementById('macro-btc-dom');
+  if (btcDom && dom.btc_dominance) btcDom.textContent = dom.btc_dominance.toFixed(1) + '%';
+  var btcDomDetail = document.getElementById('macro-btc-dom-detail');
+  if (btcDomDetail && dom.eth_dominance) btcDomDetail.textContent = 'ETH: ' + dom.eth_dominance.toFixed(1) + '%';
+
+  // DeFi TVL
+  var tvlEl = document.getElementById('macro-defi-tvl');
+  if (tvlEl && tvl.total_tvl) tvlEl.textContent = '$' + (tvl.total_tvl / 1e9).toFixed(1) + 'B';
+  var tvlChange = document.getElementById('macro-defi-tvl-change');
+  if (tvlChange && tvl.tvl_change_7d !== undefined) {
+    tvlChange.textContent = (tvl.tvl_change_7d > 0 ? '+' : '') + tvl.tvl_change_7d + '% (7d)';
+    tvlChange.style.color = tvl.tvl_change_7d > 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // Briefing
+  var briefEl = document.getElementById('macro-briefing');
+  if (briefEl) briefEl.textContent = (briefing.briefing || 'No briefing available. Macro agent runs every 4h.').replace(/^#+\s*/gm, '');
+  var briefTime = document.getElementById('macro-briefing-time');
+  if (briefTime && briefing.updated) briefTime.textContent = 'Generated ' + new Date(briefing.updated).toLocaleString();
+}
+
+function macroRenderFed() {
+  var macro = macroPageData.macro || {};
+  var calendar = macro.fed_calendar || [];
+
+  var calEl = document.getElementById('macro-fed-calendar');
+  if (calEl && Array.isArray(calendar) && calendar.length > 0) {
+    calEl.innerHTML = '<div style="display:grid;gap:8px;">' + calendar.map(function(e) {
+      var typeColors = {rate_decision: 'var(--red)', inflation: 'var(--orange)', employment: 'var(--blue)'};
+      var color = typeColors[e.type] || 'var(--text3)';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;border-left:3px solid ' + color + ';">' +
+        '<div style="font-size:13px;font-weight:600;min-width:90px;color:' + color + ';">' + esc(e.date || '') + '</div>' +
+        '<div style="font-size:13px;color:var(--text2);">' + esc(e.event || '') + '</div>' +
+        '<span style="font-size:10px;background:var(--bg4);padding:2px 6px;border-radius:4px;color:var(--text3);margin-left:auto;">' + esc(e.type || '') + '</span>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+}
+
+function macroRenderMarkets() {
+  var macro = macroPageData.macro || {};
+  var indices = macro.indices || {};
+  var unlocks = macro.token_unlocks || [];
+
+  // Cross-market grid
+  var grid = document.getElementById('macro-markets-grid');
+  if (grid) {
+    var cards = [];
+    var items = [
+      {label: 'DXY (Dollar Index)', data: indices.dxy, key: 'value', suffix: '', color: function(v) { return v > 104 ? 'var(--red)' : v < 100 ? 'var(--green)' : 'var(--yellow)'; }},
+      {label: 'VIX (Volatility)', data: indices.vix, key: 'value', suffix: '', color: function(v) { return v > 25 ? 'var(--red)' : v < 15 ? 'var(--green)' : 'var(--yellow)'; }},
+      {label: 'US 10Y Treasury', data: indices.us10y, key: 'value', suffix: '%', color: function(v) { return v > 4.5 ? 'var(--red)' : v < 3.5 ? 'var(--green)' : 'var(--yellow)'; }},
+    ];
+    items.forEach(function(item) {
+      if (item.data && item.data[item.key]) {
+        var val = item.data[item.key];
+        cards.push('<div style="background:var(--bg3);border-radius:8px;padding:16px;">' +
+          '<div style="font-size:11px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">' + item.label + '</div>' +
+          '<div style="font-size:28px;font-weight:700;color:' + item.color(val) + ';">' + val + item.suffix + '</div>' +
+          '<div style="font-size:12px;color:var(--text2);margin-top:4px;">' + esc(item.data.impact || item.data.level || item.data.trend || '') + '</div>' +
+        '</div>');
+      }
+    });
+    grid.innerHTML = cards.join('') || '<div style="color:var(--text3);">No market data available. Server pushes data every 10 minutes.</div>';
+  }
+
+  // Token unlocks
+  var unlockEl = document.getElementById('macro-unlocks-list');
+  if (unlockEl && Array.isArray(unlocks) && unlocks.length > 0) {
+    unlockEl.innerHTML = '<div style="display:grid;gap:8px;">' + unlocks.map(function(u) {
+      var pressureColor = u.selling_pressure === 'HIGH' ? 'var(--red)' : u.selling_pressure === 'MEDIUM' ? 'var(--orange)' : 'var(--green)';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;">' +
+        '<div style="font-weight:700;min-width:60px;color:var(--accent2);">' + esc(u.protocol || '') + '</div>' +
+        '<div style="font-size:13px;color:var(--text2);">' + esc(u.date || '') + '</div>' +
+        '<div style="font-size:13px;font-weight:600;">$' + ((u.usd_value || 0) / 1e6).toFixed(0) + 'M</div>' +
+        '<span style="font-size:10px;padding:2px 8px;border-radius:4px;color:#fff;background:' + pressureColor + ';margin-left:auto;">' + esc(u.selling_pressure || '') + '</span>' +
+      '</div>';
+    }).join('') + '</div>';
+  } else if (unlockEl) {
+    unlockEl.innerHTML = '<div style="color:var(--text3);">No upcoming unlocks tracked.</div>';
+  }
+}
+
+function macroRenderNarratives() {
+  var news = macroPageData.news || {};
+  var narratives = news.narratives || {};
+  var headlines = news.headlines || [];
+
+  // Narratives
+  var narEl = document.getElementById('macro-narratives-list');
+  if (narEl) {
+    var html = '';
+    var dominant = narratives.dominant_narratives || [];
+    if (dominant.length > 0) {
+      html += '<div style="margin-bottom:20px;"><div style="font-size:12px;text-transform:uppercase;color:var(--accent2);margin-bottom:8px;">Dominant Narratives</div>';
+      html += dominant.map(function(n) {
+        return '<span style="display:inline-block;background:var(--accent-bg);color:var(--accent2);padding:6px 14px;border-radius:16px;font-size:13px;font-weight:600;margin:0 6px 6px 0;">' + esc(n) + '</span>';
+      }).join('') + '</div>';
+    }
+    var heating = narratives.heating_up || [];
+    if (heating.length > 0) {
+      html += '<div style="margin-bottom:20px;"><div style="font-size:12px;text-transform:uppercase;color:var(--green);margin-bottom:8px;">Heating Up</div>';
+      html += heating.map(function(n) {
+        return '<span style="display:inline-block;background:rgba(16,185,129,0.15);color:var(--green);padding:6px 14px;border-radius:16px;font-size:13px;margin:0 6px 6px 0;">' + esc(n) + '</span>';
+      }).join('') + '</div>';
+    }
+    var cooling = narratives.cooling_down || [];
+    if (cooling.length > 0) {
+      html += '<div style="margin-bottom:20px;"><div style="font-size:12px;text-transform:uppercase;color:var(--red);margin-bottom:8px;">Cooling Down</div>';
+      html += cooling.map(function(n) {
+        return '<span style="display:inline-block;background:rgba(239,68,68,0.15);color:var(--red);padding:6px 14px;border-radius:16px;font-size:13px;margin:0 6px 6px 0;">' + esc(n) + '</span>';
+      }).join('') + '</div>';
+    }
+    if (narratives.sector_rotation) {
+      html += '<div style="margin-bottom:20px;"><div style="font-size:12px;text-transform:uppercase;color:var(--yellow);margin-bottom:8px;">Sector Rotation</div>';
+      html += '<div style="background:var(--bg3);padding:12px 16px;border-radius:8px;font-size:13px;color:var(--text2);">' + esc(narratives.sector_rotation) + '</div></div>';
+    }
+    if (narratives.sentiment) {
+      var sentColors = {bullish: 'var(--green)', bearish: 'var(--red)', neutral: 'var(--text3)', mixed: 'var(--yellow)'};
+      html += '<div style="font-size:13px;color:' + (sentColors[narratives.sentiment] || 'var(--text2)') + ';font-weight:600;">Overall Sentiment: ' + esc(narratives.sentiment).toUpperCase() + ' (confidence: ' + (narratives.confidence || '?') + '/10)</div>';
+    }
+    narEl.innerHTML = html || '<div style="color:var(--text3);">No narrative analysis yet. Macro agent runs every 4h.</div>';
+  }
+
+  // Headlines
+  var headEl = document.getElementById('macro-headlines-list');
+  if (headEl && headlines.length > 0) {
+    headEl.innerHTML = headlines.map(function(h) {
+      return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<span style="font-size:11px;color:var(--text3);min-width:80px;">' + esc(h.source || '') + '</span>' +
+        '<span style="font-size:13px;color:var(--text);">' + esc(h.title || '') + '</span>' +
+      '</div>';
+    }).join('');
+  } else if (headEl) {
+    headEl.innerHTML = '<div style="color:var(--text3);">No headlines yet. Macro agent scans news every 4h.</div>';
+  }
+}
+
+function macroRenderLearning() {
+  var stats = macroPageData.regimeStats || {};
+  var memories = macroPageData.memories || {};
+
+  // Regime performance stats
+  var statsEl = document.getElementById('macro-regime-stats');
+  if (statsEl) {
+    var regimes = ['RISK-ON', 'RISK-OFF', 'STAGFLATION', 'NEUTRAL'];
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">';
+    regimes.forEach(function(r) {
+      var s = stats[r] || {};
+      var count = s.count || 0;
+      var avg = s.avg_btc_change || 0;
+      var color = avg > 0 ? 'var(--green)' : avg < 0 ? 'var(--red)' : 'var(--text3)';
+      var regimeColor = r === 'RISK-ON' ? 'var(--green)' : r === 'RISK-OFF' ? 'var(--red)' : r === 'STAGFLATION' ? 'var(--orange)' : 'var(--text3)';
+      html += '<div style="background:var(--bg3);border-radius:8px;padding:16px;border-top:3px solid ' + regimeColor + ';">' +
+        '<div style="font-size:12px;font-weight:700;color:' + regimeColor + ';margin-bottom:8px;">' + r + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);">Observations: ' + count + '</div>' +
+        '<div style="font-size:20px;font-weight:700;color:' + color + ';margin-top:4px;">' + (avg > 0 ? '+' : '') + avg + '%</div>' +
+        '<div style="font-size:11px;color:var(--text3);">Avg BTC 24h change</div>' +
+        (s.best ? '<div style="font-size:11px;color:var(--green);margin-top:4px;">Best: +' + s.best + '%</div>' : '') +
+        (s.worst ? '<div style="font-size:11px;color:var(--red);">Worst: ' + s.worst + '%</div>' : '') +
+      '</div>';
+    });
+    html += '</div>';
+    if (Object.keys(stats).length === 0) {
+      html = '<div style="color:var(--text3);">No correlation data yet. The Macro agent builds this over time as it tracks regime vs BTC performance.</div>';
+    }
+    statsEl.innerHTML = html;
+  }
+
+  // Agent memories
+  var memEl = document.getElementById('macro-agent-memories');
+  if (memEl && memories && typeof memories === 'object') {
+    var mems = Object.values(memories).filter(function(m) { return m && m.content; });
+    mems.sort(function(a, b) { return (b.created || '').localeCompare(a.created || ''); });
+    if (mems.length > 0) {
+      memEl.innerHTML = mems.slice(0, 20).map(function(m) {
+        var typeColor = m.type === 'learning' ? 'var(--green)' : m.type === 'insight' ? 'var(--blue)' : 'var(--text3)';
+        return '<div style="padding:10px 14px;background:var(--bg3);border-radius:8px;margin-bottom:8px;border-left:3px solid ' + typeColor + ';">' +
+          '<div style="font-size:13px;color:var(--text);">' + esc(m.content || '') + '</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:4px;">' + esc(m.type || '') + ' — ' + (m.created ? new Date(m.created).toLocaleString() : '') + '</div>' +
+        '</div>';
+      }).join('');
+    } else {
+      memEl.innerHTML = '<div style="color:var(--text3);">No learnings yet. The Macro agent stores insights as it detects regime transitions and narrative shifts.</div>';
+    }
+  }
+}
+
+// Initialize macro page data when shown
+var _macroInitialized = false;
 
 // Format helpers
 function hlFmt(n) { if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(2)+'M'; if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(1)+'K'; return n.toFixed(2); }
