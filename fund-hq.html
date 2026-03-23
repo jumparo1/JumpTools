@@ -3270,7 +3270,17 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
                   <li><strong>Macro Data</strong> — DXY, VIX, US 10Y Treasury from Yahoo Finance + Fed calendar (2026 FOMC dates) + CPI/NFP schedule</li>
                   <li><strong>Token Unlocks</strong> — DeFiLlama emissions API + known major unlocks with VC selling pressure ratings</li>
                   <li><strong>Production Deploy</strong> — launchd auto-start on Mac Mini, restart on crash, Dashboard agent status widget with remote control</li>
-                  <li><strong>Roadmap Sync</strong> — 30 tasks marked Done across all phases in Firebase roadmap</li>
+                  <li><strong>Data Enrichment</strong> — DefiLlama revenue (9 protocols: HYPE $746M/yr, PENDLE +91% growth), CoinGecko developer/social data, Coinglass derivatives (cross-exchange OI, L/S ratio). Scorer capacity 60% &rarr; 95%</li>
+                  <li><strong>Bull/Bear Debate</strong> — 3 Claude calls per signal (Bull FOR, Bear AGAINST, Judge verdict). Structured JSON output with conviction 1-10, entry/stop/targets. Prevents confirmation bias</li>
+                  <li><strong>Risk Gate</strong> — portfolio-aware filter: sector concentration &gt;30%, drawdown &gt;10%, low liquidity penalty, loss streak, duplicate detection. Blocks bad signals before publishing</li>
+                  <li><strong>Macro Agent</strong> — 4th worker (every 4h): regime classification (RISK-ON/OFF/STAGFLATION), news scanning (CryptoPanic + RSS), narrative tracking, correlation learning. Context injected into all debates</li>
+                  <li><strong>VC Agent</strong> — 5th worker (every 6h): DefiLlama raises scanner, Tier 1 VC detection, 100x gem filter (/25), Claude assessments on top gems</li>
+                  <li><strong>Macro Intelligence Page</strong> — 5 tabs: Overview (regime + briefing), Fed &amp; Liquidity (Three Pillar framework), Markets (DXY/VIX/yields), Narratives, Learning + Teach box</li>
+                  <li><strong>Prompt Library</strong> — 18 context-engineered prompts across all 5 agents + cross-agent workflows (morning routine, full pipeline, Sunday deep-dive)</li>
+                  <li><strong>Teach Boxes</strong> — All 5 agent pages have "Teach the Agent" input: paste articles, trade journals, frameworks. Saved to Firebase agent memory, injected into every cycle</li>
+                  <li><strong>Command Center</strong> — Dashboard renamed. Top Opportunities section: 0-100 Opportunity Score combining all 5 agents, Tier 1-4 ranking. Agent Scorecards: accuracy, grade, PnL per agent</li>
+                  <li><strong>HQ Brain</strong> — Opportunity Score engine (quality 25%, confirmation 20%, R/R 20%, timing 15%, liquidity 10%, narrative 10%) + Agent Scorecards. Runs every 2h in daemon</li>
+                  <li><strong>Roadmap Sync</strong> — 30 tasks marked Done across all phases. Phase 6 COMPLETE. Phase 7+8 planned</li>
                 </ul>
               </div>
 
