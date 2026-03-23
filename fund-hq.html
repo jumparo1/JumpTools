@@ -772,8 +772,8 @@ tbody tr:hover { background: var(--bg3); }
     <!-- ===== DASHBOARD ===== -->
     <div id="page-dashboard" class="page">
       <div class="page-header">
-        <h1>Dashboard</h1>
-        <p>Fund overview — watchlist, research, and tasks at a glance</p>
+        <h1>Command Center</h1>
+        <p>What should I pay attention to today?</p>
       </div>
       <div class="stats-row" id="stats-row"></div>
 
@@ -825,6 +825,28 @@ tbody tr:hover { background: var(--bg3); }
             <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','trader')" style="color:var(--yellow);">Force Trader</button>
             <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','vc')" style="color:var(--blue);">Force VC</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Top Opportunities (HQ Ranking) -->
+      <div class="card" style="margin-bottom:20px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="font-size:14px;color:var(--text2);margin:0;">Top Opportunities</h3>
+          <span style="font-size:11px;color:var(--text3);" id="opp-updated">--</span>
+        </div>
+        <div id="opp-ranked-list">
+          <div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">HQ scores opportunities every 2h. Waiting for first ranking...</div>
+        </div>
+      </div>
+
+      <!-- Agent Scorecards -->
+      <div class="card" style="margin-bottom:20px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="font-size:14px;color:var(--text2);margin:0;">Agent Scorecards</h3>
+          <span style="font-size:11px;color:var(--text3);" id="scorecards-updated">--</span>
+        </div>
+        <div id="scorecards-body">
+          <div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">Scorecards build as signals expire and outcomes are recorded.</div>
         </div>
       </div>
 
@@ -4061,6 +4083,105 @@ function agentCmd(action, worker) {
   }
 }
 
+// ===== OPPORTUNITY RANKING (Command Center) =====
+
+function renderOpportunities(data) {
+  var el = document.getElementById('opp-ranked-list');
+  var updEl = document.getElementById('opp-updated');
+  if (!el) return;
+  if (!data || !data.ranked || !data.ranked.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">No opportunities ranked yet. HQ scores every 2h.</div>';
+    return;
+  }
+  if (updEl && data.updated) updEl.textContent = 'Updated ' + new Date(data.updated).toLocaleString();
+
+  var tierColors = {1: 'var(--green)', 2: 'var(--blue)', 3: 'var(--yellow)', 4: 'var(--text3)'};
+  var tierLabels = {1: 'ACT NOW', 2: 'WATCHLIST', 3: 'RESEARCH', 4: 'IGNORE'};
+
+  el.innerHTML = data.ranked.slice(0, 8).map(function(o) {
+    var tc = tierColors[o.tier] || 'var(--text3)';
+    var dims = o.dimensions || {};
+    // Mini bar chart for dimensions
+    var dimBars = ['quality','timing','confirmation','risk_reward','liquidity','narrative'].map(function(d) {
+      var v = dims[d] || 0;
+      var label = d === 'risk_reward' ? 'R/R' : d.substring(0,4);
+      return '<div style="flex:1;text-align:center;" title="' + d + ': ' + v + '/100">' +
+        '<div style="height:' + Math.max(2, v * 0.3) + 'px;background:' + tc + ';border-radius:2px;margin:0 1px;opacity:0.7;"></div>' +
+        '<div style="font-size:8px;color:var(--text3);margin-top:2px;">' + label + '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">' +
+      '<div style="min-width:32px;text-align:center;"><span style="font-size:20px;font-weight:800;color:' + tc + ';">' + o.score + '</span></div>' +
+      '<div style="flex:1;">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<span style="font-size:14px;font-weight:700;">' + esc(o.symbol) + '</span>' +
+          '<span style="font-size:9px;padding:2px 6px;border-radius:4px;color:#fff;background:' + tc + ';font-weight:700;">' + tierLabels[o.tier] + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px;">Best: ' + esc(o.strongest || '') + ' / Weakest: ' + esc(o.weakest || '') + '</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:flex-end;gap:1px;width:80px;height:30px;">' + dimBars + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Tier summary
+  var counts = data.tier_counts || {};
+  el.innerHTML += '<div style="display:flex;gap:12px;margin-top:10px;font-size:11px;color:var(--text3);">' +
+    '<span style="color:var(--green);">' + (counts.tier_1 || 0) + ' Act Now</span>' +
+    '<span style="color:var(--blue);">' + (counts.tier_2 || 0) + ' Watchlist</span>' +
+    '<span style="color:var(--yellow);">' + (counts.tier_3 || 0) + ' Research</span>' +
+    '<span>' + (counts.tier_4 || 0) + ' Ignore</span>' +
+    '<span style="margin-left:auto;">' + (data.total || 0) + ' total</span>' +
+  '</div>';
+}
+
+function renderScorecards(data) {
+  var el = document.getElementById('scorecards-body');
+  var updEl = document.getElementById('scorecards-updated');
+  if (!el) return;
+  if (!data || !data.agents) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">Scorecards build as signals expire.</div>';
+    return;
+  }
+  if (updEl && data.updated) updEl.textContent = 'Updated ' + new Date(data.updated).toLocaleString();
+
+  var agentColors = {'sentinel': 'var(--purple)', 'analyst': 'var(--green)', 'trader': 'var(--yellow)', 'macro': 'var(--orange)', 'vc': 'var(--blue)'};
+  var gradeColors = {'A': 'var(--green)', 'B': 'var(--blue)', 'C': 'var(--yellow)', 'D': 'var(--red)', '?': 'var(--text3)'};
+  var agents = data.agents || {};
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">';
+  var order = ['macro-auto', 'sentinel-auto', 'analyst-auto', 'trader-auto', 'vc-auto'];
+  order.forEach(function(key) {
+    var a = agents[key];
+    if (!a) return;
+    var shortName = key.replace('-auto', '');
+    var color = agentColors[shortName] || 'var(--text3)';
+    var gc = gradeColors[a.grade] || 'var(--text3)';
+    html += '<div style="background:var(--bg3);border-radius:8px;padding:12px;border-top:2px solid ' + color + ';">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<span style="font-size:12px;font-weight:700;text-transform:capitalize;">' + shortName + '</span>' +
+        '<span style="font-size:16px;font-weight:800;color:' + gc + ';">' + (a.grade || '?') + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--text3);line-height:1.6;">' +
+        (a.accuracy !== null ? '<div>Accuracy: <strong style="color:var(--text);">' + a.accuracy + '%</strong></div>' : '') +
+        '<div>' + a.total_signals + ' signals / ' + a.evaluated + ' evaluated</div>' +
+        (a.avg_pnl_pct !== null ? '<div>Avg PnL: <span style="color:' + (a.avg_pnl_pct > 0 ? 'var(--green)' : 'var(--red)') + ';">' + (a.avg_pnl_pct > 0 ? '+' : '') + a.avg_pnl_pct + '%</span></div>' : '') +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  // Overall
+  var ov = data.overall || {};
+  if (ov.accuracy !== null && ov.total_evaluated > 0) {
+    html += '<div style="margin-top:10px;font-size:11px;color:var(--text3);">Overall: ' + ov.accuracy + '% accuracy across ' + ov.total_evaluated + ' evaluated signals' +
+      (ov.best_agent ? ' / Best: <strong style="color:var(--green);">' + ov.best_agent.replace('-auto','') + '</strong>' : '') +
+    '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ===== BACKEND API LAYER =====
@@ -7177,6 +7298,14 @@ if (firebaseReady) {
   // Agent daemon status listener
   dbRef.child('agentStatus').on('value', (snap) => {
     renderAgentStatus(snap.val());
+  });
+  // Opportunity ranking listener
+  dbRef.child('opportunities').on('value', (snap) => {
+    renderOpportunities(snap.val());
+  });
+  // Agent scorecards listener
+  dbRef.child('agentScorecards').on('value', (snap) => {
+    renderScorecards(snap.val());
   });
 }
 
