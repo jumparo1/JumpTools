@@ -2365,6 +2365,13 @@ tbody tr:hover { background: var(--bg3); }
           </div>
 
           <div class="docs-nav-group">
+            <div class="docs-nav-label">Playbook</div>
+            <div class="docs-nav-item" onclick="docsNav('prompts')">
+              <span class="docs-nav-icon">&#128214;</span> Prompt Library
+            </div>
+          </div>
+
+          <div class="docs-nav-group">
             <div class="docs-nav-label">Reference</div>
             <div class="docs-nav-item" onclick="docsNav('scoring')">
               <span class="docs-nav-icon">&#11088;</span> Scoring System
@@ -2977,6 +2984,121 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
                   <strong>Mobile App</strong> — React Native wrapper
                   <div class="docs-muted">Native iPhone app with push notifications, quick actions, portfolio view</div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- PROMPT LIBRARY -->
+          <section class="docs-section" id="docs-s-prompts" style="display:none;">
+            <div class="docs-breadcrumb">Playbook</div>
+            <h1 class="docs-title">Prompt Library</h1>
+            <p class="docs-lead">High-signal prompts for each agent. Based on context engineering principles &mdash; minimal tokens, maximum signal. Copy-paste into the chat or use as daily workflows.</p>
+            <div class="docs-divider"></div>
+            <div class="docs-body">
+
+              <h2 style="color:var(--orange);">Macro Agent &mdash; Morning Briefing</h2>
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--orange);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Daily &bull; 2 min &bull; Dashboard context</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">What's the macro regime right now? Give me: (1) regime tag (risk-on/off/stagflation), (2) DXY + VIX + 10Y levels, (3) Fear & Greed, (4) top 3 narratives heating up, (5) any upcoming Fed events this week, (6) one-line crypto bias. Keep it under 200 words.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--orange);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Weekly &bull; Lyn Alden Framework</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Run a Lyn Alden-style macro analysis: (1) Where are we in the long-term debt cycle? (2) Is the Fed in gradual print or big print mode? (3) Three Pillar assessment &mdash; which pillar (equities/hard money/cash) is favored right now? (4) DXY trend &mdash; strengthening or weakening, crypto implication. (5) Stagflation risk check &mdash; energy prices + employment data + yields. End with: portfolio positioning recommendation for this week.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid var(--orange);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">On Event &bull; Regime Transition</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Macro regime just changed. What shifted? Compare previous vs current: DXY, VIX, yields, funding rates, Fear & Greed. What caused the transition? Is this a true regime change or noise? What should I do with my crypto positions? Historical precedent for this type of shift?</code>
+              </div>
+
+              <h2 style="color:var(--purple);">Sentinel Agent &mdash; On-Chain Intelligence</h2>
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--purple);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Daily &bull; Whale scan</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Scan whale activity on my watchlist coins. Who's positioning? Show: (1) Top 5 largest whale positions by size, (2) any new positions opened in last 24h, (3) funding rate extremes, (4) OI changes > 10%, (5) any L/S ratio crowding. Flag anything that looks like smart money accumulation vs distribution.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--purple);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">On Trigger &bull; Whale position detected</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">A whale just opened a $[X] [LONG/SHORT] on [COIN]. Profile this wallet: win rate, avg hold time, leverage pattern, historical accuracy. Is this wallet smart money? Compare their entry vs current funding and OI. Should I follow this trade? Give me a conviction score 1-10.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid var(--purple);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Research &bull; Entity deep-dive</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Deep-dive on wallet [ADDRESS]. Pull: all current positions, PnL history, win rate, avg leverage, biggest wins/losses. Classify: Fund, Insider, Market Maker, Degen, or Copyable. Grade A-F. Is this wallet worth tracking long-term?</code>
+              </div>
+
+              <h2 style="color:var(--green);">Analyst Agent &mdash; Research &amp; Scoring</h2>
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--green);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Daily &bull; Score check</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Show my watchlist scores ranked by composite. For any score that shifted > 0.3 since yesterday: what changed and why? Flag any asset that crossed above 3.5 (opportunity) or below 2.5 (warning). Include revenue growth data if available.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--green);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Research &bull; Bull/Bear thesis</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Full research on [COIN]. Run the Bull/Bear debate: (1) BULL: strongest 5 reasons to buy with data, (2) BEAR: strongest 5 reasons to avoid with data, (3) VERDICT: direction, conviction 1-10, entry zone, stop, targets. Include: protocol revenue, TVL trend, developer activity, whale positioning, funding rate, macro regime context. Be brutally honest.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--green);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Discovery &bull; Find opportunities</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Scan for asymmetric opportunities I'm not tracking yet. Criteria: (1) > 70% off ATH but 7d momentum turning positive, (2) $10M-$2B market cap sweet spot, (3) real revenue or TVL growth, (4) not a meme coin. Show top 5 with composite scores. Which ones have upcoming catalysts?</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid var(--green);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Valuation &bull; Is it cheap?</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Run full valuation on [COIN]: (1) Revenue multiple vs sector peers, (2) MCap/TVL ratio vs category median, (3) DCF-lite with 25% crypto discount rate, (4) FDV dilution risk. Composite verdict: STRONG BUY / UNDERVALUED / FAIR / OVERVALUED / AVOID. Compare to 3 closest peers.</code>
+              </div>
+
+              <h2 style="color:var(--yellow);">Trader Agent &mdash; Setups &amp; Execution</h2>
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--yellow);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Daily &bull; Setup check</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Check my active setups: (1) any approaching stop loss? (within 3%), (2) any approaching target? (within 5%), (3) any new high-score setups from last scan (score > 3.5 + catalyst), (4) my win rate and profit factor this month, (5) any calibration needed? Keep it actionable &mdash; what do I need to do TODAY?</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--yellow);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Trade &bull; Position sizing</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Size a position for [COIN] [LONG/SHORT]. Capital: $[X]. Risk per trade: [1-2]%. Entry: $[X]. Stop: $[X]. Calculate: position size in USD, number of units, implied leverage, R-multiples (1R through 5R). Also check: does this trade fit my portfolio? Sector concentration? Correlation with existing positions?</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--yellow);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Review &bull; Confluence scoring</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Run confluence score for [COIN] trade setup: (1) On-chain: whale activity + entity grades (25%), (2) Fundamental: research quality + revenue trend (25%), (3) Technical: chart setup + confirmation (30%), (4) Regime: macro conditions (20%). Total /100. If > 70: strong setup. If < 50: skip. What's the weakest factor and can it improve?</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid var(--yellow);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Weekly &bull; Performance review</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Weekly performance review: (1) Win rate and profit factor, (2) Best and worst trades &mdash; what went right/wrong, (3) Which playbook performed best, (4) Score calibration status &mdash; are weights still accurate, (5) Signal accuracy from Sentinel/Analyst/Trader, (6) Top 3 learnings to carry into next week. Be honest about mistakes.</code>
+              </div>
+
+              <h2 style="color:var(--blue);">VC Agent &mdash; Fundraising Intelligence</h2>
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--blue);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Daily &bull; New raises</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">What fundraising rounds happened in the last 7 days? Filter: > $5M raised. Show: project name, amount, round type, lead investors, category. Highlight any with Tier 1 VCs (a16z, Paradigm, Polychain, etc). Run the 100x filter (/25) on the top 3. Which ones should I track?</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:20px;border-left:3px solid var(--blue);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Research &bull; VC due diligence</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Deep VC due diligence on [PROJECT]: (1) Team background + previous exits, (2) Market TAM + timing assessment, (3) Product status &mdash; mainnet or vaporware, (4) Tokenomics &mdash; unlock schedule, insider %, cliff dates, (5) Backer quality &mdash; who invested and at what valuation, (6) Competitive landscape &mdash; who are they competing with, (7) 100x filter score /25. Should I invest at current terms?</code>
+              </div>
+
+              <h2>Cross-Agent Workflows</h2>
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--accent2);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Morning Routine &bull; 5 min daily check</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Morning briefing: (1) Macro regime + overnight changes, (2) Any Sentinel alerts fired overnight? (3) Watchlist score changes > 0.3, (4) Active setups approaching stop/target, (5) Cost tracker status, (6) Top action item for today. One paragraph per section. Go.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--accent2);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Full Pipeline &bull; Idea to execution</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Run full pipeline on [COIN]: (1) Analyst: score + valuation + research report, (2) Sentinel: whale positioning + funding + OI, (3) Macro: does the regime support this trade? (4) Trader: Bull/Bear debate + entry/stop/target + position size, (5) Risk gate: portfolio fit check. Final verdict: TRADE / WATCH / PASS with conviction 1-10.</code>
+              </div>
+
+              <div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--accent2);">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Sunday &bull; Weekly deep-dive</div>
+                <code style="display:block;font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">Sunday review: (1) This week's P&L and win rate, (2) Best/worst signals from all agents, (3) Macro regime shift? What changed, (4) Narrative rotation &mdash; what's heating up vs cooling, (5) Auto-discovery: any new coins worth adding to watchlist? (6) Score calibration &mdash; run if 5+ new closes, (7) Agent performance &mdash; which agent was most accurate, (8) Plan for next week &mdash; top 3 opportunities to watch.</code>
+              </div>
+
+              <div class="docs-hint" style="margin-top:20px;">
+                These prompts are designed for Fund HQ's chat interface. Paste any prompt into the chat bubble &mdash; Pamela routes to the right specialist agent automatically. For autonomous scans, the daemon workers run these patterns continuously.
               </div>
             </div>
           </section>
@@ -11145,7 +11267,7 @@ function hlLoadFromFirebase() {
 
 // ===== DOCS NAVIGATION (GitBook-style) =====
 function docsNav(page) {
-  var docsPages = ['overview','pipeline','architecture','pamela','hyperliquid','scheduled','agent-roadmap','scoring','apis','models','changelog','about','tasks','roadmap','progress'];
+  var docsPages = ['overview','pipeline','architecture','pamela','hyperliquid','scheduled','agent-roadmap','prompts','scoring','apis','models','changelog','about','tasks','roadmap','progress'];
   // For embedded ops pages, render their content into the docs section
   var opsPages = {about: 'page-about', tasks: 'page-tasks', roadmap: 'page-roadmap', progress: 'page-progress'};
   if (opsPages[page]) {
