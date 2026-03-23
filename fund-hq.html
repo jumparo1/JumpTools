@@ -819,9 +819,11 @@ tbody tr:hover { background: var(--bg3); }
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-sm btn-ghost" onclick="agentCmd('pause','all')">Pause All</button>
             <button class="btn btn-sm btn-ghost" onclick="agentCmd('resume','all')">Resume All</button>
+            <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','macro')" style="color:var(--orange);">Force Macro</button>
             <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','sentinel')" style="color:var(--purple);">Force Sentinel</button>
             <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','analyst')" style="color:var(--green);">Force Analyst</button>
             <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','trader')" style="color:var(--yellow);">Force Trader</button>
+            <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','vc')" style="color:var(--blue);">Force VC</button>
           </div>
         </div>
       </div>
@@ -3848,25 +3850,46 @@ function renderAgentStatus(data) {
 
   const workers = data.workers || {};
   const costs = data.costs || {};
-  let html = '';
+  const agentColors = {sentinel: 'var(--purple)', analyst: 'var(--green)', trader: 'var(--yellow)', macro: 'var(--orange)', vc: 'var(--blue)'};
+  const agentIcons = {sentinel: '&#128737;', analyst: '&#128202;', trader: '&#128200;', macro: '&#127758;', vc: '&#128176;'};
+
+  // Worker cards grid
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px;">';
+  const workerOrder = ['macro','sentinel','analyst','trader','vc'];
+  const sortedWorkers = workerOrder.filter(n => workers[n]).map(n => [n, workers[n]]);
+  // Add any workers not in the predefined order
   for (const [name, w] of Object.entries(workers)) {
-    const sc = w.paused ? 'var(--yellow)' : w.status === 'running' ? 'var(--green)' : w.status === 'error' ? 'var(--red)' : 'var(--text3)';
+    if (!workerOrder.includes(name)) sortedWorkers.push([name, w]);
+  }
+
+  for (const [name, w] of sortedWorkers) {
+    const sc = w.paused ? 'var(--yellow)' : w.status === 'running' ? 'var(--green)' : w.status === 'error' ? 'var(--red)' : agentColors[name] || 'var(--text3)';
+    const dotColor = w.paused ? 'var(--yellow)' : w.status === 'running' ? 'var(--green)' : w.status === 'error' ? 'var(--red)' : 'var(--green)';
     const label = w.paused ? 'paused' : w.status || 'idle';
     const lr = w.last_run ? agentTimeAgo(new Date(w.last_run)) : 'never';
     const iv = w.interval_min ? w.interval_min + 'min' : '?';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;' + (name !== Object.keys(workers).pop() ? 'border-bottom:1px solid var(--border);' : '') + '">';
-    html += '<div style="display:flex;align-items:center;gap:8px;"><span style="color:' + sc + ';font-size:10px;">&#9679;</span>';
-    html += '<span style="font-size:13px;font-weight:600;text-transform:capitalize;">' + name + '</span>';
-    html += '<span style="font-size:11px;color:var(--text3);">' + label + '</span></div>';
-    html += '<div style="text-align:right;font-size:11px;color:var(--text3);">' + lr + ' / ' + iv;
+    const runs = w.runs || 0;
+    const icon = agentIcons[name] || '&#9679;';
+    html += '<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;border-top:2px solid ' + (agentColors[name] || 'var(--border)') + ';">';
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">';
+    html += '<span style="color:' + dotColor + ';font-size:8px;">&#9679;</span>';
+    html += '<span style="font-size:12px;font-weight:700;text-transform:capitalize;">' + name + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:10px;color:var(--text3);line-height:1.6;">';
+    html += lr + ' / ' + iv + '<br>';
+    html += runs + ' runs';
     if (w.errors > 0) html += ' <span style="color:var(--red);">' + w.errors + ' err</span>';
     html += '</div></div>';
   }
+  html += '</div>';
+
+  // Cost bar
   const cost = costs.cost || 0;
   const limit = costs.limit || 10;
+  const reqs = costs.requests || 0;
   const pct = Math.min(100, (cost / limit) * 100);
-  html += '<div style="margin-top:8px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;"><span>Cost today</span><span style="font-weight:600;color:var(--text1);">$' + cost.toFixed(4) + ' / $' + limit.toFixed(0) + '</span></div>';
-  html += '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + (pct > 80 ? 'var(--red)' : 'var(--green)') + ';border-radius:2px;"></div></div></div>';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text3);"><span>' + reqs + ' API calls</span><span style="font-weight:600;color:var(--text);">$' + cost.toFixed(4) + ' / $' + limit.toFixed(0) + '</span></div>';
+  html += '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:' + pct + '%;background:' + (pct > 80 ? 'var(--red)' : 'var(--green)') + ';border-radius:2px;"></div></div>';
   body.innerHTML = html;
   controls.style.display = isOnline && !stale ? 'block' : 'none';
 }
@@ -3882,7 +3905,7 @@ function agentTimeAgo(d) {
 function agentCmd(action, worker) {
   if (!firebaseReady || !dbRef) return alert('Firebase not connected');
   if (worker === 'all') {
-    ['sentinel', 'analyst', 'trader'].forEach(w => {
+    ['sentinel', 'analyst', 'trader', 'macro', 'vc'].forEach(w => {
       dbRef.child('agentCommands').child(w).set({ action: action });
     });
   } else {
