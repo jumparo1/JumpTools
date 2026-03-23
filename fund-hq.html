@@ -801,6 +801,28 @@ tbody tr:hover { background: var(--bg3); }
         </div>
       </div>
 
+      <!-- Agent Daemon Status -->
+      <div class="card" id="dash-agent-card" style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="font-size:14px;color:var(--text2);margin:0;">
+            <span id="agent-online-dot" style="color:var(--text3);">&#9679;</span> Daemon Status
+          </h3>
+          <span id="agent-heartbeat-time" style="font-size:11px;color:var(--text3);"></span>
+        </div>
+        <div id="agent-status-body">
+          <div style="color:var(--text3);font-size:12px;text-align:center;padding:16px;">Waiting for daemon heartbeat...</div>
+        </div>
+        <div id="agent-controls" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-ghost" onclick="agentCmd('pause','all')">Pause All</button>
+            <button class="btn btn-sm btn-ghost" onclick="agentCmd('resume','all')">Resume All</button>
+            <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','sentinel')" style="color:var(--purple);">Force Sentinel</button>
+            <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','analyst')" style="color:var(--green);">Force Analyst</button>
+            <button class="btn btn-sm btn-ghost" onclick="agentCmd('run_now','trader')" style="color:var(--yellow);">Force Trader</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Quick Actions -->
       <div class="card" style="margin-bottom:20px;padding:16px 20px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -3407,6 +3429,68 @@ function computeConviction(symbol) {
 function convictionBadge(score) {
   var color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--yellow)' : 'var(--red)';
   return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:' + color + '22;color:' + color + ';">' + score + '/100</span>';
+}
+
+// ===== AGENT DAEMON STATUS =====
+
+function renderAgentStatus(data) {
+  const dot = document.getElementById('agent-online-dot');
+  const timeEl = document.getElementById('agent-heartbeat-time');
+  const body = document.getElementById('agent-status-body');
+  const controls = document.getElementById('agent-controls');
+  if (!dot || !body) return;
+  if (!data) { body.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px;">No daemon data</div>'; controls.style.display = 'none'; return; }
+
+  const isOnline = data.online === true;
+  const hb = data.heartbeat ? new Date(data.heartbeat) : null;
+  const agoS = hb ? Math.round((Date.now() - hb.getTime()) / 1000) : null;
+  const stale = agoS !== null && agoS > 120;
+
+  dot.style.color = isOnline && !stale ? 'var(--green)' : 'var(--red)';
+  if (agoS !== null) { timeEl.textContent = agoS < 60 ? agoS + 's ago' : Math.round(agoS / 60) + 'min ago'; } else { timeEl.textContent = ''; }
+
+  const workers = data.workers || {};
+  const costs = data.costs || {};
+  let html = '';
+  for (const [name, w] of Object.entries(workers)) {
+    const sc = w.paused ? 'var(--yellow)' : w.status === 'running' ? 'var(--green)' : w.status === 'error' ? 'var(--red)' : 'var(--text3)';
+    const label = w.paused ? 'paused' : w.status || 'idle';
+    const lr = w.last_run ? agentTimeAgo(new Date(w.last_run)) : 'never';
+    const iv = w.interval_min ? w.interval_min + 'min' : '?';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;' + (name !== Object.keys(workers).pop() ? 'border-bottom:1px solid var(--border);' : '') + '">';
+    html += '<div style="display:flex;align-items:center;gap:8px;"><span style="color:' + sc + ';font-size:10px;">&#9679;</span>';
+    html += '<span style="font-size:13px;font-weight:600;text-transform:capitalize;">' + name + '</span>';
+    html += '<span style="font-size:11px;color:var(--text3);">' + label + '</span></div>';
+    html += '<div style="text-align:right;font-size:11px;color:var(--text3);">' + lr + ' / ' + iv;
+    if (w.errors > 0) html += ' <span style="color:var(--red);">' + w.errors + ' err</span>';
+    html += '</div></div>';
+  }
+  const cost = costs.cost || 0;
+  const limit = costs.limit || 10;
+  const pct = Math.min(100, (cost / limit) * 100);
+  html += '<div style="margin-top:8px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px;"><span>Cost today</span><span style="font-weight:600;color:var(--text1);">$' + cost.toFixed(4) + ' / $' + limit.toFixed(0) + '</span></div>';
+  html += '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + (pct > 80 ? 'var(--red)' : 'var(--green)') + ';border-radius:2px;"></div></div></div>';
+  body.innerHTML = html;
+  controls.style.display = isOnline && !stale ? 'block' : 'none';
+}
+
+function agentTimeAgo(d) {
+  const s = Math.round((Date.now() - d.getTime()) / 1000);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.round(s / 60) + 'min ago';
+  if (s < 86400) return Math.round(s / 3600) + 'h ago';
+  return Math.round(s / 86400) + 'd ago';
+}
+
+function agentCmd(action, worker) {
+  if (!firebaseReady || !dbRef) return alert('Firebase not connected');
+  if (worker === 'all') {
+    ['sentinel', 'analyst', 'trader'].forEach(w => {
+      dbRef.child('agentCommands').child(w).set({ action: action });
+    });
+  } else {
+    dbRef.child('agentCommands').child(worker).set({ action: action });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -6427,6 +6511,10 @@ if (firebaseReady) {
       const newest = DB.alerts.filter(a => !a.dismissed).sort((a, b) => (b.created || '').localeCompare(a.created || ''))[0];
       if (newest && newest.severity === 'opportunity') notifyAlert(newest);
     }
+  });
+  // Agent daemon status listener
+  dbRef.child('agentStatus').on('value', (snap) => {
+    renderAgentStatus(snap.val());
   });
 }
 
