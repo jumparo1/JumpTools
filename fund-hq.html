@@ -1211,6 +1211,7 @@ tbody tr:hover { background: var(--bg3); }
       </div>
       <div class="watchlist-grid" id="watchlist-grid"></div>
       <div id="wl-detail" style="margin-top:20px;"></div>
+      <div id="teach-analyst-box"></div>
     </div>
 
     <!-- ===== ALERTS ===== -->
@@ -1500,6 +1501,7 @@ tbody tr:hover { background: var(--bg3); }
           <p style="color:var(--text3);font-size:11px;margin-top:8px;">Data source: DefiLlama Raises API (fetched server-side daily)</p>
         </div>
       </div>
+      <div id="teach-vc-box"></div>
     </div>
 
     <!-- ===== TASKS (Kanban Board) ===== -->
@@ -2062,6 +2064,7 @@ tbody tr:hover { background: var(--bg3); }
         </div>
       </div>
 
+      <div id="teach-sentinel-box"></div>
     </div><!-- /page-onchain -->
 
     <!-- ===== TECHNICAL ANALYSIS ===== -->
@@ -2343,6 +2346,7 @@ tbody tr:hover { background: var(--bg3); }
         </div>
       </div>
 
+      <div id="teach-trader-box"></div>
     </div><!-- /page-technical -->
 
     <!-- ===== DOCS (GitBook-style) ===== -->
@@ -13875,6 +13879,121 @@ function macroTeachAgent() {
     statusEl.style.color = 'var(--red)';
   });
 }
+
+// ===== TEACH ALL AGENTS — Reusable teach box =====
+var agentTeachConfig = {
+  sentinel: {
+    label: 'Sentinel Agent',
+    color: 'var(--purple)',
+    description: 'Teach the Sentinel about whale patterns, on-chain signals, smart money behavior, funding rate setups. What worked in past scans? Which wallets are worth tracking?',
+    types: [
+      {value: 'pattern', label: 'Pattern (whale behavior, accumulation/distribution)'},
+      {value: 'wallet', label: 'Smart Money (wallet notes, entity intel)'},
+      {value: 'rule', label: 'Scanning Rule (if funding > X then Y)'},
+      {value: 'lesson', label: 'Lesson (false alarm post-mortem, good catch)'},
+    ]
+  },
+  analyst: {
+    label: 'Analyst Agent',
+    color: 'var(--green)',
+    description: 'Teach the Analyst about valuation frameworks, sector comparisons, scoring insights. What makes a good investment? Which metrics matter most for which sectors?',
+    types: [
+      {value: 'framework', label: 'Valuation Framework (DCF assumptions, multiples)'},
+      {value: 'sector', label: 'Sector Intel (category dynamics, competitive landscape)'},
+      {value: 'scoring', label: 'Scoring Insight (which factors predicted winners)'},
+      {value: 'lesson', label: 'Lesson (bad score that led to loss, good call)'},
+    ]
+  },
+  trader: {
+    label: 'Trader Agent',
+    color: 'var(--yellow)',
+    description: 'Teach the Trader about your edge, playbook rules, position sizing insights, trade journals. What setups work in which regimes? What are your mistakes to avoid?',
+    types: [
+      {value: 'playbook', label: 'Playbook Rule (setup criteria, entry/exit rules)'},
+      {value: 'journal', label: 'Trade Journal (detailed trade breakdown)'},
+      {value: 'sizing', label: 'Position Sizing (risk rules, correlation limits)'},
+      {value: 'mistake', label: 'Mistake to Avoid (what went wrong and why)'},
+      {value: 'edge', label: 'Edge Definition (what gives you an advantage)'},
+    ]
+  },
+  vc: {
+    label: 'VC Agent',
+    color: 'var(--blue)',
+    description: 'Teach the VC Agent about fundraising patterns, which VCs have the best track records, what made past 100x projects succeed, tokenomics red flags.',
+    types: [
+      {value: 'vc_track', label: 'VC Track Record (which funds pick winners)'},
+      {value: 'success', label: 'Success Pattern (what made past 100x projects)'},
+      {value: 'red_flag', label: 'Red Flag (tokenomics trap, team warning sign)'},
+      {value: 'thesis', label: 'Investment Thesis (sector/narrative conviction)'},
+    ]
+  }
+};
+
+function renderTeachBoxes() {
+  Object.keys(agentTeachConfig).forEach(function(agent) {
+    var el = document.getElementById('teach-' + agent + '-box');
+    if (!el) return;
+    var cfg = agentTeachConfig[agent];
+    var typeOptions = cfg.types.map(function(t) {
+      return '<option value="' + t.value + '">' + t.label + '</option>';
+    }).join('');
+
+    el.innerHTML = '<div class="card" style="padding:20px;margin-top:20px;">' +
+      '<h3 style="margin-bottom:8px;color:' + cfg.color + ';">Teach the ' + cfg.label + '</h3>' +
+      '<p style="color:var(--text2);font-size:12px;margin-bottom:12px;">' + cfg.description + '</p>' +
+      '<select id="teach-' + agent + '-type" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;width:100%;margin-bottom:8px;">' + typeOptions + '</select>' +
+      '<input id="teach-' + agent + '-title" placeholder="Title (e.g. \'SOL whale accumulation pattern Q1 2026\')" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;width:100%;box-sizing:border-box;margin-bottom:8px;" />' +
+      '<textarea id="teach-' + agent + '-content" placeholder="Paste your insight, analysis, trade journal, or data here..." style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:13px;width:100%;box-sizing:border-box;min-height:140px;resize:vertical;line-height:1.7;font-family:inherit;"></textarea>' +
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;">' +
+      '<button class="btn btn-primary" onclick="teachAgent(\'' + agent + '\')" style="font-size:13px;padding:8px 20px;">Save to ' + cfg.label + ' Memory</button>' +
+      '<span id="teach-' + agent + '-status" style="font-size:12px;color:var(--text3);"></span>' +
+      '</div></div>';
+  });
+}
+
+function teachAgent(agent) {
+  var type = document.getElementById('teach-' + agent + '-type').value;
+  var title = document.getElementById('teach-' + agent + '-title').value.trim();
+  var content = document.getElementById('teach-' + agent + '-content').value.trim();
+  var statusEl = document.getElementById('teach-' + agent + '-status');
+
+  if (!content) { statusEl.textContent = 'Please paste some content.'; statusEl.style.color = 'var(--red)'; return; }
+  if (!title) { title = type + ' — ' + new Date().toLocaleDateString(); }
+
+  var key = 'teach_' + Date.now().toString(36);
+  var entry = {
+    content: (title ? '**' + title + '**: ' : '') + content.substring(0, 5000),
+    type: type,
+    agent: agent,
+    tags: [type, 'user-taught'],
+    metadata: { title: title, source: 'user', char_count: content.length },
+    created: new Date().toISOString(),
+    used_count: 0
+  };
+
+  var fbUrl = 'https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app';
+  fetch(fbUrl + '/fundHQ/agentMemory/' + agent + '/' + key + '.json', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry)
+  }).then(function(r) {
+    if (r.ok) {
+      statusEl.textContent = 'Saved! Agent will use this in next cycle.';
+      statusEl.style.color = 'var(--green)';
+      document.getElementById('teach-' + agent + '-title').value = '';
+      document.getElementById('teach-' + agent + '-content').value = '';
+    } else {
+      statusEl.textContent = 'Error saving.';
+      statusEl.style.color = 'var(--red)';
+    }
+  }).catch(function(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  });
+}
+
+// Render teach boxes on page load
+setTimeout(renderTeachBoxes, 1000);
 
 // Initialize macro page data when shown
 var _macroInitialized = false;
