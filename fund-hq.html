@@ -2555,49 +2555,140 @@ cd ~/deploy && git add . && git commit && git push
           <section class="docs-section" id="docs-s-agent-roadmap" style="display:none;">
             <div class="docs-breadcrumb">Agents</div>
             <h1 class="docs-title">Agent Roadmap</h1>
-            <p class="docs-lead">Building toward multiple autonomous agents managing $1B AUM.</p>
+            <p class="docs-lead">5 frontend agents + 3 autonomous workers running 24/7 on Mac Mini.</p>
             <div class="docs-divider"></div>
             <div class="docs-body">
+              <h2>Frontend Agents (Interactive)</h2>
               <div class="docs-roadmap-item done">
                 <div class="docs-roadmap-status">&#10003;</div>
                 <div>
-                  <strong>Pamela</strong> — AI research + fund ops
-                  <div class="docs-muted">20 tools, multi-turn conversations, web search, all fund operations</div>
-                </div>
-              </div>
-              <div class="docs-roadmap-item done">
-                <div class="docs-roadmap-status">&#10003;</div>
-                <div>
-                  <strong>Hyperliquid Agent</strong> — whale tracking + wallet profiling
-                  <div class="docs-muted">Wallet scanner, whale discovery, A-F grading, WebSocket monitoring, Firebase alerts</div>
+                  <strong>Router (Pamela)</strong> — intent classification + delegation
+                  <div class="docs-muted">8 shared tools, routes to specialist agents, handles general queries</div>
                 </div>
               </div>
               <div class="docs-roadmap-item done">
                 <div class="docs-roadmap-status">&#10003;</div>
                 <div>
-                  <strong>Market Scanner</strong> — scheduled scans + alerts
-                  <div class="docs-muted">3 cron jobs: daily scan, watchlist refresh, weekly deep dive</div>
+                  <strong>Analyst Agent</strong> — fundamental research
+                  <div class="docs-muted">10 tools, 5-lens filter, reports, valuations, peer comparison, web search</div>
                 </div>
               </div>
-              <div class="docs-roadmap-item pending">
-                <div class="docs-roadmap-status">&#9744;</div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
                 <div>
-                  <strong>Risk Agent</strong> — portfolio risk management
-                  <div class="docs-muted">VaR calculations, correlation analysis, position sizing, portfolio construction</div>
+                  <strong>Sentinel Agent</strong> — on-chain intelligence
+                  <div class="docs-muted">8 tools, whale tracking, entity profiling, Hyperliquid + Binance data</div>
                 </div>
               </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Trader Agent</strong> — trade setups + learning
+                  <div class="docs-muted">10 tools, confluence scoring, position sizing, playbook learning loop</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>VC Agent</strong> — fundraising intelligence
+                  <div class="docs-muted">6 tools, DefiLlama raises, investor portfolios, 100x gem filter</div>
+                </div>
+              </div>
+
+              <h2 style="margin-top:28px;">Backend Services (FastAPI)</h2>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 1: Data Infrastructure</strong>
+                  <div class="docs-muted">CoinGecko, Binance, DeFiLlama, Hyperliquid, Fear &amp; Greed, DXY, VIX, Fed calendar, token unlocks</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 2: Quantitative Models</strong>
+                  <div class="docs-muted">DCF valuation, revenue multiples, multi-factor scorer (5 dimensions), auto-discovery engine</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 3: Risk Framework</strong>
+                  <div class="docs-muted">Portfolio VaR, correlation matrix, liquidity scoring, counterparty risk, portfolio optimizer, position sizer</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 4: Learning &amp; Edge</strong>
+                  <div class="docs-muted">Trade feedback loop, score calibration, backtesting bridge, monthly performance reports</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 5: Full Autonomy</strong>
+                  <div class="docs-muted">Autonomous research triggers, portfolio-aware smart alerts, auto-manage watchlist, API platform</div>
+                </div>
+              </div>
+
+              <h2 style="margin-top:28px;">Autonomous Daemon (24/7 Mac Mini)</h2>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 6A: Foundation</strong>
+                  <div class="docs-muted">daemon.py orchestrator, Claude Haiku client, work queue, agent memory CRUD, heartbeat, cost tracking</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 6B: Sentinel Worker</strong> — every 30min
+                  <div class="docs-muted">5 scanners (price spikes, volume, whales, funding extremes, OI changes), Claude assessment, signal generation</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 6C: Analyst Worker</strong> — every 2h
+                  <div class="docs-muted">Score refresh, shift detection, Claude research briefs, auto-discovery, auto-manage watchlist</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 6D: Trader Worker</strong> — every 1h
+                  <div class="docs-muted">Setup proximity alerts, outcome tracking, score calibration, Claude setup scanning, signal expiry</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item done">
+                <div class="docs-roadmap-status">&#10003;</div>
+                <div>
+                  <strong>Phase 6E: Production</strong>
+                  <div class="docs-muted">launchd auto-start on boot, restart on crash, Dashboard agent status widget, remote pause/resume/force</div>
+                </div>
+              </div>
+
+              <h2 style="margin-top:28px;">Planned</h2>
               <div class="docs-roadmap-item pending">
                 <div class="docs-roadmap-status">&#9744;</div>
                 <div>
                   <strong>Execution Agent</strong> — automated trading
-                  <div class="docs-muted">Signal-based trade execution, order management, slippage control</div>
+                  <div class="docs-muted">Signal-based trade execution, order management, slippage control via Hyperliquid API</div>
                 </div>
               </div>
               <div class="docs-roadmap-item pending">
                 <div class="docs-roadmap-status">&#9744;</div>
                 <div>
-                  <strong>Macro Agent</strong> — macro intelligence
-                  <div class="docs-muted">Fed policy, rates, liquidity conditions, macro regime classification</div>
+                  <strong>Alternative Data</strong> — GitHub commits, social velocity, dev activity
+                  <div class="docs-muted">Additional data dimensions for scoring model enrichment</div>
+                </div>
+              </div>
+              <div class="docs-roadmap-item pending">
+                <div class="docs-roadmap-status">&#9744;</div>
+                <div>
+                  <strong>Multi-user Infrastructure</strong> — analyst team, PM review
+                  <div class="docs-muted">Role-based access, compliance audit trail, team collaboration</div>
                 </div>
               </div>
             </div>
@@ -2704,6 +2795,23 @@ cd ~/deploy && git add . && git commit && git push
             <p class="docs-lead">Release history and feature updates.</p>
             <div class="docs-divider"></div>
             <div class="docs-body">
+
+              <div class="docs-changelog-entry">
+                <div class="docs-changelog-date">March 23, 2026</div>
+                <ul>
+                  <li><strong>Phase 6A: Daemon Foundation</strong> — daemon.py orchestrator with 3 worker loops, heartbeat every 60s, $10/day cost limit, exponential backoff, graceful SIGTERM shutdown</li>
+                  <li><strong>Shared Modules</strong> — Claude Haiku client (rate limiting, cost tracking, memory injection), work queue (priority, dedup, cooldowns), agent memory CRUD (Firebase-backed learnings/mistakes/thresholds)</li>
+                  <li><strong>Sentinel Worker</strong> — 5 autonomous scanners every 30min: price spikes (&gt;15%), volume (&gt;3x), HL whales ($500K+), funding extremes (&gt;0.05%), OI changes (&gt;20%). Claude Haiku assessment per trigger</li>
+                  <li><strong>Analyst Worker</strong> — score refresh for 13+ assets every 2h, score-shift detection (&gt;0.5) with Claude research briefs, auto-discovery every 6h, auto-manage watchlist</li>
+                  <li><strong>Trader Worker</strong> — setup proximity alerts every 1h, TradeFeedback performance tracking, ScoreCalibrator (auto after 5+ trades), Claude setup scanning, 7-day signal expiry</li>
+                  <li><strong>Counterparty Risk</strong> — exchange/protocol/bridge scoring (Binance 9/10, Hyperliquid 5.5/10, Wormhole 4/10)</li>
+                  <li><strong>Monthly Reports</strong> — auto-generated performance reports with trading, signals, costs, learnings sections</li>
+                  <li><strong>Macro Data</strong> — DXY, VIX, US 10Y Treasury from Yahoo Finance + Fed calendar (2026 FOMC dates) + CPI/NFP schedule</li>
+                  <li><strong>Token Unlocks</strong> — DeFiLlama emissions API + known major unlocks with VC selling pressure ratings</li>
+                  <li><strong>Production Deploy</strong> — launchd auto-start on Mac Mini, restart on crash, Dashboard agent status widget with remote control</li>
+                  <li><strong>Roadmap Sync</strong> — 30 tasks marked Done across all phases in Firebase roadmap</li>
+                </ul>
+              </div>
 
               <div class="docs-changelog-entry">
                 <div class="docs-changelog-date">March 20, 2026</div>
