@@ -4629,12 +4629,20 @@ function buildSentinelPrompt() {
   '- market_hl: HL perp data (OI, funding, volume, price)\n' +
   '- market_binance: Binance top trader long/short ratio, global ratio, smart money divergence\n' +
   '- positioning: aggregated long/short from scanned HL wallets\n' +
-  '- top_positions: individual whale positions on HL\n' +
+  '- top_positions: individual whale positions with liq_price, distance_to_liq, quality_grade, win_rate, whale_type, holding_since\n' +
+  '- verdict: auto-generated one-line summary with bias, squeeze levels, divergence\n' +
   'ALWAYS present Binance top trader ratio and smart money divergence when available — this is the strongest signal.\n' +
   'Format: "Binance top traders: 62% long (bullish) | Retail: 55% short (bearish) | DIVERGENCE DETECTED"\n\n' +
+  '## ENRICHED WHALE DATA\n' +
+  'Top 10 positions are enriched with:\n' +
+  '- liq_price + distance_to_liq: Show these ALWAYS. "Liq at $42.50 (12% away)" is actionable. "Vulnerable to squeeze" is not.\n' +
+  '- quality_grade + win_rate + whale_type: Show grade and historical win rate for each whale. An A-grade whale shorting is very different from a C-grade degen.\n' +
+  '- holding_since: How long the position has been open. "Opened 3d ago" vs "opened 2h ago" tells you conviction level.\n' +
+  '- verdict: Start your analysis with the auto-verdict, then expand with your interpretation.\n\n' +
   '## COMMUNICATION STYLE\n' +
-  '- Lead with the signal, not the process: "3 whales accumulating SOL — $4.2M total"\n' +
-  '- Always include: wallet grade, position size, regime context\n' +
+  '- Lead with the verdict, then the signal: "Strong short bias with squeeze risk above $X"\n' +
+  '- Always include: liq prices + distance, wallet grade + win rate, position age, regime context\n' +
+  '- End every whale analysis with a clear directional call: "Lean [long/short] with [risk level] above/below $X"\n' +
   '- Use create_signal for significant findings\n' +
   '- Use create_alert severity "opportunity" for high-conviction whale signals\n\n' +
   '## LIVE CONTEXT\n' +
@@ -5223,15 +5231,17 @@ async function executeToolCall(name, input) {
           hlSavedWallets.forEach(function(w) { if (w.address) addresses.add(w.address); });
         } catch(e) {}
 
-        // Step 3: Scan wallets for positions (up to 100)
+        // Step 3: Scan wallets for positions (up to 100) — enriched with liq price, timestamps, quality
         const whalePositions = [];
         var longNotional = 0, shortNotional = 0, longCount = 0, shortCount = 0;
         const checked = Array.from(addresses).slice(0, 100);
+        const whaleScoreCache = {}; // addr → { grade, win_rate, type }
         for (const addr of checked) {
           try {
             const state = await hlPost({ type: 'clearinghouseState', user: addr });
             const acctVal = parseFloat((state.marginSummary || {}).accountValue || 0);
             if (acctVal < 10000) continue;
+            var hasLargePosition = false;
             (state.assetPositions || []).forEach(ap => {
               const p = ap.position || ap;
               const sz = parseFloat(p.szi || 0);
@@ -5239,11 +5249,14 @@ async function executeToolCall(name, input) {
               const entry = parseFloat(p.entryPx || 0);
               const notional = Math.abs(sz * entry);
               if (coin && p.coin !== coin) return;
-              // Track all positions for long/short ratio
               if (sz > 0) { longNotional += notional; longCount++; }
               else { shortNotional += notional; shortCount++; }
-              // Only include positions above min size
               if (notional < minSize) return;
+              hasLargePosition = true;
+              // Liquidation price from HL API
+              var liqPx = parseFloat(p.liquidationPx || 0);
+              var markPx = coin && marketData[coin] ? marketData[coin].mark_price : entry;
+              var distToLiq = liqPx > 0 && markPx > 0 ? parseFloat((Math.abs(markPx - liqPx) / markPx * 100).toFixed(1)) : null;
               whalePositions.push({
                 wallet: addr.slice(0, 10) + '...',
                 full_address: addr,
@@ -5253,12 +5266,61 @@ async function executeToolCall(name, input) {
                 entry_price: entry,
                 unrealized_pnl: Math.round(parseFloat(p.unrealizedPnl || 0)),
                 leverage: (p.leverage ? p.leverage.value || 1 : 1) + 'x',
-                account_value: Math.round(acctVal)
+                account_value: Math.round(acctVal),
+                liq_price: liqPx > 0 ? parseFloat(liqPx.toFixed(4)) : null,
+                distance_to_liq: distToLiq ? distToLiq + '%' : 'N/A',
+                _addr: addr, _needsEnrich: true
               });
             });
           } catch(e) {}
         }
         whalePositions.sort((a, b) => b.size_usd - a.size_usd);
+
+        // Step 3b: Enrich top 10 positions with quality scores + entry timestamps
+        var topToEnrich = whalePositions.slice(0, 10).filter(w => w._needsEnrich);
+        var enrichAddrs = [...new Set(topToEnrich.map(w => w._addr))];
+        for (const addr of enrichAddrs) {
+          try {
+            const [enrichState, fills] = await Promise.all([
+              hlPost({ type: 'clearinghouseState', user: addr }),
+              hlPost({ type: 'userFills', user: addr })
+            ]);
+            // Quality score
+            if (typeof whaleScoreWallet === 'function') {
+              var scoreResult = whaleScoreWallet(addr, enrichState, fills, coin || null);
+              whaleScoreCache[addr] = {
+                quality_grade: scoreResult.grade || 'N/A',
+                win_rate: scoreResult.winRate ? scoreResult.winRate + '%' : 'N/A',
+                whale_type: scoreResult.type || 'unknown',
+                total_trades: scoreResult.totalTrades || 0
+              };
+            }
+            // Entry timestamp — find oldest fill for this coin to estimate when position opened
+            if (coin && Array.isArray(fills)) {
+              var coinFills = fills.filter(f => f.coin === coin).sort((a, b) => (a.time || 0) - (b.time || 0));
+              if (coinFills.length > 0) {
+                var oldestTime = coinFills[0].time || 0;
+                whaleScoreCache[addr] = whaleScoreCache[addr] || {};
+                whaleScoreCache[addr].entry_time = oldestTime ? new Date(oldestTime).toISOString() : null;
+                whaleScoreCache[addr].holding_since = oldestTime ? hlTimeSince(oldestTime) : 'unknown';
+              }
+            }
+          } catch(e) {}
+        }
+        // Merge enrichment into positions
+        whalePositions.forEach(function(wp) {
+          var enriched = whaleScoreCache[wp._addr];
+          if (enriched) {
+            wp.quality_grade = enriched.quality_grade || 'N/A';
+            wp.win_rate = enriched.win_rate || 'N/A';
+            wp.whale_type = enriched.whale_type || 'unknown';
+            wp.total_trades = enriched.total_trades || 0;
+            if (enriched.entry_time) wp.entry_time = enriched.entry_time;
+            if (enriched.holding_since) wp.holding_since = enriched.holding_since;
+          }
+          delete wp._addr;
+          delete wp._needsEnrich;
+        });
 
         // Build result with market context
         var result = {
@@ -5333,6 +5395,38 @@ async function executeToolCall(name, input) {
             result.market_binance = { venue: 'Binance', error: 'Failed to fetch: ' + e.message };
           }
         }
+
+        // Step 6: Auto-verdict — one-line summary with actionable levels
+        var verdictParts = [];
+        var lsRatio = result.positioning.long_short_ratio;
+        if (typeof lsRatio === 'number') {
+          if (lsRatio < 0.5) verdictParts.push('Strong short bias (' + lsRatio + ' L/S)');
+          else if (lsRatio < 0.8) verdictParts.push('Moderate short bias (' + lsRatio + ' L/S)');
+          else if (lsRatio > 2) verdictParts.push('Strong long bias (' + lsRatio + ' L/S)');
+          else if (lsRatio > 1.3) verdictParts.push('Moderate long bias (' + lsRatio + ' L/S)');
+          else verdictParts.push('Neutral positioning (' + lsRatio + ' L/S)');
+        }
+        // Liquidation cluster — find nearest liq prices for squeeze risk
+        var liqShorts = whalePositions.filter(w => w.side === 'SHORT' && w.liq_price).map(w => w.liq_price).sort((a, b) => a - b);
+        var liqLongs = whalePositions.filter(w => w.side === 'LONG' && w.liq_price).map(w => w.liq_price).sort((a, b) => b - a);
+        var markPxForVerdict = coin && marketData[coin] ? marketData[coin].mark_price : 0;
+        if (liqShorts.length > 0 && markPxForVerdict > 0) {
+          var nearestShortLiq = liqShorts[0];
+          var pctAway = ((nearestShortLiq - markPxForVerdict) / markPxForVerdict * 100).toFixed(1);
+          verdictParts.push('Short squeeze risk above $' + nearestShortLiq.toFixed(2) + ' (' + pctAway + '% away, ' + liqShorts.length + ' short liqs)');
+        }
+        if (liqLongs.length > 0 && markPxForVerdict > 0) {
+          var nearestLongLiq = liqLongs[0];
+          var pctAwayL = ((markPxForVerdict - nearestLongLiq) / markPxForVerdict * 100).toFixed(1);
+          verdictParts.push('Long cascade below $' + nearestLongLiq.toFixed(2) + ' (' + pctAwayL + '% away, ' + liqLongs.length + ' long liqs)');
+        }
+        // Binance divergence
+        if (result.market_binance && result.market_binance.top_trader_bias) {
+          var hlBias = result.positioning.bias;
+          var bnBias = result.market_binance.top_trader_bias;
+          if (hlBias !== bnBias) verdictParts.push('DIVERGENCE: HL whales ' + hlBias + ' vs Binance smart money ' + bnBias);
+        }
+        result.verdict = verdictParts.join('. ') + '.';
 
         return result;
       } catch(e) { return { error: 'Whale scan failed: ' + e.message }; }
