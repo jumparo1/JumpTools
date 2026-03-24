@@ -11917,12 +11917,72 @@ var vcSources = [];
 try { vcSources = JSON.parse(localStorage.getItem('vc_sources') || '[]'); } catch(e) { vcSources = []; }
 
 // ===== VC STAR RATINGS =====
+var VC_DEFAULT_RATINGS = {
+  "levl":{stars:4,note:"Galaxy Digital spinout, $7M seed led by Galaxy + Variant — strong pedigree, stablecoin cross-border payments"},
+  "novig":{stars:5,note:"Sports prediction market, $75M Series B at $500M valuation, Pantera + Multicoin, $4B annualized volume"},
+  "based":{stars:2,note:"No credible public info found — too obscure, treat as high-risk unknown"},
+  "saturn":{stars:2,note:"Bitcoin DEX with only $800K seed from Sora Ventures — tiny raise, niche market"},
+  "odei":{stars:1,note:"Micro-cap AI agent token on Base, no disclosed VC backers — speculative meme-AI play"},
+  "01 exchange":{stars:2,note:"No verifiable funding data — perps DEX space is hyper-competitive"},
+  "kled ai":{stars:3,note:"Solana AI data marketplace, Sebastian Thrun + Aglaé Ventures — interesting but micro-cap execution risk, token -75%"},
+  "veryai":{stars:4,note:"Palm-scan proof-of-humanity, $10M seed led by Polychain, Solana co-founder angel — right problem, right time"},
+  "general tensor":{stars:3,note:"Bittensor infrastructure, $5M seed with DCG + Goldman Sachs-backed — institutional signal but ecosystem risk"},
+  "ironlight":{stars:4,note:"SEC-regulated ATS for tokenized securities, $21M Series A, ex-TD Bank CEO chairman — strong RWA timing"},
+  "roboforce":{stars:4,note:"Physical AI robotics, $52M led by YZi Labs, NVIDIA collab + Nobel laureate Myron Scholes — AI-robotics convergence"},
+  "backpack":{stars:5,note:"Solana-native CeFi exchange, $363B lifetime volume, Placeholder/Jump/Delphi backed, imminent TGE catalyst"},
+  "eightco holdings":{stars:2,note:"NASDAQ shell pivoting to AI/crypto — speculative transformation play, not pure crypto venture"},
+  "kast":{stars:5,note:"Stablecoin neobank, $80M Series A at $600M valuation, QED + DST Global, 1M+ users, 15-20% MoM growth"},
+  "cryptio":{stars:4,note:"Enterprise crypto accounting, $45M Series B, 450+ clients incl Circle + SocGen — institutional adoption wave"},
+  "zodl":{stars:5,note:"Zcash privacy dev lab, $25M seed, Paradigm + a16z + Coinbase + Winklevoss — elite privacy syndicate, ZEC +400% shielded pool"},
+  "unitas labs":{stars:3,note:"Yield-bearing stablecoin on Solana, Amber Group-led — competitive against Ethena"},
+  "metacomp":{stars:3,note:"Alibaba-backed Singapore exchange, $10B+ volume, profitable — limited token upside"},
+  "origins network":{stars:2,note:"Crowded AI L1 space, no standout differentiation"},
+  "bluesky":{stars:3,note:"Bain Capital $100M, 43M users — no token/direct crypto upside"},
+  "kalshi":{stars:5,note:"Paradigm + a16z + Sequoia, $22B valuation, CFTC-regulated prediction market leader"},
+  "transfi":{stars:3,note:"$19.2M raise, 70-country reach — competitive stablecoin payments"},
+  "derivio":{stars:3,note:"YZi Labs (ex-Binance Labs) backed, agentic trading — zkSync adoption struggles"},
+  "dtcpay":{stars:3,note:"Vertex (Temasek-backed) led, Visa partnership — undifferentiated payments"},
+  "ark labs":{stars:4,note:"Tether-led $7.7M, Bitcoin-native programmable finance with largest stablecoin issuer as strategic partner"},
+  "op net":{stars:3,note:"Bitcoin L1 smart contracts, Further + Anagram backed — niche but interesting"},
+  "zcash open development lab":{stars:5,note:"Paradigm + a16z + Coinbase + Winklevoss $25M — elite privacy syndicate"},
+  "omnipact":{stars:2,note:"Anonymous backers, pre-mainnet — red flag at $50M raise"},
+  "utexo":{stars:4,note:"Tether-led, Franklin Templeton — USDT on Bitcoin via Lightning fills real infra gap"},
+  "qfex":{stars:4,note:"General Catalyst-led, Paul Graham + YC, Citadel/Jump alumni — 24/7 perps on TradFi assets"},
+  "cyclops":{stars:3,note:"Castle Island + F-Prime + Shift4 — solid team but saturated payments space"},
+  "cambria":{stars:2,note:"$1M token sale, $30M FDV — tiny, Web3 gaming poor track record"},
+  "crossover markets":{stars:4,note:"Tradeweb-led at $200M val, DRW + Wintermute — institutional crypto ECN with $50B+ volume"},
+  "interstate":{stars:2,note:"$1.5M raise, minimal info — too early"},
+  "marscat":{stars:2,note:"Animoca $3M, P2P privacy infra — too small, vague product"},
+  "arq":{stars:5,note:"Sequoia + Founders Fund, 2M customers, $10B+ annualized volume — proven PMF in LatAm stablecoins"},
+  "akave":{stars:3,note:"Protocol Labs + Avalanche backed — decentralized storage for AI, similar plays haven't broken out"},
+  "bluprynt":{stars:4,note:"Coinbase Ventures + Robinhood + Mark Cuban, first MiCA pilot — compliance infra positioning"},
+  "jpyc":{stars:3,note:"First licensed yen stablecoin, Sony Bank MOU — niche Japan opportunity"},
+  "sts digital":{stars:4,note:"CMT Digital + Kraken + Fidelity backed, profitable, tripled revenue — institutional crypto derivatives"},
+  "whop":{stars:4,note:"Tether $200M at $1.6B val, 18.4M users, $142M annualized revenue — creator marketplace + USDT"},
+  "t54 labs":{stars:4,note:"Ripple + Franklin Templeton — AI agent KYC/compliance, early-mover in critical category"},
+  "tbd":{stars:3,note:"CMT Digital + ParaFi + Jump, 225K users — clever but niche vs Kalshi/Polymarket"},
+  "kash":{stars:3,note:"Coinbase Ventures + Spartan — novel X-embedded prediction markets, but pre-revenue pre-seed"},
+  "power protocol":{stars:3,note:"Bitkraft + Delphi, 380K beta players, $1.1M revenue — best Web3 gaming metrics but poor sector history"},
+  "based one":{stars:5,note:"Pantera + Coinbase + Wintermute, $40B volume, $14M revenue in 8mo on Hyperliquid — exceptional traction"},
+  "flying tulip":{stars:3,note:"Andre Cronje $206M raise but token fell below listing price — poor launch despite pedigree"}
+};
 var vcStarRatings = {};
-try { vcStarRatings = JSON.parse(localStorage.getItem('vc_star_ratings') || '{}'); } catch(e) { vcStarRatings = {}; }
+try {
+  vcStarRatings = JSON.parse(localStorage.getItem('vc_star_ratings') || '{}');
+  // Seed defaults if empty
+  if (Object.keys(vcStarRatings).length === 0) {
+    vcStarRatings = JSON.parse(JSON.stringify(VC_DEFAULT_RATINGS));
+    localStorage.setItem('vc_star_ratings', JSON.stringify(vcStarRatings));
+  }
+} catch(e) { vcStarRatings = JSON.parse(JSON.stringify(VC_DEFAULT_RATINGS)); }
 
 function vcGetStarStore() {
-  if (typeof vcStarRatings === 'undefined' || !vcStarRatings) {
+  if (typeof vcStarRatings === 'undefined' || !vcStarRatings || Object.keys(vcStarRatings).length === 0) {
     try { vcStarRatings = JSON.parse(localStorage.getItem('vc_star_ratings') || '{}'); } catch(e) { vcStarRatings = {}; }
+    if (Object.keys(vcStarRatings).length === 0) {
+      vcStarRatings = {"levl":{stars:4,note:"Galaxy Digital spinout, Galaxy + Variant led"},"novig":{stars:5,note:"$75M Series B, Pantera + Multicoin, $4B volume"},"based":{stars:2,note:"No credible public info — high-risk unknown"},"saturn":{stars:2,note:"Bitcoin DEX, $800K seed — tiny raise"},"odei":{stars:1,note:"Micro-cap AI token, no VC backers"},"01 exchange":{stars:2,note:"No verifiable funding — hyper-competitive perps"},"kled ai":{stars:3,note:"AI data marketplace, Thrun + Aglaé — micro-cap risk, token -75%"},"veryai":{stars:4,note:"Polychain-led proof-of-humanity, Solana co-founder angel"},"general tensor":{stars:3,note:"Bittensor infra, DCG + Goldman-backed — ecosystem risk"},"ironlight":{stars:4,note:"SEC-regulated ATS, ex-TD Bank CEO — strong RWA timing"},"roboforce":{stars:4,note:"AI robotics $52M, YZi Labs + NVIDIA collab"},"backpack":{stars:5,note:"Solana CeFi exchange, $363B volume, imminent TGE"},"eightco holdings":{stars:2,note:"NASDAQ shell pivot — speculative"},"kast":{stars:5,note:"$80M Series A, QED + DST, 1M+ users, 15-20% MoM growth"},"cryptio":{stars:4,note:"$45M Series B, 450+ clients incl Circle + SocGen"},"zodl":{stars:5,note:"$25M seed, Paradigm + a16z + Coinbase + Winklevoss — elite privacy"},"unitas labs":{stars:3,note:"Yield stablecoin on Solana — competitive vs Ethena"},"metacomp":{stars:3,note:"Alibaba-backed, profitable — limited token upside"},"origins network":{stars:2,note:"Crowded AI L1, no differentiation"},"bluesky":{stars:3,note:"$100M Bain Capital, 43M users — no token upside"},"kalshi":{stars:5,note:"Paradigm+a16z+Sequoia, $22B val, CFTC-regulated"},"transfi":{stars:3,note:"$19M raise, 70 countries — competitive payments"},"derivio":{stars:3,note:"YZi Labs backed — zkSync adoption struggles"},"dtcpay":{stars:3,note:"Temasek-backed, Visa partnership — undifferentiated"},"ark labs":{stars:4,note:"Tether-led, Bitcoin-native programmable finance"},"op net":{stars:3,note:"Bitcoin smart contracts — niche but interesting"},"zcash open development lab":{stars:5,note:"Paradigm+a16z+Coinbase+Winklevoss $25M — elite privacy"},"omnipact":{stars:2,note:"Anonymous backers, pre-mainnet — red flag"},"utexo":{stars:4,note:"Tether+Franklin Templeton — USDT on Bitcoin Lightning"},"qfex":{stars:4,note:"General Catalyst, Paul Graham+YC — 24/7 TradFi perps"},"cyclops":{stars:3,note:"Castle Island+F-Prime — saturated payments"},"cambria":{stars:2,note:"$1M token sale — tiny, poor gaming sector history"},"crossover markets":{stars:4,note:"Tradeweb-led $200M val, DRW+Wintermute — institutional ECN"},"interstate":{stars:2,note:"$1.5M raise — too early"},"marscat":{stars:2,note:"Animoca $3M privacy infra — too small, vague"},"arq":{stars:5,note:"Sequoia+Founders Fund, 2M customers, $10B+ volume"},"akave":{stars:3,note:"Protocol Labs+Avalanche — decentralized storage for AI"},"bluprynt":{stars:4,note:"Coinbase+Robinhood+Mark Cuban — compliance infra"},"jpyc":{stars:3,note:"First licensed yen stablecoin — niche Japan"},"sts digital":{stars:4,note:"CMT+Kraken+Fidelity, profitable — crypto derivatives"},"whop":{stars:4,note:"Tether $200M, 18.4M users, $142M revenue"},"t54 labs":{stars:4,note:"Ripple+Franklin Templeton — AI agent KYC"},"tbd":{stars:3,note:"CMT+ParaFi+Jump — niche vs Kalshi/Polymarket"},"kash":{stars:3,note:"Coinbase+Spartan — X-embedded prediction markets, pre-seed"},"power protocol":{stars:3,note:"Bitkraft+Delphi, 380K players — poor GameFi history"},"based one":{stars:5,note:"Pantera+Coinbase, $40B volume, $14M revenue on Hyperliquid"},"flying tulip":{stars:3,note:"Andre Cronje $206M — token fell below listing price"}};
+      try { localStorage.setItem('vc_star_ratings', JSON.stringify(vcStarRatings)); } catch(e) {}
+    }
   }
   return vcStarRatings;
 }
