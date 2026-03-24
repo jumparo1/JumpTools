@@ -3745,23 +3745,15 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
 // ============================================================================
 // FIREBASE CONFIG — Paste your Firebase config below
 // ============================================================================
-// Firebase config loaded from localStorage — set via Settings page
-// To set: localStorage.setItem('fundHQ_firebaseConfig', JSON.stringify({apiKey:..., authDomain:..., databaseURL:..., projectId:..., storageBucket:..., messagingSenderId:..., appId:...}))
-const firebaseConfig = (() => {
-  try {
-    const saved = localStorage.getItem('fundHQ_firebaseConfig');
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
-  return {
-    apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
-    authDomain: "",
-    databaseURL: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
-  };
-})();
+const firebaseConfig = {
+  apiKey: "AIzaSyAyK2aZBu29kX-7rHzZIs308MsekpgNvEo",
+  authDomain: "fundhq-8feae.firebaseapp.com",
+  databaseURL: "https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "fundhq-8feae",
+  storageBucket: "fundhq-8feae.firebasestorage.app",
+  messagingSenderId: "305591584755",
+  appId: "1:305591584755:web:ccbe80fbdac2282b743486"
+};
 // ============================================================================
 
 // ===== USER IDENTITY =====
