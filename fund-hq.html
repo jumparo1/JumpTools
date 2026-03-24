@@ -896,6 +896,17 @@ tbody tr:hover { background: var(--bg3); }
         </div>
       </div>
 
+      <!-- System Intelligence -->
+      <div class="card" style="margin-bottom:20px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="font-size:14px;color:var(--text2);margin:0;">System Intelligence</h3>
+          <span style="font-size:11px;color:var(--text3);" id="sysint-updated">--</span>
+        </div>
+        <div id="sysint-body">
+          <div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">Evolution engine runs every 6h. Waiting for data...</div>
+        </div>
+      </div>
+
       <!-- Quick Actions -->
       <div class="card" style="margin-bottom:20px;padding:16px 20px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -2476,6 +2487,9 @@ tbody tr:hover { background: var(--bg3); }
             <div class="docs-nav-item" onclick="docsNav('models')">
               <span class="docs-nav-icon">&#129302;</span> AI Models
             </div>
+            <div class="docs-nav-item" onclick="docsNav('evolution')">
+              <span class="docs-nav-icon">&#129504;</span> Evolution Engine
+            </div>
           </div>
 
           <div class="docs-nav-group">
@@ -3292,6 +3306,41 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
                 </tbody>
               </table>
               <div class="docs-hint">Select model in the research workspace or report editor. Pamela defaults to Haiku for speed.</div>
+            </div>
+          </section>
+
+          <!-- EVOLUTION ENGINE -->
+          <section class="docs-section" id="docs-s-evolution" style="display:none;">
+            <div class="docs-breadcrumb">Reference</div>
+            <h1 class="docs-title">Evolution Engine</h1>
+            <p class="docs-lead">How the system learns and improves autonomously.</p>
+            <div class="docs-divider"></div>
+            <div class="docs-body">
+              <h2>Signal Feedback Loop</h2>
+              <p>Every signal flows through: create → risk gate → debate → write → expire (7d) → outcome → evolution → threshold adjust → next cycle is smarter.</p>
+
+              <h2>Live Evolution Data</h2>
+              <div id="docs-evo-outcomes" style="margin-bottom:16px;">
+                <div style="color:var(--text3);font-size:12px;">Loading signal outcomes...</div>
+              </div>
+
+              <h2>Threshold Evolution</h2>
+              <p>Continuous gradient: target 55% accuracy, max 10% step per cycle. Thresholds converge smoothly.</p>
+              <div id="docs-evo-thresholds" style="margin-bottom:16px;">
+                <div style="color:var(--text3);font-size:12px;">Loading threshold data...</div>
+              </div>
+
+              <h2>Cross-Agent Patterns</h2>
+              <p>Tracks which agent combinations predict winners. Multi-agent agreement boosts opportunity scores.</p>
+              <div id="docs-evo-patterns" style="margin-bottom:16px;">
+                <div style="color:var(--text3);font-size:12px;">Loading pattern data...</div>
+              </div>
+
+              <h2>Self-Reflection Rules</h2>
+              <p>After productive cycles, agents reflect on accuracy. Rules >14 days without improvement are flagged.</p>
+              <div id="docs-evo-rules" style="margin-bottom:16px;">
+                <div style="color:var(--text3);font-size:12px;">Loading agent rules...</div>
+              </div>
             </div>
           </section>
 
@@ -4370,6 +4419,167 @@ function renderSignalAccuracy(signals) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ===== SYSTEM INTELLIGENCE DASHBOARD =====
+
+function renderSystemIntelligence(outcomes, patterns, thresholds) {
+  var el = document.getElementById('sysint-body');
+  var updEl = document.getElementById('sysint-updated');
+  if (!el) return;
+
+  var html = '';
+
+  // Row 1: Key metrics
+  var accuracy = outcomes ? outcomes.overall_accuracy : null;
+  var totalExpired = outcomes ? (outcomes.total_expired || 0) : 0;
+  var patternInsight = patterns ? (patterns.insight || '') : '';
+  var evolvedCount = thresholds && thresholds.evolved ? thresholds.evolved.length : 0;
+
+  var accColor = accuracy >= 60 ? 'var(--green)' : accuracy >= 40 ? 'var(--yellow)' : accuracy !== null ? 'var(--red)' : 'var(--text3)';
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px;">';
+  html += '<div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">' +
+    '<div style="font-size:24px;font-weight:800;color:' + accColor + ';">' + (accuracy !== null ? accuracy + '%' : '--') + '</div>' +
+    '<div style="font-size:10px;color:var(--text3);">Overall Accuracy</div></div>';
+  html += '<div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">' +
+    '<div style="font-size:24px;font-weight:800;color:var(--text);">' + totalExpired + '</div>' +
+    '<div style="font-size:10px;color:var(--text3);">Signals Evaluated</div></div>';
+  html += '<div style="background:var(--bg3);border-radius:8px;padding:12px;text-align:center;">' +
+    '<div style="font-size:24px;font-weight:800;color:var(--purple);">' + evolvedCount + '</div>' +
+    '<div style="font-size:10px;color:var(--text3);">Thresholds Evolved</div></div>';
+  html += '</div>';
+
+  // Row 2: Per-type accuracy bars
+  if (outcomes && outcomes.by_type) {
+    html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:4px;">Accuracy by Signal Type</div>';
+    var types = Object.keys(outcomes.by_type).sort(function(a,b) {
+      return (outcomes.by_type[b].total || 0) - (outcomes.by_type[a].total || 0);
+    });
+    types.forEach(function(t) {
+      var s = outcomes.by_type[t];
+      var acc = s.accuracy || 0;
+      var color = acc >= 60 ? 'var(--green)' : acc >= 40 ? 'var(--yellow)' : 'var(--red)';
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+        '<span style="font-size:10px;width:80px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + t.replace(/_/g,' ') + '</span>' +
+        '<div style="flex:1;height:10px;background:var(--bg2);border-radius:3px;overflow:hidden;">' +
+          '<div style="height:100%;width:' + acc + '%;background:' + color + ';border-radius:3px;opacity:0.7;"></div></div>' +
+        '<span style="font-size:9px;color:var(--text3);width:50px;text-align:right;">' + acc + '% (' + (s.total||0) + ')</span></div>';
+    });
+  }
+
+  // Row 3: Per-regime accuracy
+  if (outcomes && outcomes.by_regime) {
+    html += '<div style="font-size:11px;color:var(--text3);font-weight:600;margin:8px 0 4px;">Accuracy by Regime</div>';
+    var regimeColors = {'RISK-ON':'var(--green)','RISK-OFF':'var(--red)','NEUTRAL':'var(--yellow)','STAGFLATION':'var(--orange)','unknown':'var(--text3)'};
+    Object.keys(outcomes.by_regime).forEach(function(r) {
+      var s = outcomes.by_regime[r];
+      if (!s.total) return;
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">' +
+        '<span style="font-size:10px;width:70px;color:' + (regimeColors[r]||'var(--text3)') + ';font-weight:600;">' + r + '</span>' +
+        '<div style="flex:1;height:10px;background:var(--bg2);border-radius:3px;overflow:hidden;">' +
+          '<div style="height:100%;width:' + (s.accuracy||0) + '%;background:' + (regimeColors[r]||'var(--text3)') + ';border-radius:3px;opacity:0.5;"></div></div>' +
+        '<span style="font-size:9px;color:var(--text3);width:50px;text-align:right;">' + (s.accuracy||0) + '% (' + s.total + ')</span></div>';
+    });
+  }
+
+  // Row 4: Pattern insight
+  if (patternInsight) {
+    html += '<div style="margin-top:10px;padding:8px 10px;background:var(--bg2);border-radius:6px;border-left:3px solid var(--purple);">' +
+      '<div style="font-size:10px;color:var(--purple);font-weight:600;margin-bottom:2px;">Pattern Discovered</div>' +
+      '<div style="font-size:11px;color:var(--text2);">' + patternInsight + '</div></div>';
+  }
+
+  // Row 5: Last threshold evolution
+  if (thresholds && thresholds.evolved && thresholds.evolved.length > 0) {
+    html += '<div style="margin-top:8px;font-size:10px;color:var(--text3);">Last evolution: ';
+    thresholds.evolved.forEach(function(e) {
+      html += '<span style="color:var(--blue);">' + e.type.replace(/_/g,' ') + '</span> ' +
+        e.direction + ' ' + (e.change_pct||'?') + '% (' + e.accuracy + '% acc) ';
+    });
+    html += '</div>';
+  }
+
+  if (updEl && outcomes && outcomes.updated) updEl.textContent = 'Updated ' + new Date(outcomes.updated).toLocaleString();
+  el.innerHTML = html;
+}
+
+// Store evolution data for rendering
+var _evoOutcomes = null, _evoPatterns = null, _evoThresholds = null;
+function _refreshSysInt() {
+  renderSystemIntelligence(_evoOutcomes, _evoPatterns, _evoThresholds);
+  renderDocsEvolution(_evoOutcomes, _evoPatterns, _evoThresholds);
+}
+
+function renderDocsEvolution(outcomes, patterns, thresholds) {
+  // Outcomes table
+  var oel = document.getElementById('docs-evo-outcomes');
+  if (oel && outcomes && outcomes.by_type) {
+    var h = '<table class="docs-table"><thead><tr><th>Signal Type</th><th>Total</th><th>Correct</th><th>Incorrect</th><th>Accuracy</th><th>Avg PnL</th></tr></thead><tbody>';
+    Object.keys(outcomes.by_type).forEach(function(t) {
+      var s = outcomes.by_type[t];
+      var accColor = (s.accuracy||0) >= 60 ? 'var(--green)' : (s.accuracy||0) >= 40 ? 'var(--yellow)' : 'var(--red)';
+      h += '<tr><td>' + t.replace(/_/g,' ') + '</td><td>' + (s.total||0) + '</td><td style="color:var(--green);">' + (s.correct||0) + '</td><td style="color:var(--red);">' + (s.incorrect||0) + '</td><td style="color:' + accColor + ';font-weight:700;">' + (s.accuracy||0) + '%</td><td>' + (s.avg_pnl||0) + '%</td></tr>';
+    });
+    h += '</tbody></table>';
+    if (outcomes.by_agent) {
+      h += '<h3>By Agent</h3><table class="docs-table"><thead><tr><th>Agent</th><th>Total</th><th>Accuracy</th></tr></thead><tbody>';
+      Object.keys(outcomes.by_agent).forEach(function(a) {
+        var s = outcomes.by_agent[a];
+        h += '<tr><td>' + a + '</td><td>' + (s.total||0) + '</td><td>' + (s.accuracy||0) + '%</td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+    if (outcomes.by_regime) {
+      h += '<h3>By Regime</h3><table class="docs-table"><thead><tr><th>Regime</th><th>Total</th><th>Accuracy</th></tr></thead><tbody>';
+      Object.keys(outcomes.by_regime).forEach(function(r) {
+        var s = outcomes.by_regime[r];
+        h += '<tr><td>' + r + '</td><td>' + (s.total||0) + '</td><td>' + (s.accuracy||0) + '%</td></tr>';
+      });
+      h += '</tbody></table>';
+    }
+    h += '<div style="font-size:11px;color:var(--text3);">Overall: ' + (outcomes.overall_accuracy||'?') + '% on ' + (outcomes.total_expired||0) + ' signals. Updated: ' + (outcomes.updated ? new Date(outcomes.updated).toLocaleString() : '--') + '</div>';
+    oel.innerHTML = h;
+  }
+
+  // Thresholds
+  var tel = document.getElementById('docs-evo-thresholds');
+  if (tel && thresholds) {
+    var h2 = '';
+    if (thresholds.evolved && thresholds.evolved.length) {
+      h2 += '<table class="docs-table"><thead><tr><th>Type</th><th>Old</th><th>New</th><th>Change</th><th>Accuracy</th><th>Signals</th></tr></thead><tbody>';
+      thresholds.evolved.forEach(function(e) {
+        h2 += '<tr><td>' + e.type + '</td><td>' + e.old + '</td><td>' + e.new + '</td><td style="color:var(--blue);">' + e.direction + ' ' + (e.change_pct||'?') + '%</td><td>' + e.accuracy + '%</td><td>' + e.total_signals + '</td></tr>';
+      });
+      h2 += '</tbody></table>';
+    }
+    if (thresholds.insufficient && thresholds.insufficient.length) {
+      h2 += '<div style="font-size:11px;color:var(--text3);margin-top:6px;">Waiting: ';
+      thresholds.insufficient.forEach(function(i) { h2 += i.type + ' (' + i.count + '/' + i.need + ') '; });
+      h2 += '</div>';
+    }
+    if (!h2) h2 = '<div style="color:var(--text3);font-size:12px;">No thresholds evolved yet. Need 10+ signals per type.</div>';
+    tel.innerHTML = h2;
+  }
+
+  // Patterns
+  var pel = document.getElementById('docs-evo-patterns');
+  if (pel && patterns) {
+    var h3 = '';
+    if (patterns.patterns) {
+      h3 += '<table class="docs-table"><thead><tr><th>Pattern</th><th>Total</th><th>Correct</th><th>Accuracy</th></tr></thead><tbody>';
+      Object.keys(patterns.patterns).forEach(function(p) {
+        var s = patterns.patterns[p];
+        h3 += '<tr><td>' + p.replace(/_/g,' ') + '</td><td>' + (s.total||0) + '</td><td>' + (s.correct||0) + '</td><td>' + (s.accuracy !== null ? s.accuracy + '%' : '--') + '</td></tr>';
+      });
+      h3 += '</tbody></table>';
+    }
+    if (patterns.insight) {
+      h3 += '<div style="padding:8px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--purple);font-size:12px;color:var(--text2);margin-top:8px;">' + patterns.insight + '</div>';
+    }
+    if (!h3) h3 = '<div style="color:var(--text3);font-size:12px;">Need 10+ expired signals for pattern analysis.</div>';
+    pel.innerHTML = h3;
+  }
+}
 
 // ===== BACKEND API LAYER =====
 const BACKEND_URL = localStorage.getItem('fundHQ_backendUrl') || 'http://localhost:8888';
@@ -7497,6 +7707,16 @@ if (firebaseReady) {
   // Signal accuracy listener
   dbRef.child('signals').on('value', (snap) => {
     renderSignalAccuracy(snap.val());
+  });
+  // System Intelligence listeners (evolution engine data)
+  dbRef.child('agentData/evolution/signalOutcomes').on('value', (snap) => {
+    _evoOutcomes = snap.val(); _refreshSysInt();
+  });
+  dbRef.child('agentData/evolution/crossAgentPatterns').on('value', (snap) => {
+    _evoPatterns = snap.val(); _refreshSysInt();
+  });
+  dbRef.child('agentData/evolution/thresholds').on('value', (snap) => {
+    _evoThresholds = snap.val(); _refreshSysInt();
   });
 }
 
@@ -11613,7 +11833,7 @@ function hlLoadFromFirebase() {
 
 // ===== DOCS NAVIGATION (GitBook-style) =====
 function docsNav(page) {
-  var docsPages = ['overview','pipeline','architecture','pamela','hyperliquid','scheduled','agent-roadmap','prompts','scoring','apis','models','changelog','about','tasks','roadmap','progress'];
+  var docsPages = ['overview','pipeline','architecture','pamela','hyperliquid','scheduled','agent-roadmap','prompts','scoring','apis','models','evolution','changelog','about','tasks','roadmap','progress'];
   // For embedded ops pages, render their content into the docs section
   var opsPages = {about: 'page-about', tasks: 'page-tasks', roadmap: 'page-roadmap', progress: 'page-progress'};
   if (opsPages[page]) {
