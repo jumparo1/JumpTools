@@ -850,6 +850,52 @@ tbody tr:hover { background: var(--bg3); }
         </div>
       </div>
 
+      <!-- Signal Accuracy Dashboard -->
+      <div class="card" style="margin-bottom:20px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="font-size:14px;color:var(--text2);margin:0;">Signal Accuracy</h3>
+          <span style="font-size:11px;color:var(--text3);" id="sig-accuracy-updated">--</span>
+        </div>
+        <!-- Stats Row -->
+        <div id="sig-accuracy-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px;">
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:20px;font-weight:700;" id="sig-total">0</div>
+            <div style="font-size:10px;color:var(--text3);">Total Signals</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:20px;font-weight:700;" id="sig-accuracy-pct">--</div>
+            <div style="font-size:10px;color:var(--text3);">Accuracy</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:20px;font-weight:700;color:var(--green);" id="sig-correct">0</div>
+            <div style="font-size:10px;color:var(--text3);">Correct</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:20px;font-weight:700;color:var(--red);" id="sig-incorrect">0</div>
+            <div style="font-size:10px;color:var(--text3);">Incorrect</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:20px;font-weight:700;color:var(--blue);" id="sig-active">0</div>
+            <div style="font-size:10px;color:var(--text3);">Active</div>
+          </div>
+        </div>
+        <!-- By Agent -->
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:6px;">By Agent</div>
+          <div id="sig-by-agent"></div>
+        </div>
+        <!-- By Type -->
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:6px;">By Signal Type</div>
+          <div id="sig-by-type"></div>
+        </div>
+        <!-- Weekly Trend -->
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:6px;">Weekly Accuracy Trend</div>
+          <div id="sig-weekly-trend"></div>
+        </div>
+      </div>
+
       <!-- Quick Actions -->
       <div class="card" style="margin-bottom:20px;padding:16px 20px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -4192,6 +4238,137 @@ function renderScorecards(data) {
   el.innerHTML = html;
 }
 
+// ===== SIGNAL ACCURACY DASHBOARD =====
+
+function renderSignalAccuracy(signals) {
+  if (!signals || typeof signals !== 'object') return;
+  var sigs = Object.values(signals).filter(function(s) { return s && typeof s === 'object'; });
+  if (!sigs.length) return;
+
+  var active = sigs.filter(function(s) { return s.status === 'active'; });
+  var expired = sigs.filter(function(s) { return s.status === 'expired'; });
+  var correct = sigs.filter(function(s) { return s.outcome === 'correct'; });
+  var incorrect = sigs.filter(function(s) { return s.outcome === 'incorrect'; });
+  var evaluated = correct.length + incorrect.length;
+  var accuracy = evaluated > 0 ? Math.round(correct.length / evaluated * 100) : null;
+
+  // Stats
+  var totalEl = document.getElementById('sig-total');
+  var accEl = document.getElementById('sig-accuracy-pct');
+  var corEl = document.getElementById('sig-correct');
+  var incEl = document.getElementById('sig-incorrect');
+  var actEl = document.getElementById('sig-active');
+  var updEl = document.getElementById('sig-accuracy-updated');
+  if (totalEl) totalEl.textContent = sigs.length;
+  if (accEl) {
+    accEl.textContent = accuracy !== null ? accuracy + '%' : '--';
+    accEl.style.color = accuracy >= 60 ? 'var(--green)' : accuracy >= 40 ? 'var(--yellow)' : accuracy !== null ? 'var(--red)' : 'var(--text3)';
+  }
+  if (corEl) corEl.textContent = correct.length;
+  if (incEl) incEl.textContent = incorrect.length;
+  if (actEl) actEl.textContent = active.length;
+  if (updEl) updEl.textContent = evaluated + ' evaluated';
+
+  // By Agent
+  var agentEl = document.getElementById('sig-by-agent');
+  if (agentEl) {
+    var byAgent = {};
+    sigs.forEach(function(s) {
+      var src = (s.source || 'unknown').replace('-auto', '');
+      if (!byAgent[src]) byAgent[src] = { correct: 0, incorrect: 0, total: 0 };
+      byAgent[src].total++;
+      if (s.outcome === 'correct') byAgent[src].correct++;
+      if (s.outcome === 'incorrect') byAgent[src].incorrect++;
+    });
+    var agentColors = { sentinel: 'var(--purple)', analyst: 'var(--green)', trader: 'var(--yellow)', macro: 'var(--orange)', vc: 'var(--blue)' };
+    var html = '';
+    Object.keys(byAgent).sort().forEach(function(agent) {
+      var a = byAgent[agent];
+      var ev = a.correct + a.incorrect;
+      var acc = ev > 0 ? Math.round(a.correct / ev * 100) : null;
+      var barW = acc !== null ? acc : 0;
+      var color = agentColors[agent] || 'var(--text3)';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+        '<span style="font-size:11px;width:60px;color:' + color + ';font-weight:600;text-transform:capitalize;">' + agent + '</span>' +
+        '<div style="flex:1;height:14px;background:var(--bg2);border-radius:4px;overflow:hidden;position:relative;">' +
+          '<div style="height:100%;width:' + barW + '%;background:' + color + ';border-radius:4px;opacity:0.7;"></div>' +
+          '<span style="position:absolute;right:4px;top:0;font-size:9px;line-height:14px;color:var(--text2);">' + (acc !== null ? acc + '%' : '--') + '</span>' +
+        '</div>' +
+        '<span style="font-size:10px;color:var(--text3);width:40px;text-align:right;">' + a.total + ' sig</span>' +
+      '</div>';
+    });
+    agentEl.innerHTML = html;
+  }
+
+  // By Type
+  var typeEl = document.getElementById('sig-by-type');
+  if (typeEl) {
+    var byType = {};
+    sigs.forEach(function(s) {
+      var t = s.type || 'unknown';
+      if (!byType[t]) byType[t] = { correct: 0, incorrect: 0, total: 0 };
+      byType[t].total++;
+      if (s.outcome === 'correct') byType[t].correct++;
+      if (s.outcome === 'incorrect') byType[t].incorrect++;
+    });
+    var html2 = '';
+    Object.keys(byType).sort(function(a, b) { return byType[b].total - byType[a].total; }).forEach(function(type) {
+      var t = byType[type];
+      var ev = t.correct + t.incorrect;
+      var acc = ev > 0 ? Math.round(t.correct / ev * 100) : null;
+      var barW = acc !== null ? acc : 0;
+      var accColor = acc >= 60 ? 'var(--green)' : acc >= 40 ? 'var(--yellow)' : acc !== null ? 'var(--red)' : 'var(--text3)';
+      html2 += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+        '<span style="font-size:10px;width:90px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + type.replace(/_/g, ' ') + '</span>' +
+        '<div style="flex:1;height:12px;background:var(--bg2);border-radius:3px;overflow:hidden;position:relative;">' +
+          '<div style="height:100%;width:' + barW + '%;background:' + accColor + ';border-radius:3px;opacity:0.6;"></div>' +
+          '<span style="position:absolute;right:4px;top:0;font-size:8px;line-height:12px;color:var(--text2);">' + (acc !== null ? acc + '%' : '--') + '</span>' +
+        '</div>' +
+        '<span style="font-size:9px;color:var(--text3);width:24px;text-align:right;">' + t.total + '</span>' +
+      '</div>';
+    });
+    typeEl.innerHTML = html2;
+  }
+
+  // Weekly Trend
+  var trendEl = document.getElementById('sig-weekly-trend');
+  if (trendEl) {
+    var byWeek = {};
+    expired.forEach(function(s) {
+      if (!s.outcome || s.outcome === 'unknown') return;
+      var d = new Date(s.created || s.expired_at);
+      if (isNaN(d)) return;
+      // Week key: YYYY-Www
+      var jan1 = new Date(d.getFullYear(), 0, 1);
+      var wk = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+      var key = d.getFullYear() + '-W' + String(wk).padStart(2, '0');
+      if (!byWeek[key]) byWeek[key] = { correct: 0, incorrect: 0 };
+      if (s.outcome === 'correct') byWeek[key].correct++;
+      if (s.outcome === 'incorrect') byWeek[key].incorrect++;
+    });
+    var weeks = Object.keys(byWeek).sort();
+    if (weeks.length === 0) {
+      trendEl.innerHTML = '<div style="font-size:11px;color:var(--text3);">Need more expired signals for trend data.</div>';
+    } else {
+      var trendHtml = '<div style="display:flex;align-items:flex-end;gap:4px;height:60px;">';
+      weeks.slice(-12).forEach(function(wk) {
+        var w = byWeek[wk];
+        var ev = w.correct + w.incorrect;
+        var acc = ev > 0 ? Math.round(w.correct / ev * 100) : 0;
+        var barH = Math.max(4, acc * 0.55);
+        var color = acc >= 60 ? 'var(--green)' : acc >= 40 ? 'var(--yellow)' : 'var(--red)';
+        trendHtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;">' +
+          '<div style="font-size:8px;color:var(--text3);margin-bottom:2px;">' + acc + '%</div>' +
+          '<div style="width:100%;height:' + barH + 'px;background:' + color + ';border-radius:2px;opacity:0.7;"></div>' +
+          '<div style="font-size:7px;color:var(--text3);margin-top:2px;">' + wk.split('-W')[1] + '</div>' +
+        '</div>';
+      });
+      trendHtml += '</div>';
+      trendEl.innerHTML = trendHtml;
+    }
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ===== BACKEND API LAYER =====
@@ -7316,6 +7493,10 @@ if (firebaseReady) {
   // Agent scorecards listener
   dbRef.child('agentScorecards').on('value', (snap) => {
     renderScorecards(snap.val());
+  });
+  // Signal accuracy listener
+  dbRef.child('signals').on('value', (snap) => {
+    renderSignalAccuracy(snap.val());
   });
 }
 
