@@ -11916,6 +11916,44 @@ try { vcRaises = JSON.parse(localStorage.getItem('vc_raises') || '[]'); } catch(
 var vcSources = [];
 try { vcSources = JSON.parse(localStorage.getItem('vc_sources') || '[]'); } catch(e) { vcSources = []; }
 
+// ===== VC STAR RATINGS =====
+var vcStarRatings = {};
+try { vcStarRatings = JSON.parse(localStorage.getItem('vc_star_ratings') || '{}'); } catch(e) { vcStarRatings = {}; }
+
+function vcGetStarStore() {
+  if (typeof vcStarRatings === 'undefined' || !vcStarRatings) {
+    try { vcStarRatings = JSON.parse(localStorage.getItem('vc_star_ratings') || '{}'); } catch(e) { vcStarRatings = {}; }
+  }
+  return vcStarRatings;
+}
+
+function vcGetStars(name) {
+  if (!name) return null;
+  var store = vcGetStarStore();
+  var key = name.toLowerCase().trim();
+  return store[key] || null;
+}
+
+function vcSetStars(name, stars, note) {
+  if (!name) return;
+  var store = vcGetStarStore();
+  var key = name.toLowerCase().trim();
+  store[key] = { stars: stars, note: note || '' };
+  vcStarRatings = store;
+  localStorage.setItem('vc_star_ratings', JSON.stringify(store));
+}
+
+function vcStarHtml(name) {
+  var rating = vcGetStars(name);
+  if (!rating) return '';
+  var s = rating.stars;
+  var starColor = s >= 4 ? 'var(--green)' : s >= 3 ? 'var(--yellow, #fbbf24)' : 'var(--red)';
+  var stars = '';
+  for (var i = 1; i <= 5; i++) stars += '<span style="color:' + (i <= s ? starColor : 'var(--bg3)') + ';">&#9733;</span>';
+  var tooltip = rating.note ? ' title="' + esc(rating.note) + '"' : '';
+  return '<span style="font-size:12px;letter-spacing:1px;cursor:help;"' + tooltip + '>' + stars + '</span>';
+}
+
 function vcSave() {
   localStorage.setItem('vc_raises', JSON.stringify(vcRaises));
   if (typeof dbRef !== 'undefined' && dbRef) {
@@ -12046,6 +12084,7 @@ function vcRender() {
         '<div style="flex:1;">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
             '<strong style="font-size:14px;color:var(--text1);">' + esc(r.project || '') + '</strong>' +
+            vcStarHtml(r.project) +
             '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:' + roundColor + '20;color:' + roundColor + ';font-weight:600;">' + esc(r.round || '?') + '</span>' +
             (is100x ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--accent)20;color:var(--accent);font-weight:700;">100x</span>' : '') +
             (isTier1 ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--green)20;color:var(--green);font-weight:600;">TIER 1</span>' : '') +
@@ -12387,6 +12426,7 @@ function vcRenderFeed() {
         '<div style="flex:1;">' +
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">' +
             '<strong style="font-size:13px;color:var(--text1);">' + esc(r.name || '') + '</strong>' +
+            vcStarHtml(r.name) +
             '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:' + roundColor + '20;color:' + roundColor + ';font-weight:600;">' + esc(r.round || '?') + '</span>' +
             (isTier1 ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--green)20;color:var(--green);font-weight:600;">TIER 1</span>' : '') +
             (amtDisplay ? '<span style="font-size:12px;font-weight:700;color:var(--text1);">' + amtDisplay + '</span>' : '') +
