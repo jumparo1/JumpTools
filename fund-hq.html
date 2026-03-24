@@ -2161,6 +2161,7 @@ tbody tr:hover { background: var(--bg3); }
         <button class="market-tab" onclick="taShowTab('confluence')" id="ta-tab-confluence">Confluence</button>
         <button class="market-tab" onclick="taShowTab('tradelog')" id="ta-tab-tradelog">Trade Log</button>
         <button class="market-tab" onclick="taShowTab('performance')" id="ta-tab-performance">Performance</button>
+        <button class="market-tab" onclick="taShowTab('paper')" id="ta-tab-paper" style="color:var(--orange);">Paper Trading</button>
       </div>
 
       <!-- MARKET REGIME -->
@@ -2421,6 +2422,40 @@ tbody tr:hover { background: var(--bg3); }
           </div>
           <div id="perf-calibration">
             <div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">Calibration adjusts scoring weights based on which factors predicted winners.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAPER TRADING -->
+      <div id="ta-panel-paper" style="display:none;">
+        <!-- Stats Row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;">
+          <div class="card" style="padding:14px;text-align:center;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;">Equity</div><div id="paper-equity" style="font-size:20px;font-weight:700;color:var(--green);margin-top:4px;">$10,000</div></div>
+          <div class="card" style="padding:14px;text-align:center;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;">Total PnL</div><div id="paper-pnl" style="font-size:20px;font-weight:700;margin-top:4px;">$0</div></div>
+          <div class="card" style="padding:14px;text-align:center;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;">Win Rate</div><div id="paper-winrate" style="font-size:20px;font-weight:700;color:var(--yellow);margin-top:4px;">--</div></div>
+          <div class="card" style="padding:14px;text-align:center;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;">Profit Factor</div><div id="paper-pf" style="font-size:20px;font-weight:700;color:var(--blue);margin-top:4px;">--</div></div>
+          <div class="card" style="padding:14px;text-align:center;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;">Sharpe</div><div id="paper-sharpe" style="font-size:20px;font-weight:700;color:var(--purple);margin-top:4px;">--</div></div>
+          <div class="card" style="padding:14px;text-align:center;"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;">Max DD</div><div id="paper-dd" style="font-size:20px;font-weight:700;color:var(--red);margin-top:4px;">--</div></div>
+        </div>
+        <!-- Equity Curve -->
+        <div class="card" style="padding:16px;margin-bottom:16px;">
+          <h3 style="font-size:13px;color:var(--text2);margin:0 0 10px 0;">Equity Curve</h3>
+          <div id="paper-equity-curve" style="height:80px;display:flex;align-items:flex-end;gap:2px;">
+            <div style="color:var(--text3);font-size:11px;">No trades yet</div>
+          </div>
+        </div>
+        <!-- Open Trades -->
+        <div class="card" style="padding:16px;margin-bottom:16px;">
+          <h3 style="font-size:13px;color:var(--text2);margin:0 0 10px 0;">Open Trades <span id="paper-open-count" style="color:var(--text3);font-weight:400;">(0)</span></h3>
+          <div id="paper-open-trades">
+            <div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">No open paper trades</div>
+          </div>
+        </div>
+        <!-- Closed Trades -->
+        <div class="card" style="padding:16px;">
+          <h3 style="font-size:13px;color:var(--text2);margin:0 0 10px 0;">Closed Trades <span id="paper-closed-count" style="color:var(--text3);font-weight:400;">(0)</span></h3>
+          <div id="paper-closed-trades">
+            <div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">No closed paper trades</div>
           </div>
         </div>
       </div>
@@ -13787,7 +13822,7 @@ function pfSetCash() {
 
 // ===== TECHNICAL ANALYSIS TAB NAVIGATION =====
 function taShowTab(tab) {
-  ['regime','setups','playbooks','confluence','tradelog','performance'].forEach(function(t) {
+  ['regime','setups','playbooks','confluence','tradelog','performance','paper'].forEach(function(t) {
     var panel = document.getElementById('ta-panel-' + t);
     if (panel) panel.style.display = t === tab ? '' : 'none';
     var tabBtn = document.getElementById('ta-tab-' + t);
@@ -13797,6 +13832,122 @@ function taShowTab(tab) {
   if (tab === 'setups') setupRender();
   if (tab === 'tradelog') tradeRender();
   if (tab === 'performance') loadPerformance();
+  if (tab === 'paper') renderPaperTrades();
+}
+
+// ===== PAPER TRADING RENDERER =====
+
+function renderPaperTrades() {
+  if (!firebaseReady) return;
+  dbRef.child('paperTrades').once('value', function(snap) {
+    var data = snap.val();
+    if (!data) return;
+
+    // Stats
+    var stats = data._stats || {};
+    var eqEl = document.getElementById('paper-equity');
+    var pnlEl = document.getElementById('paper-pnl');
+    var wrEl = document.getElementById('paper-winrate');
+    var pfEl = document.getElementById('paper-pf');
+    var shEl = document.getElementById('paper-sharpe');
+    var ddEl = document.getElementById('paper-dd');
+
+    if (eqEl) eqEl.textContent = '$' + (stats.equity || 10000).toLocaleString(undefined, {maximumFractionDigits: 0});
+    if (pnlEl) {
+      var pnl = stats.total_pnl || 0;
+      pnlEl.textContent = (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toLocaleString(undefined, {maximumFractionDigits: 0});
+      pnlEl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+    if (wrEl) wrEl.textContent = stats.win_rate ? stats.win_rate + '%' : '--';
+    if (pfEl) pfEl.textContent = stats.profit_factor || '--';
+    if (shEl) shEl.textContent = stats.sharpe_ratio || '--';
+    if (ddEl) ddEl.textContent = stats.max_drawdown_pct ? stats.max_drawdown_pct + '%' : '--';
+
+    // Equity curve
+    var curveEl = document.getElementById('paper-equity-curve');
+    if (curveEl && stats.equity_curve && stats.equity_curve.length > 1) {
+      var curve = stats.equity_curve;
+      var minEq = Math.min.apply(null, curve);
+      var maxEq = Math.max.apply(null, curve);
+      var range = maxEq - minEq || 1;
+      var ch = '';
+      curve.forEach(function(eq, i) {
+        var h = Math.max(4, ((eq - minEq) / range) * 70);
+        var color = eq >= 10000 ? 'var(--green)' : 'var(--red)';
+        ch += '<div style="flex:1;height:' + h + 'px;background:' + color + ';border-radius:2px;opacity:0.7;" title="$' + eq.toFixed(0) + '"></div>';
+      });
+      curveEl.innerHTML = ch;
+    }
+
+    // Trades
+    var trades = [];
+    Object.keys(data).forEach(function(k) {
+      if (k !== '_stats' && data[k] && typeof data[k] === 'object' && data[k].id) trades.push(data[k]);
+    });
+
+    var open = trades.filter(function(t) { return t.status === 'open'; });
+    var closed = trades.filter(function(t) { return t.status === 'closed'; });
+    closed.sort(function(a, b) { return (b.closed_at || '').localeCompare(a.closed_at || ''); });
+
+    // Open trades
+    var openEl = document.getElementById('paper-open-trades');
+    var openCnt = document.getElementById('paper-open-count');
+    if (openCnt) openCnt.textContent = '(' + open.length + ')';
+    if (openEl) {
+      if (!open.length) {
+        openEl.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">No open paper trades</div>';
+      } else {
+        var oh = '';
+        open.forEach(function(t) {
+          var pnlColor = (t.pnl_pct || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+          oh += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+            '<span style="font-size:12px;font-weight:700;width:50px;">' + t.coin + '</span>' +
+            '<span style="font-size:11px;color:' + (t.side==='LONG'?'var(--green)':'var(--red)') + ';width:40px;">' + t.side + '</span>' +
+            '<span style="font-size:11px;color:var(--text3);width:70px;">$' + (t.entry_price||0).toFixed(2) + '</span>' +
+            '<span style="font-size:11px;font-weight:600;color:' + pnlColor + ';width:60px;">' + ((t.pnl_pct||0)>=0?'+':'') + (t.pnl_pct||0).toFixed(1) + '%</span>' +
+            '<span style="font-size:11px;color:' + pnlColor + ';width:60px;">' + ((t.pnl_usd||0)>=0?'+$':'-$') + Math.abs(t.pnl_usd||0).toFixed(0) + '</span>' +
+            '<span style="font-size:10px;color:var(--text3);flex:1;text-align:right;">R:R ' + (t.rr_ratio||0) + ' | $' + (t.position_size_usd||0).toFixed(0) + '</span>' +
+          '</div>';
+        });
+        openEl.innerHTML = oh;
+      }
+    }
+
+    // Closed trades
+    var closedEl = document.getElementById('paper-closed-trades');
+    var closedCnt = document.getElementById('paper-closed-count');
+    if (closedCnt) closedCnt.textContent = '(' + closed.length + ')';
+    if (closedEl) {
+      if (!closed.length) {
+        closedEl.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;">No closed paper trades</div>';
+      } else {
+        var ch2 = '';
+        closed.slice(0, 20).forEach(function(t) {
+          var win = (t.pnl_pct || 0) > 0;
+          var bg = win ? 'rgba(34,197,94,0.05)' : 'rgba(239,68,68,0.05)';
+          ch2 += '<div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border);background:' + bg + ';">' +
+            '<span style="font-size:12px;font-weight:700;width:50px;">' + t.coin + '</span>' +
+            '<span style="font-size:11px;color:' + (t.side==='LONG'?'var(--green)':'var(--red)') + ';width:40px;">' + t.side + '</span>' +
+            '<span style="font-size:11px;font-weight:700;color:' + (win?'var(--green)':'var(--red)') + ';width:60px;">' + ((t.pnl_pct||0)>=0?'+':'') + (t.pnl_pct||0).toFixed(1) + '%</span>' +
+            '<span style="font-size:11px;color:' + (win?'var(--green)':'var(--red)') + ';width:60px;">' + ((t.pnl_usd||0)>=0?'+$':'-$') + Math.abs(t.pnl_usd||0).toFixed(0) + '</span>' +
+            '<span style="font-size:10px;color:var(--text3);width:60px;">' + (t.close_reason||'').replace('_',' ') + '</span>' +
+            '<span style="font-size:9px;color:var(--text3);flex:1;text-align:right;">' + (t.closed_at ? new Date(t.closed_at).toLocaleDateString() : '') + '</span>' +
+          '</div>';
+        });
+        closedEl.innerHTML = ch2;
+      }
+    }
+  });
+}
+
+// Auto-refresh paper trades via listener
+if (typeof dbRef !== 'undefined' && dbRef) {
+  dbRef.child('paperTrades/_stats').on('value', function(snap) {
+    var stats = snap.val();
+    if (!stats) return;
+    var eqEl = document.getElementById('paper-equity');
+    if (eqEl) eqEl.textContent = '$' + (stats.equity || 10000).toLocaleString(undefined, {maximumFractionDigits: 0});
+  });
 }
 
 // ===== ON-CHAIN INTEL DIVISION NAVIGATION =====
