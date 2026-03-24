@@ -1393,15 +1393,14 @@ tbody tr:hover { background: var(--bg3); }
       <div class="page-header">
         <h1>&#128176; VC Watchlist</h1>
         <p>Track fundraising channels, saved raises, and VC-backed projects</p>
-        <div class="header-actions">
-          <button class="btn btn-primary admin-only" onclick="vcShowAddRaise()">+ Add Raise</button>
-        </div>
       </div>
 
       <!-- Tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:20px;">
+      <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;">
         <button class="tab active" id="vc-tab-my" onclick="vcSwitchTab('my')">&#128203; My Raises</button>
         <button class="tab" id="vc-tab-feed" onclick="vcSwitchTab('feed')">&#128225; Live Feed <span id="vc-feed-badge" style="font-size:10px;background:var(--accent);color:var(--bg1);padding:1px 6px;border-radius:8px;margin-left:4px;display:none;">0</span></button>
+        <div style="flex:1;"></div>
+        <button class="btn btn-primary admin-only" onclick="vcShowAddRaise()" style="font-size:12px;padding:6px 14px;">+ Add Project</button>
       </div>
 
       <!-- ===== MY RAISES TAB ===== -->
@@ -1487,6 +1486,7 @@ tbody tr:hover { background: var(--bg3); }
             <span id="vc-feed-status" style="font-size:12px;color:var(--text3);">Feed updates daily via DefiLlama</span>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-ghost" onclick="vcFetchDefiLlama()" id="vc-feed-refresh-btn" style="font-size:11px;padding:4px 10px;">&#x21bb; Refresh</button>
             <select id="vc-feed-filter-round" style="background:var(--bg2);border:1px solid var(--border);color:var(--text1);padding:6px 10px;border-radius:8px;font-size:11px;" onchange="vcRenderFeed()">
               <option value="all">All Rounds</option>
               <option value="Seed">Seed</option>
@@ -11954,7 +11954,8 @@ var VC_TIER2 = ['binance labs', 'coinbase ventures', 'galaxy', 'hack vc', 'elect
 function vcIsTier1(investors) {
   if (!investors) return false;
   var inv = investors.toLowerCase();
-  return VC_TIER1.some(function(t) { return inv.indexOf(t) >= 0; });
+  var tier1 = ['a16z', 'paradigm', 'polychain', 'multicoin', 'sequoia', 'dragonfly', 'framework', 'pantera', 'andreessen', 'coinbase ventures', 'binance labs', 'galaxy digital', 'electric capital', 'variant', '1kx', 'delphi'];
+  return tier1.some(function(t) { return inv.indexOf(t) >= 0; });
 }
 
 function vcIs100x(raise) {
@@ -12165,9 +12166,68 @@ function vcRefreshFeed() {
   }
 }
 
-// ===== VC FEED (DefiLlama via Firebase) =====
+// ===== VC FEED (DefiLlama via Firebase + client-side fetch) =====
 var vcFeedData = [];
 var vcFeedTab = 'my';
+
+function vcFetchDefiLlama() {
+  var btn = document.getElementById('vc-feed-refresh-btn');
+  if (btn) btn.textContent = '⏳ Loading...';
+  var status = document.getElementById('vc-feed-status');
+  if (status) status.textContent = 'Fetching from DefiLlama...';
+  fetch('https://api.llama.fi/raises')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var allRaises = data && data.raises ? data.raises : [];
+      var cutoff = Date.now() / 1000 - 30 * 86400; // last 30 days
+      var raises = [];
+      for (var i = 0; i < allRaises.length; i++) {
+        var r = allRaises[i];
+        if (!r || typeof r !== 'object') continue;
+        var amount = r.amount || 0;
+        if (amount < 1) continue; // skip < $1M (API returns amounts in millions)
+        var dateTs = r.date;
+        if (dateTs && dateTs < cutoff) continue;
+        var leads = (r.leadInvestors || []).map(function(x) { return typeof x === 'string' ? x : (x && x.name || ''); }).filter(Boolean);
+        var others = (r.otherInvestors || []).map(function(x) { return typeof x === 'string' ? x : (x && x.name || ''); }).filter(Boolean);
+        var allInv = leads.concat(others).join(', ');
+        var hasTier1 = vcIsTier1(allInv);
+        raises.push({
+          name: r.name || 'Unknown',
+          amount: amount,
+          round: r.round || 'Unknown',
+          category: r.category || '',
+          chains: r.chains || [],
+          date: dateTs ? new Date(dateTs * 1000).toISOString() : '',
+          leadInvestors: leads,
+          otherInvestors: others,
+          has_tier1: hasTier1,
+          source: r.source || 'DefiLlama',
+          valuation: r.valuation || null
+        });
+      }
+      raises.sort(function(a, b) { return new Date(b.date || 0) - new Date(a.date || 0); });
+      vcFeedData = raises;
+      var now = new Date().toLocaleString();
+      localStorage.setItem('vc_feed', JSON.stringify(vcFeedData));
+      localStorage.setItem('vc_feed_updated', now);
+      // Also write to Firebase for persistence
+      try {
+        if (typeof dbRef !== 'undefined' && dbRef) {
+          dbRef.child('vcFeed').set({ raises: raises.slice(0, 100), updated: now });
+        }
+      } catch(e) {}
+      var badge = document.getElementById('vc-feed-badge');
+      if (badge) { badge.textContent = raises.length; badge.style.display = 'inline'; }
+      vcRenderFeed();
+      if (btn) btn.textContent = '↻ Refresh';
+    })
+    .catch(function(err) {
+      console.error('[VC Feed]', err);
+      if (status) status.textContent = 'Error fetching from DefiLlama: ' + err.message;
+      if (btn) btn.textContent = '↻ Refresh';
+    });
+}
 
 function vcSwitchTab(tab) {
   vcFeedTab = tab;
@@ -12199,18 +12259,32 @@ function vcLoadFeed() {
     if (typeof dbRef !== 'undefined' && dbRef) {
       dbRef.child('vcFeed').once('value').then(function(snap) {
         var data = snap.val();
-        if (data && Array.isArray(data) && data.length > 0) {
-          vcFeedData = data;
-          localStorage.setItem('vc_feed', JSON.stringify(vcFeedData));
-          vcRenderFeed();
-          // Update badge
-          var badge = document.getElementById('vc-feed-badge');
-          if (badge) { badge.textContent = vcFeedData.length; badge.style.display = 'inline'; }
+        if (data) {
+          // Handle both formats: direct array or { raises: [...] } object from vc_worker
+          var raises = Array.isArray(data) ? data : (data.raises && Array.isArray(data.raises) ? data.raises : []);
+          // Also merge gems if present
+          if (data.gems && Array.isArray(data.gems)) {
+            var raiseNames = {};
+            raises.forEach(function(r) { if (r.name) raiseNames[r.name.toLowerCase()] = true; });
+            data.gems.forEach(function(g) { if (g.name && !raiseNames[g.name.toLowerCase()]) raises.push(g); });
+          }
+          if (raises.length > 0) {
+            vcFeedData = raises;
+            localStorage.setItem('vc_feed', JSON.stringify(vcFeedData));
+            if (data.updated) localStorage.setItem('vc_feed_updated', data.updated);
+            vcRenderFeed();
+            var badge = document.getElementById('vc-feed-badge');
+            if (badge) { badge.textContent = vcFeedData.length; badge.style.display = 'inline'; }
+          }
         }
       }).catch(function(){});
     }
   } catch(e) {}
   vcRenderFeed();
+  // Auto-fetch from DefiLlama if no data cached
+  if (!vcFeedData.length) {
+    vcFetchDefiLlama();
+  }
 }
 
 function vcRenderFeed() {
@@ -12266,7 +12340,7 @@ function vcRenderFeed() {
 
   // Check which projects are already in My Raises
   var trackedNames = {};
-  vcRaises.forEach(function(r) { if (r.project) trackedNames[r.project.toLowerCase()] = true; });
+  (vcRaises || []).forEach(function(r) { if (r.project) trackedNames[r.project.toLowerCase()] = true; });
 
   list.innerHTML = filtered.slice(0, 100).map(function(r) {
     var roundColor = roundColors[r.round] || 'var(--text3)';
@@ -12275,23 +12349,47 @@ function vcRenderFeed() {
       var d = typeof r.date === 'number' ? new Date(r.date * 1000) : new Date(r.date);
       dateStr = d.toISOString().split('T')[0];
     }
+    // Handle both formats: leadInvestors/otherInvestors arrays OR flat investors array
     var investors = [];
-    if (r.leadInvestors && r.leadInvestors.length) investors = investors.concat(r.leadInvestors.map(function(i) { return '<strong>' + esc(i) + '</strong>'; }));
-    if (r.otherInvestors && r.otherInvestors.length) investors = investors.concat(r.otherInvestors.slice(0, 5).map(function(i) { return esc(i); }));
+    var allInvNames = [];
+    if (r.leadInvestors && r.leadInvestors.length) {
+      var leads = r.leadInvestors.map(function(i) { return typeof i === 'string' ? i : (i.name || ''); });
+      investors = investors.concat(leads.map(function(n) { return '<strong>' + esc(n) + '</strong>'; }));
+      allInvNames = allInvNames.concat(leads);
+    }
+    if (r.otherInvestors && r.otherInvestors.length) {
+      var others = r.otherInvestors.map(function(i) { return typeof i === 'string' ? i : (i.name || ''); });
+      investors = investors.concat(others.slice(0, 5).map(function(n) { return esc(n); }));
+      allInvNames = allInvNames.concat(others);
+      if (others.length > 5) investors.push('+' + (others.length - 5) + ' more');
+    }
+    // Fallback: flat investors array from vc_worker
+    if (!investors.length && r.investors && r.investors.length) {
+      var invList = r.investors.map(function(i) { return typeof i === 'string' ? i : (i.name || ''); }).filter(Boolean);
+      investors = invList.slice(0, 6).map(function(n) { return esc(n); });
+      if (invList.length > 6) investors.push('+' + (invList.length - 6) + ' more');
+      allInvNames = invList;
+    }
     var investorStr = investors.length ? investors.join(', ') : 'Undisclosed';
-    if (r.otherInvestors && r.otherInvestors.length > 5) investorStr += ' +' + (r.otherInvestors.length - 5) + ' more';
 
-    var isTier1 = vcIsTier1((r.leadInvestors || []).concat(r.otherInvestors || []).join(', '));
+    var isTier1 = r.has_tier1 || vcIsTier1(allInvNames.join(', '));
     var isTracked = trackedNames[(r.name || '').toLowerCase()];
+
+    // Format amount — API returns in millions already (e.g. 3.1 = $3.1M)
+    var amtDisplay = '';
+    if (r.amount) {
+      var amt = typeof r.amount === 'number' ? (r.amount >= 1000 ? (r.amount / 1000000).toFixed(1).replace(/\.0$/, '') : r.amount) : r.amount;
+      amtDisplay = '$' + amt + 'M';
+    }
 
     return '<div class="card" style="padding:12px 16px;margin-bottom:8px;border-left:3px solid ' + roundColor + ';">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">' +
         '<div style="flex:1;">' +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">' +
             '<strong style="font-size:13px;color:var(--text1);">' + esc(r.name || '') + '</strong>' +
             '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:' + roundColor + '20;color:' + roundColor + ';font-weight:600;">' + esc(r.round || '?') + '</span>' +
             (isTier1 ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--green)20;color:var(--green);font-weight:600;">TIER 1</span>' : '') +
-            (r.amount ? '<span style="font-size:12px;font-weight:700;color:var(--text1);">$' + r.amount + 'M</span>' : '') +
+            (amtDisplay ? '<span style="font-size:12px;font-weight:700;color:var(--text1);">' + amtDisplay + '</span>' : '') +
           '</div>' +
           '<div style="font-size:11px;color:var(--text2);margin-bottom:2px;">' +
             (r.category || '') +
@@ -12350,13 +12448,15 @@ function vcTrackFromFeed(idx) {
     var d = typeof item.date === 'number' ? new Date(item.date * 1000) : new Date(item.date);
     dateStr = d.toISOString().split('T')[0];
   }
-  var allInvestors = (item.leadInvestors || []).concat(item.otherInvestors || []);
+  var allInvestors = (item.leadInvestors || []).concat(item.otherInvestors || item.investors || []);
+  var invStr = allInvestors.map(function(i) { return typeof i === 'string' ? i : (i.name || ''); }).filter(Boolean).join(', ');
+  var amt = item.amount || 0;
 
   vcAddFromAgent({
     project: item.name,
-    amount: item.amount || 0,
+    amount: amt || 0,
     round: item.round || 'Other',
-    investors: allInvestors.join(', '),
+    investors: invStr,
     category: item.category || '',
     chains: (item.chains || []).join(', '),
     notes: item.sector || '',
