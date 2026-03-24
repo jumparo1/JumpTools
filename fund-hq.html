@@ -3388,6 +3388,29 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
             <div class="docs-body">
 
               <div class="docs-changelog-entry">
+                <div class="docs-changelog-date">March 24, 2026</div>
+                <ul>
+                  <li><strong>Signal Schema Enforcement</strong> — Centralized create_signal() in shared/signals.py. Enforced schema: regime, price_at_creation, side, dedup (2h window), dead letter queue. All 3 signal-producing workers refactored</li>
+                  <li><strong>Signal Outcome Recording</strong> — Direction-aware outcomes: LONG+positive=correct, SHORT+negative=correct. price_at_expiry tracked. Skips coins with missing prices instead of "unknown"</li>
+                  <li><strong>Debate on High-Conviction</strong> — All high-conviction signals now run Bull/Bear debate. Verdict attached to signal. PASS verdict downgrades conviction</li>
+                  <li><strong>Sentinel Upgrades</strong> — Whale liq prices + distance-to-liq %, HL-vs-Binance funding divergence scanner, liquidation cluster detector, capitulation detector (RISK-OFF only: -20% 7d + volume + whale buying)</li>
+                  <li><strong>Daily Intelligence Summary</strong> — Comprehensive scan on first cycle after midnight: movers, funding, whales, OI, liq clusters, divergences, tier 1/2 opps. Claude briefing with 3 ACTION items</li>
+                  <li><strong>Regime-Aware Filtering</strong> — Conviction auto-downgraded when counter-regime (LONG in RISK-OFF, SHORT in RISK-ON). Funding 30% more sensitive in RISK-OFF. Sector heat tracking per macro cycle</li>
+                  <li><strong>Self-Reflection Centralized</strong> — Moved from workers to daemon run_worker(). _was_productive() check. Upgraded prompt: per-type accuracy, previous rules evaluation, regime context. Rules store accuracy_at_creation for validation</li>
+                  <li><strong>Rule Validation</strong> — validate_stale_rules() flags rules &gt;14 days old without accuracy improvement. Runs in evolution cycle</li>
+                  <li><strong>Continuous Threshold Evolution</strong> — Replaced binary 15%/20% jumps with continuous gradient: target 55%, max 10% step, &plusmn;3% dead zone. Smooth convergence</li>
+                  <li><strong>Cross-Agent Confidence Weights</strong> — Multi-agent accuracy writes multiplier to Firebase. Opportunity score confirmation dimension boosted when multiple agents agree</li>
+                  <li><strong>Weekly Score Calibration</strong> — Correlates signal types with 7-day returns. New weights saved to Firebase, analyst loads evolved weights at cycle start</li>
+                  <li><strong>Signal Accuracy Dashboard</strong> — Command Center: stats row (total/accuracy/correct/incorrect/active), per-agent CSS bars, per-type bars, weekly trend chart</li>
+                  <li><strong>System Intelligence Dashboard</strong> — Overall accuracy big number, per-type + per-regime accuracy bars, pattern insights, threshold evolution display. 3 new Firebase listeners</li>
+                  <li><strong>Evolution Engine Docs Page</strong> — Full breakdown tables: signal outcomes by type/agent/regime, threshold history, cross-agent patterns. Live Firebase data</li>
+                  <li><strong>Paper Trading Engine</strong> — shared/paper_trading.py: 1% risk sizing, stop/target monitoring every 1h, equity curve, win rate, profit factor, Sharpe, max DD. Auto-creates from approved setups. Frontend tab with stats + trade tables</li>
+                  <li><strong>Monthly Strategy Review</strong> — Auto-generates on 1st of month: reads 30 days of signals/trades/evolution. Claude produces review + 3 strategy rules distributed to all 5 agents. Rules compound month over month</li>
+                  <li><strong>Learning Loop Closed</strong> — Performance scorecard injection (agents know their accuracy per type), prioritized memory (Rules &gt; Validated &gt; Learnings &gt; Insights), memory decay + reinforcement</li>
+                </ul>
+              </div>
+
+              <div class="docs-changelog-entry">
                 <div class="docs-changelog-date">March 23, 2026</div>
                 <ul>
                   <li><strong>Phase 6A: Daemon Foundation</strong> — daemon.py orchestrator with 3 worker loops, heartbeat every 60s, $10/day cost limit, exponential backoff, graceful SIGTERM shutdown</li>
