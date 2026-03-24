@@ -5115,35 +5115,37 @@ var VC_TOOLS = [
 // --- DefiLlama Raises Cache ---
 var _raisesCache = null;
 var _raisesCacheTime = 0;
+var _recentlyRemoved = new Set(); // Track removed watchlist IDs to prevent zombie resurrection
+var _recentlyAdded = new Set(); // Track just-added watchlist IDs for merge grace period
 async function fetchDefiLlamaRaises() {
   // Cache for 30 minutes
   if (_raisesCache && Date.now() - _raisesCacheTime < 1800000) return _raisesCache;
-  // Check Firebase cache first (populated by scheduled task or manual refresh)
+  // Check Firebase vcFeed first (populated by daemon vc_worker every 6h)
   if (typeof dbRef !== 'undefined' && dbRef) {
     try {
-      var snap = await dbRef.child('vcRaises').once('value');
+      var snap = await dbRef.child('vcFeed').once('value');
       var cached = snap.val();
-      if (cached && cached.raises && cached.fetchedAt && Date.now() - cached.fetchedAt < 86400000) {
+      if (cached && cached.raises && cached.updated) {
         _raisesCache = cached.raises;
         _raisesCacheTime = Date.now();
         return _raisesCache;
       }
     } catch(e) {}
   }
-  // Try direct API (works server-side / scheduled tasks, may fail browser CORS)
+  // Fallback: try direct API (may fail browser CORS)
   try {
     var resp = await fetch('https://api.llama.fi/raises');
     if (resp.ok) {
       var data = await resp.json();
       _raisesCache = data.raises || [];
       _raisesCacheTime = Date.now();
-      // Cache to Firebase for browser access
+      // Cache to Firebase for next time
       if (typeof dbRef !== 'undefined' && dbRef) {
-        dbRef.child('vcRaises').set({ raises: _raisesCache.slice(0, 500), fetchedAt: Date.now() }).catch(function(){});
+        dbRef.child('vcFeed').update({ raises: _raisesCache.slice(0, 500), updated: new Date().toISOString() }).catch(function(){});
       }
       return _raisesCache;
     }
-  } catch(e) {}
+  } catch(e) { console.warn('DefiLlama direct API failed (CORS expected in browser):', e.message); }
   return null; // Returns null — agent should use web_search fallback
 }
 
@@ -7198,6 +7200,8 @@ async function addToWatchlist(type, id, symbol, name, thumb) {
     var res = _searchResultsEl(); if (res) res.classList.add('hidden');
     // Add to local DB immediately for instant feedback
     DB.watchlist.push(item);
+    _recentlyAdded.add(itemId);
+    setTimeout(() => _recentlyAdded.delete(itemId), 10000); // 10s grace period
     renderMarketData();
     // Persist to Firebase
     if (firebaseReady && dbRef) {
@@ -7222,8 +7226,13 @@ async function addToWatchlist(type, id, symbol, name, thumb) {
 }
 
 function removeFromWatchlist(id) {
+  // Always remove from local DB + localStorage
+  DB.watchlist = DB.watchlist.filter(w => w.id !== id);
+  _recentlyRemoved.add(id);
+  setTimeout(() => _recentlyRemoved.delete(id), 10000); // 10s grace period
+  localStorage.setItem('fundHQ', JSON.stringify(DB));
   if (firebaseReady && dbRef) { dbRef.child('watchlist').child(id).remove(); }
-  else { DB.watchlist = DB.watchlist.filter(w => w.id !== id); localStorage.setItem('fundHQ', JSON.stringify(DB)); debouncedRender(); }
+  debouncedRender();
   if (selectedMarketDetail && selectedMarketDetail.watchlistId === id) {
     const de = _detailEl(); if (de) de.innerHTML = '';
     selectedMarketDetail = null;
@@ -7714,18 +7723,19 @@ if (firebaseReady) {
     if (allLoaded()) debouncedRender();
   });
 
-  // Watchlist listener — merge with local items to prevent race condition
+  // Watchlist listener — Firebase is source of truth
   dbRef.child('watchlist').on('value', (snap) => {
     const data = snap.val();
     const fbItems = data ? Object.values(data) : [];
-    // Keep any local items not yet in Firebase (recently added)
     const fbIds = new Set(fbItems.map(i => i.id));
-    const localOnly = DB.watchlist.filter(w => !fbIds.has(w.id));
+    // Only keep local items that were JUST added (within seconds) and not yet in Firebase
+    const localOnly = DB.watchlist.filter(w => !fbIds.has(w.id) && _recentlyAdded.has(w.id) && !_recentlyRemoved.has(w.id));
     DB.watchlist = fbItems.concat(localOnly);
-    // Push local-only items to Firebase so they persist
+    // Push truly new local-only items to Firebase
     localOnly.forEach(item => {
       dbRef.child('watchlist').child(item.id).set(item).catch(function(){});
     });
+    localStorage.setItem('fundHQ', JSON.stringify(DB));
     initialLoad.watchlist = true;
     if (allLoaded()) debouncedRender();
   });
