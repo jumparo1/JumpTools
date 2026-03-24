@@ -3613,6 +3613,17 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
         </div>
         <div id="backend-test-result" style="font-size:11px;min-height:16px;"></div>
       </div>
+      <!-- ===== FIREBASE CONFIG ===== -->
+      <div class="card admin-only" style="max-width:560px;margin-top:20px;">
+        <h3 style="font-size:15px;margin-bottom:4px;">Firebase Config</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:12px;">Paste your Firebase config JSON. Stored locally only.</p>
+        <textarea id="settings-firebase-config" rows="6" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}' style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;font-family:monospace;resize:vertical;outline:none;"></textarea>
+        <div style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+          <button class="btn btn-primary btn-sm" onclick="try{var c=JSON.parse(document.getElementById('settings-firebase-config').value);if(!c.apiKey||!c.databaseURL){throw'missing fields';}localStorage.setItem('fundHQ_firebaseConfig',JSON.stringify(c));document.getElementById('firebase-config-result').textContent='Saved! Reloading...';document.getElementById('firebase-config-result').style.color='var(--green)';setTimeout(()=>location.reload(),1000);}catch(e){document.getElementById('firebase-config-result').textContent='Invalid JSON: '+e;document.getElementById('firebase-config-result').style.color='var(--red)';}">Save & Reload</button>
+          <span id="firebase-config-result" style="font-size:11px;"></span>
+        </div>
+        <script>try{var _fc=localStorage.getItem('fundHQ_firebaseConfig');if(_fc)document.getElementById('settings-firebase-config').value=_fc;}catch(e){}</script>
+      </div>
       <!-- ===== API KEYS SECTION ===== -->
       <div class="card admin-only" style="max-width:560px;margin-top:20px;">
         <h3 style="font-size:15px;margin-bottom:4px;">API Keys</h3>
@@ -3734,16 +3745,23 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
 // ============================================================================
 // FIREBASE CONFIG — Paste your Firebase config below
 // ============================================================================
-// Get this from: Firebase Console > Project Settings > Your Apps > Web App
-const firebaseConfig = {
-  apiKey: "AIzaSyAyK2aZBu29kX-7rHzZIs308MsekpgNvEo",
-  authDomain: "fundhq-8feae.firebaseapp.com",
-  databaseURL: "https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "fundhq-8feae",
-  storageBucket: "fundhq-8feae.firebasestorage.app",
-  messagingSenderId: "305591584755",
-  appId: "1:305591584755:web:ccbe80fbdac2282b743486"
-};
+// Firebase config loaded from localStorage — set via Settings page
+// To set: localStorage.setItem('fundHQ_firebaseConfig', JSON.stringify({apiKey:..., authDomain:..., databaseURL:..., projectId:..., storageBucket:..., messagingSenderId:..., appId:...}))
+const firebaseConfig = (() => {
+  try {
+    const saved = localStorage.getItem('fundHQ_firebaseConfig');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return {
+    apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
+    authDomain: "",
+    databaseURL: "",
+    projectId: "",
+    storageBucket: "",
+    messagingSenderId: "",
+    appId: ""
+  };
+})();
 // ============================================================================
 
 // ===== USER IDENTITY =====
@@ -4689,7 +4707,7 @@ const marketCache = {
   }
 };
 
-function getFmpKey() { return localStorage.getItem('fundHQ_fmpApiKey') || '9DKc8Jhb3ZintHtPYoonssDzlMvkq6X0'; }
+function getFmpKey() { return localStorage.getItem('fundHQ_fmpApiKey') || ''; }
 function saveFmpKey(key) { localStorage.setItem('fundHQ_fmpApiKey', key.trim()); }
 
 function getCoinglassKey() { return localStorage.getItem('fundHQ_coinglassApiKey') || ''; }
