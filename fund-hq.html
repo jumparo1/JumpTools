@@ -13115,6 +13115,7 @@ function vcOpenResearchCard(raise) {
 
   // What it does
   var whatBullets = [];
+  if (raise.description) whatBullets.push(esc(raise.description));
   if (category) whatBullets.push(category + (chains.length ? ' project on ' + chains.join(', ') : ' project'));
   if (round !== 'Undisclosed') whatBullets.push(round + ' stage' + (amtDisplay !== 'Undisclosed' ? ' — raised ' + amtDisplay : ''));
   if (!whatBullets.length) whatBullets.push('<span class="vc-rc-na">Data not available</span>');
@@ -13273,29 +13274,28 @@ function vcQuickTake(raise, scores, allInv, isTier1, rawAmt, category) {
 }
 
 function vcGenerateTldr(raise, allInv, isTier1, rawAmt, round, category, chains) {
-  var name = raise.name || raise.project || 'Unknown';
-  var parts = [];
+  // Priority 1: project description from CryptoRank enrichment
+  if (raise.description && raise.description.length > 10) return raise.description;
 
-  // What it is
+  // Priority 2: user notes (first sentence)
+  if (raise.notes) {
+    var firstSentence = raise.notes.split(/[.!?\n]/)[0].trim();
+    if (firstSentence.length > 10) return firstSentence;
+  }
+
+  // Priority 3: auto-generate from raise data
+  var parts = [];
   if (category && chains.length) parts.push(category + ' project building on ' + chains.join('/'));
   else if (category) parts.push(category + ' project');
   else if (chains.length) parts.push('Project building on ' + chains.join('/'));
   else parts.push('Crypto project');
 
-  // Raise context
   if (rawAmt >= 1e6 && round !== 'Undisclosed') parts.push('Raised ' + (rawAmt >= 1e9 ? '$' + (rawAmt/1e9).toFixed(1) + 'B' : '$' + (rawAmt/1e6).toFixed(0) + 'M') + ' in ' + round + ' round');
-  else if (rawAmt >= 1e6) parts.push('Raised ' + '$' + (rawAmt/1e6).toFixed(0) + 'M');
+  else if (rawAmt >= 1e6) parts.push('Raised $' + (rawAmt/1e6).toFixed(0) + 'M');
   else if (round !== 'Undisclosed') parts.push(round + ' round, amount undisclosed');
 
-  // Investor signal
   if (isTier1) parts.push('Backed by tier 1 VCs (' + allInv.slice(0,2).join(', ') + ')');
   else if (allInv.length >= 3) parts.push('Backed by ' + allInv.length + ' investors');
-
-  // Notes override — if user added notes, use first sentence
-  if (raise.notes) {
-    var firstSentence = raise.notes.split(/[.!?\n]/)[0].trim();
-    if (firstSentence.length > 10) return firstSentence;
-  }
 
   return parts.join('. ') + '.';
 }
