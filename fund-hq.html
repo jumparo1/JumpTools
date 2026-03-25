@@ -828,6 +828,30 @@ tbody tr:hover { background: var(--bg3); }
         </div>
       </div>
 
+      <!-- Agent Activity Log + Cost History Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <!-- Agent Activity Log -->
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h3 style="font-size:14px;color:var(--text2);margin:0;">Agent Activity</h3>
+            <span style="font-size:11px;color:var(--text3);" id="agent-log-count">--</span>
+          </div>
+          <div id="agent-log-body" style="max-height:260px;overflow-y:auto;">
+            <div style="color:var(--text3);font-size:12px;text-align:center;padding:16px;">Waiting for agent activity...</div>
+          </div>
+        </div>
+        <!-- Daily Cost History -->
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <h3 style="font-size:14px;color:var(--text2);margin:0;">Daily Costs</h3>
+            <span style="font-size:11px;color:var(--text3);" id="cost-total-month">--</span>
+          </div>
+          <div id="cost-history-body" style="max-height:260px;overflow-y:auto;">
+            <div style="color:var(--text3);font-size:12px;text-align:center;padding:16px;">Waiting for cost data...</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Top Opportunities (HQ Ranking) -->
       <div class="card" style="margin-bottom:20px;padding:20px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
@@ -4254,6 +4278,60 @@ function agentCmd(action, worker) {
   } else {
     dbRef.child('agentCommands').child(worker).set({ action: action });
   }
+}
+
+// ===== AGENT LOG + COST HISTORY =====
+
+function renderAgentLog(data) {
+  const body = document.getElementById('agent-log-body');
+  const countEl = document.getElementById('agent-log-count');
+  if (!body) return;
+  if (!data) { body.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px;">No activity yet</div>'; return; }
+
+  const entries = Object.values(data).filter(e => e && e.timestamp).sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || '')).slice(0, 30);
+  if (countEl) countEl.textContent = entries.length + ' recent';
+
+  const agentColors = {sentinel: 'var(--purple)', analyst: 'var(--green)', trader: 'var(--yellow)', macro: 'var(--orange)', vc: 'var(--blue)', evolution: 'var(--accent2)', monthly_review: 'var(--text2)'};
+  body.innerHTML = entries.map(e => {
+    const c = agentColors[e.worker] || 'var(--text3)';
+    const isErr = e.action === 'error';
+    const ts = e.timestamp ? agentTimeAgo(new Date(e.timestamp)) : '';
+    const elapsed = e.elapsed_s ? e.elapsed_s + 's' : '';
+    const detail = isErr ? '<span style="color:var(--red);">' + esc((e.error || '').substring(0, 80)) + '</span>' : esc((e.result || '').substring(0, 80));
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;">' +
+      '<span style="color:' + c + ';font-weight:700;min-width:56px;text-transform:capitalize;">' + esc(e.worker || '?') + '</span>' +
+      '<span style="flex:1;color:' + (isErr ? 'var(--red)' : 'var(--text2)') + ';">' + detail + '</span>' +
+      '<span style="color:var(--text3);white-space:nowrap;">' + elapsed + (elapsed && ts ? ' · ' : '') + ts + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function renderCostHistory(data) {
+  const body = document.getElementById('cost-history-body');
+  const totalEl = document.getElementById('cost-total-month');
+  if (!body) return;
+  if (!data) { body.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px;">No cost data yet</div>'; return; }
+
+  // data is keyed by date string: { "2026-03-25": { cost, requests, limit } }
+  const days = Object.entries(data).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14);
+  const monthTotal = days.reduce((sum, [, d]) => sum + (d.cost || 0), 0);
+  if (totalEl) totalEl.textContent = '$' + monthTotal.toFixed(4) + ' this period';
+
+  const maxCost = Math.max(...days.map(([, d]) => d.cost || 0), 0.01);
+  body.innerHTML = days.map(([date, d]) => {
+    const cost = d.cost || 0;
+    const reqs = d.requests || 0;
+    const pct = Math.min(100, (cost / maxCost) * 100);
+    const dayLabel = date.substring(5); // MM-DD
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:11px;">' +
+      '<span style="min-width:40px;color:var(--text3);">' + dayLabel + '</span>' +
+      '<div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">' +
+        '<div style="height:100%;width:' + pct + '%;background:var(--green);border-radius:3px;"></div>' +
+      '</div>' +
+      '<span style="min-width:55px;text-align:right;color:var(--text);font-weight:600;">$' + cost.toFixed(4) + '</span>' +
+      '<span style="min-width:30px;text-align:right;color:var(--text3);">' + reqs + '</span>' +
+    '</div>';
+  }).join('');
 }
 
 // ===== OPPORTUNITY RANKING (Command Center) =====
@@ -7773,6 +7851,14 @@ if (firebaseReady) {
   // Agent daemon status listener
   dbRef.child('agentStatus').on('value', (snap) => {
     renderAgentStatus(snap.val());
+  });
+  // Agent activity log
+  dbRef.child('agentLog').orderByChild('timestamp').limitToLast(30).on('value', (snap) => {
+    renderAgentLog(snap.val());
+  });
+  // Daily cost history
+  dbRef.child('agentCosts/daily').on('value', (snap) => {
+    renderCostHistory(snap.val());
   });
   // Opportunity ranking listener
   dbRef.child('opportunities').on('value', (snap) => {
