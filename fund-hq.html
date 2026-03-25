@@ -12873,13 +12873,20 @@ function vcFetchDefiLlama() {
   if (btn) btn.textContent = '⏳ Loading...';
   if (topBtn && topBtn !== btn) topBtn.textContent = '⏳ Loading...';
   var status = document.getElementById('vc-feed-status');
+  if (status) status.textContent = 'Refreshing...';
 
-  // Switch to feed tab so user sees results
+  // Switch to feed tab
   if (typeof vcSwitchTab === 'function') vcSwitchTab('feed');
 
-  // Step 1: Try Firebase first (daemon updates daily at 7 AM CET)
-  if (status) status.textContent = 'Checking daemon data...';
-  var fbDone = false;
+  // Trigger daemon to run VC scan now
+  try {
+    if (typeof dbRef !== 'undefined' && dbRef) {
+      dbRef.child('agentCommands').child('vc').set({ action: 'run_now' });
+    }
+  } catch(e) {}
+
+  // Load from Firebase (daemon writes here)
+  var loaded = false;
   try {
     if (typeof dbRef !== 'undefined' && dbRef) {
       dbRef.child('vcFeed').once('value').then(function(snap) {
@@ -12890,41 +12897,28 @@ function vcFetchDefiLlama() {
           if (data.updated) { localStorage.setItem('vc_feed_updated', data.updated); vcShowFeedAge(data.updated); }
           var badge = document.getElementById('vc-feed-badge');
           if (badge) { badge.textContent = vcFeedData.length; badge.style.display = 'inline'; }
-          if (status) status.textContent = 'Loaded ' + vcFeedData.length + ' raises from daemon';
+          if (status) status.textContent = vcFeedData.length + ' raises loaded · daemon triggered to refresh';
           vcRenderFeed();
-          fbDone = true;
-          if (btn) btn.textContent = '↻ Refresh';
-          if (topBtn && topBtn !== btn) topBtn.textContent = '↻ Refresh Feed';
-          // If data is fresh enough (< 48h), stop here
-          if (data.updated && !vcIsFeedStale(data.updated)) return;
+          loaded = true;
         }
-        // Step 2: Fallback — fetch directly from DefiLlama
-        vcFetchDefiLlamaDirect();
-      }).catch(function() { vcFetchDefiLlamaDirect(); });
+        // If Firebase had nothing or is stale, try DefiLlama direct
+        if (!loaded || (data && data.updated && vcIsFeedStale(data.updated))) {
+          vcFetchDirect();
+        } else {
+          vcResetBtns();
+        }
+      }).catch(function() { vcFetchDirect(); });
     } else {
-      vcFetchDefiLlamaDirect();
+      vcFetchDirect();
     }
-  } catch(e) { vcFetchDefiLlamaDirect(); }
+  } catch(e) { vcFetchDirect(); }
 }
 
-function vcFetchDefiLlamaDirect() {
-  var btn = document.getElementById('vc-feed-refresh-btn');
-  var topBtn = document.querySelector('[onclick="vcFetchDefiLlama()"]');
+function vcFetchDirect() {
   var status = document.getElementById('vc-feed-status');
-  if (status) status.textContent = 'Fetching from DefiLlama...';
-
-  // Also trigger daemon to refresh via Firebase command
-  try {
-    if (typeof dbRef !== 'undefined' && dbRef) {
-      dbRef.child('agentCommands').child('vc').set({ action: 'run_now' });
-    }
-  } catch(e) {}
-
+  if (status) status.textContent = 'Fetching live from DefiLlama...';
   fetch('https://api.llama.fi/raises')
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(data) {
       var allRaises = data && data.raises ? data.raises : [];
       var cutoff = Date.now() / 1000 - 30 * 86400;
@@ -12938,13 +12932,11 @@ function vcFetchDefiLlamaDirect() {
         if (dateTs && dateTs < cutoff) continue;
         var leads = (r.leadInvestors || []).map(function(x) { return typeof x === 'string' ? x : (x && x.name || ''); }).filter(Boolean);
         var others = (r.otherInvestors || []).map(function(x) { return typeof x === 'string' ? x : (x && x.name || ''); }).filter(Boolean);
-        var allInv = leads.concat(others).join(', ');
-        var hasTier1 = vcIsTier1(allInv);
         raises.push({
           name: r.name || 'Unknown', amount: amount, round: r.round || 'Unknown',
           category: r.category || '', chains: r.chains || [],
           date: dateTs ? new Date(dateTs * 1000).toISOString() : '',
-          leadInvestors: leads, otherInvestors: others, has_tier1: hasTier1,
+          leadInvestors: leads, otherInvestors: others, has_tier1: vcIsTier1(leads.concat(others).join(', ')),
           source: r.source || 'DefiLlama', valuation: r.valuation || null
         });
       }
@@ -12957,21 +12949,24 @@ function vcFetchDefiLlamaDirect() {
       try { if (typeof dbRef !== 'undefined' && dbRef) { dbRef.child('vcFeed').set({ raises: raises.slice(0, 100), updated: now }); } } catch(e) {}
       var badge = document.getElementById('vc-feed-badge');
       if (badge) { badge.textContent = raises.length; badge.style.display = 'inline'; }
-      if (status) status.textContent = 'Loaded ' + raises.length + ' raises from DefiLlama';
+      if (status) status.textContent = raises.length + ' raises loaded from DefiLlama';
       vcRenderFeed();
-      if (btn) btn.textContent = '↻ Refresh';
-      if (topBtn && topBtn !== btn) topBtn.textContent = '↻ Refresh Feed';
+      vcResetBtns();
     })
     .catch(function(err) {
-      console.warn('[VC Feed] DefiLlama fetch failed:', err);
       if (status) status.textContent = vcFeedData.length > 0
-        ? 'Using cached data (' + vcFeedData.length + ' raises). DefiLlama unavailable.'
-        : 'DefiLlama unavailable. Daemon will retry at 7 AM CET.';
-      if (btn) btn.textContent = '↻ Refresh';
-      if (topBtn && topBtn !== btn) topBtn.textContent = '↻ Refresh Feed';
-      // Render whatever we have
+        ? vcFeedData.length + ' raises (cached). Live fetch unavailable — daemon will retry at 7 AM CET.'
+        : 'No data available. Daemon will fetch at 7 AM CET.';
       vcRenderFeed();
+      vcResetBtns();
     });
+}
+
+function vcResetBtns() {
+  var btn = document.getElementById('vc-feed-refresh-btn');
+  var topBtn = document.querySelector('[onclick="vcFetchDefiLlama()"]');
+  if (btn) btn.textContent = '↻ Refresh';
+  if (topBtn && topBtn !== btn) topBtn.textContent = '↻ Refresh Feed';
 }
 
 function vcSwitchTab(tab) {
