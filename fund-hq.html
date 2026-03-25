@@ -12833,17 +12833,20 @@ function vcRender() {
   filtered.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
 
   // Stats
-  var totalRaised = 0;
+  var totalRaisedM = 0;
   var tier1Count = 0;
   var gemCount = 0;
   vcRaises.forEach(function(r) {
-    totalRaised += parseFloat(r.amount || 0);
+    var amt = parseFloat(r.amount || 0);
+    // Normalize: if > 1000, it's raw USD, convert to millions
+    if (amt > 1000) amt = amt / 1e6;
+    totalRaisedM += amt;
     if (vcIsTier1(r.investors)) tier1Count++;
     if (vcIs100x(r)) gemCount++;
   });
   var el;
   el = document.getElementById('vc-stat-total'); if (el) el.textContent = vcRaises.length;
-  el = document.getElementById('vc-stat-raised'); if (el) el.textContent = '$' + Math.round(totalRaised) + 'M';
+  el = document.getElementById('vc-stat-raised'); if (el) el.textContent = totalRaisedM >= 1000 ? '$' + (totalRaisedM/1000).toFixed(1) + 'B' : '$' + Math.round(totalRaisedM) + 'M';
   el = document.getElementById('vc-stat-tier1'); if (el) el.textContent = tier1Count;
   el = document.getElementById('vc-stat-gems'); if (el) el.textContent = gemCount;
   el = document.getElementById('vc-count'); if (el) el.textContent = filtered.length + ' of ' + vcRaises.length;
