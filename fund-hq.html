@@ -1520,6 +1520,7 @@ tbody tr:hover { background: var(--bg3); }
       <div style="display:flex;gap:8px;margin-bottom:20px;align-items:center;">
         <button class="tab active" id="vc-tab-my" onclick="vcSwitchTab('my')">&#128203; My Raises</button>
         <button class="tab" id="vc-tab-feed" onclick="vcSwitchTab('feed')">&#128225; Live Feed <span id="vc-feed-badge" style="font-size:10px;background:var(--accent);color:var(--bg1);padding:1px 6px;border-radius:8px;margin-left:4px;display:none;">0</span></button>
+        <button class="tab" id="vc-tab-pipeline" onclick="vcSwitchTab('pipeline')">&#127895; Pipeline <span id="vc-pipeline-badge" style="font-size:10px;background:var(--green);color:#000;padding:1px 6px;border-radius:8px;margin-left:4px;display:none;">0</span></button>
         <div style="flex:1;"></div>
         <button class="btn btn-ghost" onclick="vcFetchDefiLlama()" style="font-size:12px;padding:6px 14px;">&#x21bb; Refresh Feed</button>
         <button class="btn btn-primary admin-only" onclick="vcShowAddRaise()" style="font-size:12px;padding:6px 14px;">+ Add Project</button>
@@ -1657,6 +1658,43 @@ tbody tr:hover { background: var(--bg3); }
           </div>
         </div>
       </div>
+      <!-- ===== PIPELINE TAB ===== -->
+      <div id="vc-panel-pipeline" style="display:none;">
+        <!-- Funnel Stats -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-bottom:20px;border-radius:8px;overflow:hidden;">
+          <div id="vc-funnel-scouted" style="background:var(--bg3);padding:14px;text-align:center;cursor:pointer;" onclick="vcPipelineFilter('scouted')">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Scouted</div>
+            <div style="font-size:24px;font-weight:800;color:var(--text2);" id="vc-pipe-scouted-n">0</div>
+          </div>
+          <div id="vc-funnel-researching" style="background:var(--bg3);padding:14px;text-align:center;cursor:pointer;" onclick="vcPipelineFilter('researching')">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--yellow);">Researching</div>
+            <div style="font-size:24px;font-weight:800;color:var(--yellow);" id="vc-pipe-research-n">0</div>
+          </div>
+          <div id="vc-funnel-shortlisted" style="background:var(--bg3);padding:14px;text-align:center;cursor:pointer;" onclick="vcPipelineFilter('shortlisted')">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);">Shortlisted</div>
+            <div style="font-size:24px;font-weight:800;color:var(--accent2);" id="vc-pipe-short-n">0</div>
+          </div>
+          <div id="vc-funnel-candidate" style="background:var(--bg3);padding:14px;text-align:center;cursor:pointer;" onclick="vcPipelineFilter('100x')">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--green);">100x Candidate</div>
+            <div style="font-size:24px;font-weight:800;color:var(--green);" id="vc-pipe-100x-n">0</div>
+          </div>
+          <div style="background:var(--bg3);padding:14px;text-align:center;cursor:pointer;" onclick="vcPipelineFilter('passed')">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--red);">Passed</div>
+            <div style="font-size:24px;font-weight:800;color:var(--red);" id="vc-pipe-passed-n">0</div>
+          </div>
+        </div>
+
+        <!-- Funnel bar -->
+        <div id="vc-funnel-bar" style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:20px;"></div>
+
+        <!-- Pipeline list -->
+        <div id="vc-pipeline-list"></div>
+        <div id="vc-pipeline-empty" style="display:none;padding:40px;text-align:center;">
+          <div style="font-size:32px;margin-bottom:8px;">&#127895;</div>
+          <p style="color:var(--text3);font-size:13px;">No tracked projects yet. Go to <strong>Live Feed</strong>, click a project, and hit <strong>Track</strong> to start building your pipeline.</p>
+        </div>
+      </div>
+
       <div id="teach-vc-box"></div>
     </div>
 
@@ -13316,8 +13354,11 @@ function vcTrackFromResearch() {
     category: r.category || '',
     chains: (r.chains || []).join(', '),
     notes: r.notes || '',
+    description: r.description || '',
+    has_tier1: r.has_tier1 || vcIsTier1(allInv.join(', ')),
+    key: r.key || '',
     date: r.date ? (typeof r.date === 'number' ? new Date(r.date*1000) : new Date(r.date)).toISOString().split('T')[0] : '',
-    status: 'watching',
+    status: 'scouted',
   });
   localStorage.setItem('vc_raises', JSON.stringify(vcRaises));
   try { if (typeof dbRef !== 'undefined' && dbRef) { var u = {}; vcRaises.forEach(function(x){u[x.id]=x;}); dbRef.child('vcRaises_watchlist').set(u); } } catch(e){}
@@ -13327,25 +13368,156 @@ function vcTrackFromResearch() {
 
 function vcSwitchTab(tab) {
   vcFeedTab = tab;
-  var myPanel = document.getElementById('vc-panel-my');
-  var feedPanel = document.getElementById('vc-panel-feed');
-  var myTab = document.getElementById('vc-tab-my');
-  var feedTab = document.getElementById('vc-tab-feed');
-  if (!myPanel || !feedPanel) return;
-  if (tab === 'feed') {
-    myPanel.style.display = 'none';
-    feedPanel.style.display = '';
-    if (myTab) myTab.classList.remove('active');
-    if (feedTab) feedTab.classList.add('active');
-    vcLoadFeed();
-  } else {
-    myPanel.style.display = '';
-    feedPanel.style.display = 'none';
-    if (myTab) myTab.classList.add('active');
-    if (feedTab) feedTab.classList.remove('active');
-    vcRender();
-  }
+  var panels = {my: 'vc-panel-my', feed: 'vc-panel-feed', pipeline: 'vc-panel-pipeline'};
+  var tabs = {my: 'vc-tab-my', feed: 'vc-tab-feed', pipeline: 'vc-tab-pipeline'};
+  // Hide all panels, deactivate all tabs
+  Object.values(panels).forEach(function(id) { var p = document.getElementById(id); if (p) p.style.display = 'none'; });
+  Object.values(tabs).forEach(function(id) { var t = document.getElementById(id); if (t) t.classList.remove('active'); });
+  // Show active
+  var panel = document.getElementById(panels[tab]);
+  var tabBtn = document.getElementById(tabs[tab]);
+  if (panel) panel.style.display = '';
+  if (tabBtn) tabBtn.classList.add('active');
+  // Load data
+  if (tab === 'feed') vcLoadFeed();
+  else if (tab === 'pipeline') vcRenderPipeline();
+  else vcRender();
 }
+
+// ===== VC PIPELINE =====
+
+var _vcPipelineFilter = 'all';
+var VC_STAGES = ['scouted', 'researching', 'shortlisted', '100x', 'passed'];
+var VC_STAGE_LABELS = {scouted: 'Scouted', researching: 'Researching', shortlisted: 'Shortlisted', '100x': '100x Candidate', passed: 'Passed'};
+var VC_STAGE_COLORS = {scouted: 'var(--text2)', researching: 'var(--yellow)', shortlisted: 'var(--accent2)', '100x': 'var(--green)', passed: 'var(--red)'};
+
+function vcPipelineFilter(stage) {
+  _vcPipelineFilter = _vcPipelineFilter === stage ? 'all' : stage;
+  vcRenderPipeline();
+}
+
+function vcMoveStage(id, newStage) {
+  var idx = vcRaises.findIndex(function(r) { return r.id === id; });
+  if (idx < 0) return;
+  vcRaises[idx].status = newStage;
+  localStorage.setItem('vc_raises', JSON.stringify(vcRaises));
+  try { if (typeof dbRef !== 'undefined' && dbRef) { var u = {}; vcRaises.forEach(function(x){u[x.id]=x;}); dbRef.child('vcRaises_watchlist').set(u); } } catch(e){}
+  vcRenderPipeline();
+}
+
+function vcRenderPipeline() {
+  var list = document.getElementById('vc-pipeline-list');
+  var empty = document.getElementById('vc-pipeline-empty');
+  if (!list) return;
+
+  // Map old statuses to pipeline stages
+  var items = (vcRaises || []).map(function(r) {
+    var stage = r.status || 'scouted';
+    if (stage === 'watching') stage = 'scouted';
+    if (stage === 'invested') stage = '100x';
+    return Object.assign({}, r, {_stage: stage});
+  });
+
+  // Counts
+  var counts = {};
+  VC_STAGES.forEach(function(s) { counts[s] = 0; });
+  items.forEach(function(r) { if (counts[r._stage] !== undefined) counts[r._stage]++; else counts['scouted']++; });
+  var total = items.length;
+
+  // Update stats
+  var el;
+  el = document.getElementById('vc-pipe-scouted-n'); if (el) el.textContent = counts.scouted;
+  el = document.getElementById('vc-pipe-research-n'); if (el) el.textContent = counts.researching;
+  el = document.getElementById('vc-pipe-short-n'); if (el) el.textContent = counts.shortlisted;
+  el = document.getElementById('vc-pipe-100x-n'); if (el) el.textContent = counts['100x'];
+  el = document.getElementById('vc-pipe-passed-n'); if (el) el.textContent = counts.passed;
+
+  // Pipeline badge
+  var badge = document.getElementById('vc-pipeline-badge');
+  if (badge) { badge.textContent = total; badge.style.display = total > 0 ? 'inline' : 'none'; }
+
+  // Funnel bar
+  var bar = document.getElementById('vc-funnel-bar');
+  if (bar && total > 0) {
+    bar.innerHTML = VC_STAGES.map(function(s) {
+      var pct = (counts[s] / total * 100) || 0;
+      if (pct < 1 && counts[s] > 0) pct = 2;
+      return pct > 0 ? '<div style="width:' + pct + '%;background:' + VC_STAGE_COLORS[s] + ';" title="' + VC_STAGE_LABELS[s] + ': ' + counts[s] + '"></div>' : '';
+    }).join('');
+  } else if (bar) { bar.innerHTML = '<div style="width:100%;background:var(--bg4);"></div>'; }
+
+  // Highlight active filter
+  VC_STAGES.forEach(function(s) {
+    var el = document.getElementById('vc-funnel-' + (s === '100x' ? 'candidate' : s));
+    if (el) {
+      el.style.background = (_vcPipelineFilter === s) ? 'var(--bg4)' : 'var(--bg3)';
+      el.style.borderBottom = (_vcPipelineFilter === s) ? '2px solid ' + VC_STAGE_COLORS[s] : '2px solid transparent';
+    }
+  });
+
+  // Filter
+  var filtered = _vcPipelineFilter === 'all' ? items : items.filter(function(r) { return r._stage === _vcPipelineFilter; });
+  // Sort: 100x first, then shortlisted, researching, scouted, passed
+  var stageOrder = {'100x': 0, shortlisted: 1, researching: 2, scouted: 3, passed: 4};
+  filtered.sort(function(a, b) { return (stageOrder[a._stage] || 3) - (stageOrder[b._stage] || 3); });
+
+  if (!filtered.length) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = total === 0 ? 'block' : 'none';
+    if (total > 0 && !filtered.length) list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">No projects in this stage.</div>';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  list.innerHTML = filtered.map(function(r) {
+    var stageColor = VC_STAGE_COLORS[r._stage] || 'var(--text3)';
+    var stageLabel = VC_STAGE_LABELS[r._stage] || r._stage;
+    var name = r.project || r.name || '';
+    var desc = r.description || '';
+    var isTier1 = r.has_tier1 || vcIsTier1(r.investors || '');
+    var rawAmt = typeof r.amount === 'number' ? r.amount : parseFloat(r.amount) || 0;
+    var amtDisplay = rawAmt >= 1e6 ? '$' + (rawAmt/1e6).toFixed(0) + 'M' : rawAmt > 0 ? '$' + rawAmt + 'M' : '';
+    var scores = vcResearchScore(r, (r.investors || '').split(','), isTier1, rawAmt >= 1e6 ? rawAmt : rawAmt * 1e6);
+    var total = scores.investors + scores.product + scores.traction + scores.upside;
+
+    // Stage buttons — show arrows to move forward/back
+    var stageIdx = VC_STAGES.indexOf(r._stage);
+    var prevStage = stageIdx > 0 ? VC_STAGES[stageIdx - 1] : null;
+    var nextStage = stageIdx < VC_STAGES.length - 1 ? VC_STAGES[stageIdx + 1] : null;
+
+    return '<div class="card" style="padding:14px 18px;margin-bottom:8px;border-left:3px solid ' + stageColor + ';">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">' +
+        '<div style="flex:1;">' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">' +
+            '<strong style="font-size:14px;cursor:pointer;text-decoration:underline;text-decoration-color:var(--border);text-underline-offset:2px;" onclick="vcOpenResearchCard(_vcFilteredRaises[' + (vcRaises || []).indexOf(r) + '] || _vcPipelineItems[' + filtered.indexOf(r) + '])">' + esc(name) + '</strong>' +
+            '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:' + stageColor + '20;color:' + stageColor + ';font-weight:700;">' + stageLabel + '</span>' +
+            (isTier1 ? '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--green)20;color:var(--green);font-weight:600;">TIER 1</span>' : '') +
+            (amtDisplay ? '<span style="font-size:12px;font-weight:700;">' + amtDisplay + '</span>' : '') +
+            '<span style="font-size:11px;color:var(--text3);">' + total + '/20</span>' +
+          '</div>' +
+          (desc ? '<div style="font-size:11px;color:var(--text2);margin-bottom:4px;line-height:1.4;">' + esc(desc.substring(0, 120)) + (desc.length > 120 ? '...' : '') + '</div>' : '') +
+          '<div style="font-size:11px;color:var(--text3);">' +
+            (r.category ? esc(r.category) + ' · ' : '') +
+            (r.date || '') +
+            ' · ' + vcQuickLinks(r) +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:4px;">' +
+          (prevStage ? '<button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="vcMoveStage(\'' + r.id + '\',\'' + prevStage + '\')" title="Move to ' + VC_STAGE_LABELS[prevStage] + '">&#9664;</button>' : '') +
+          '<select onchange="vcMoveStage(\'' + r.id + '\',this.value)" style="background:var(--bg3);border:1px solid var(--border);color:' + stageColor + ';padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;">' +
+            VC_STAGES.map(function(s) { return '<option value="' + s + '"' + (r._stage === s ? ' selected' : '') + '>' + VC_STAGE_LABELS[s] + '</option>'; }).join('') +
+          '</select>' +
+          (nextStage ? '<button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="vcMoveStage(\'' + r.id + '\',\'' + nextStage + '\')" title="Move to ' + VC_STAGE_LABELS[nextStage] + '">&#9654;</button>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Store for research card onclick
+  _vcPipelineItems = filtered;
+}
+
+var _vcPipelineItems = [];
 
 function vcLoadFeed() {
   // Try localStorage cache first
