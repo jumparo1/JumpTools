@@ -790,9 +790,14 @@ tbody tr:hover { background: var(--bg3); }
           <div id="dash-btc-dom-detail" style="font-size:11px;color:var(--text3);">Loading...</div>
         </div>
         <div class="card" style="padding:14px 18px;">
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">DeFi TVL</div>
-          <div id="dash-defi-tvl" style="font-size:22px;font-weight:700;color:var(--green);margin-top:4px;">--</div>
-          <div id="dash-defi-tvl-detail" style="font-size:11px;color:var(--text3);">Loading...</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Total MCap</div>
+          <div id="dash-total-mcap" style="font-size:22px;font-weight:700;color:var(--green);margin-top:4px;">--</div>
+          <div id="dash-total-mcap-detail" style="font-size:11px;color:var(--text3);">Loading...</div>
+        </div>
+        <div class="card" style="padding:14px 18px;">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">USDT.D</div>
+          <div id="dash-usdt-dom" style="font-size:22px;font-weight:700;color:var(--blue);margin-top:4px;">--</div>
+          <div id="dash-usdt-dom-detail" style="font-size:11px;color:var(--text3);">Loading...</div>
         </div>
         <div class="card" style="padding:14px 18px;">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Backend</div>
@@ -17577,18 +17582,27 @@ async function loadDashMacro() {
       return;
     }
   }
-  // Fallback: direct API calls
+  // Fallback: direct API calls (CoinLore + Fear & Greed)
   try {
-    var [fngRes, globalRes] = await Promise.allSettled([
+    var [fngRes, globalRes, usdtRes] = await Promise.allSettled([
       fetch('https://api.alternative.me/fng/?limit=1').then(r => r.json()),
-      fetch('https://api.coingecko.com/api/v3/global').then(r => r.json())
+      fetch('https://api.coinlore.net/api/global/').then(r => r.json()),
+      fetch('https://api.coinlore.net/api/ticker/?id=518').then(r => r.json())
     ]);
     var macro = {};
     if (fngRes.status === 'fulfilled' && fngRes.value?.data?.[0]) {
       macro.fear_greed = { value: parseInt(fngRes.value.data[0].value), classification: fngRes.value.data[0].value_classification };
     }
-    if (globalRes.status === 'fulfilled' && globalRes.value?.data) {
-      macro.btc_dominance = { btc_dominance: globalRes.value.data.market_cap_percentage?.btc };
+    if (globalRes.status === 'fulfilled' && Array.isArray(globalRes.value) && globalRes.value[0]) {
+      var g = globalRes.value[0];
+      var totalMcap = parseFloat(g.total_mcap || 0);
+      var dom = { btc_dominance: parseFloat(g.btc_d || 0), eth_dominance: parseFloat(g.eth_d || 0), total_market_cap: totalMcap, total_volume: parseFloat(g.total_volume || 0), market_cap_change_24h: parseFloat(g.mcap_change || 0) };
+      if (usdtRes.status === 'fulfilled' && Array.isArray(usdtRes.value) && usdtRes.value[0]) {
+        var usdtMcap = parseFloat(usdtRes.value[0].market_cap_usd || 0);
+        dom.usdt_dominance = totalMcap > 0 ? (usdtMcap / totalMcap * 100) : 0;
+        dom.usdt_market_cap = usdtMcap;
+      }
+      macro.btc_dominance = dom;
     }
     renderDashMacro(macro);
   } catch(e) { console.warn('Macro fallback failed:', e); }
@@ -17607,14 +17621,17 @@ function renderDashMacro(macro) {
     var domEl = document.getElementById('dash-btc-dom');
     var domDetail = document.getElementById('dash-btc-dom-detail');
     if (domEl) domEl.textContent = (dom.btc_dominance || 0).toFixed(1) + '%';
-    if (domDetail) domDetail.textContent = dom.total_market_cap ? 'Total MCap $' + fmtBigNum(dom.total_market_cap) : '';
-  }
-  if (macro.defi_tvl) {
-    var tvl = macro.defi_tvl;
-    var tvlEl = document.getElementById('dash-defi-tvl');
-    var tvlDetail = document.getElementById('dash-defi-tvl-detail');
-    if (tvlEl) tvlEl.textContent = '$' + fmtBigNum(tvl.total_tvl || 0);
-    if (tvlDetail && tvl.tvl_change_7d != null) tvlDetail.textContent = (tvl.tvl_change_7d > 0 ? '+' : '') + tvl.tvl_change_7d.toFixed(1) + '% 7d';
+    if (domDetail) domDetail.textContent = dom.market_cap_change_24h ? (dom.market_cap_change_24h > 0 ? '+' : '') + Number(dom.market_cap_change_24h).toFixed(1) + '% 24h' : '';
+    // Total MCap card
+    var mcapEl = document.getElementById('dash-total-mcap');
+    var mcapDetail = document.getElementById('dash-total-mcap-detail');
+    if (mcapEl && dom.total_market_cap) mcapEl.textContent = '$' + fmtBigNum(dom.total_market_cap);
+    if (mcapDetail && dom.total_volume) mcapDetail.textContent = 'Vol $' + fmtBigNum(dom.total_volume);
+    // USDT.D card
+    var usdtEl = document.getElementById('dash-usdt-dom');
+    var usdtDetail = document.getElementById('dash-usdt-dom-detail');
+    if (usdtEl && dom.usdt_dominance != null) { usdtEl.textContent = Number(dom.usdt_dominance).toFixed(2) + '%'; usdtEl.style.color = dom.usdt_dominance > 7 ? 'var(--red)' : dom.usdt_dominance < 5 ? 'var(--green)' : 'var(--blue)'; }
+    if (usdtDetail && dom.usdt_market_cap) usdtDetail.textContent = '$' + fmtBigNum(dom.usdt_market_cap);
   }
 }
 
