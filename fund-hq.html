@@ -13399,6 +13399,13 @@ function vcPipelineFilter(stage) {
   vcRenderPipeline();
 }
 
+function vcRemoveTracked(id) {
+  vcRaises = vcRaises.filter(function(r) { return r.id !== id; });
+  localStorage.setItem('vc_raises', JSON.stringify(vcRaises));
+  try { if (typeof dbRef !== 'undefined' && dbRef) { var u = {}; vcRaises.forEach(function(x){u[x.id]=x;}); dbRef.child('vcRaises_watchlist').set(u); } } catch(e){}
+  vcRenderPipeline();
+}
+
 function vcMoveStage(id, newStage) {
   var idx = vcRaises.findIndex(function(r) { return r.id === id; });
   if (idx < 0) return;
@@ -13511,6 +13518,7 @@ function vcRenderPipeline() {
             VC_STAGES.map(function(s) { return '<option value="' + s + '"' + (r._stage === s ? ' selected' : '') + '>' + VC_STAGE_LABELS[s] + '</option>'; }).join('') +
           '</select>' +
           (nextStage ? '<button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="vcMoveStage(\'' + r.id + '\',\'' + nextStage + '\')" title="Move to ' + VC_STAGE_LABELS[nextStage] + '">&#9654;</button>' : '') +
+          '<button class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:var(--red);" onclick="vcRemoveTracked(\'' + r.id + '\')" title="Remove">&#10005;</button>' +
         '</div>' +
       '</div>' +
     '</div>';
