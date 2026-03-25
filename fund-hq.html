@@ -14590,8 +14590,35 @@ function macroShowTab(tab) {
   macroRenderTab(tab);
 }
 
-function macroRefresh() {
+async function macroRefresh() {
+  // Re-fetch from Firebase + fresh API data
   macroLoadData();
+  // Also fetch live data directly from APIs (avoids mixed-content block)
+  try {
+    var [fngRes, globalRes, usdtRes] = await Promise.allSettled([
+      fetch('https://api.alternative.me/fng/?limit=1').then(r => r.json()),
+      fetch('https://api.coinlore.net/api/global/').then(r => r.json()),
+      fetch('https://api.coinlore.net/api/ticker/?id=518').then(r => r.json())
+    ]);
+    var live = {};
+    if (fngRes.status === 'fulfilled' && fngRes.value?.data?.[0]) {
+      live.fear_greed = { value: parseInt(fngRes.value.data[0].value), classification: fngRes.value.data[0].value_classification };
+    }
+    if (globalRes.status === 'fulfilled' && Array.isArray(globalRes.value) && globalRes.value[0]) {
+      var g = globalRes.value[0];
+      var totalMcap = parseFloat(g.total_mcap || 0);
+      live.btc_dominance = { btc_dominance: parseFloat(g.btc_d || 0), eth_dominance: parseFloat(g.eth_d || 0), total_market_cap: totalMcap, total_volume: parseFloat(g.total_volume || 0), market_cap_change_24h: parseFloat(g.mcap_change || 0) };
+      if (usdtRes.status === 'fulfilled' && Array.isArray(usdtRes.value) && usdtRes.value[0]) {
+        var usdtMcap = parseFloat(usdtRes.value[0].market_cap_usd || 0);
+        live.btc_dominance.usdt_dominance = totalMcap > 0 ? (usdtMcap / totalMcap * 100) : 0;
+        live.btc_dominance.usdt_market_cap = usdtMcap;
+      }
+    }
+    // Merge live data into macro page data
+    if (live.fear_greed) macroPageData.macro = Object.assign(macroPageData.macro || {}, { fear_greed: live.fear_greed });
+    if (live.btc_dominance) macroPageData.macro = Object.assign(macroPageData.macro || {}, { btc_dominance: live.btc_dominance });
+    macroRenderTab(getCurrentMacroTab());
+  } catch(e) { console.warn('Macro live refresh failed:', e); }
 }
 
 function macroLoadData() {
