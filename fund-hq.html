@@ -1142,10 +1142,16 @@ tbody tr:hover { background: var(--bg3); }
           <div id="macro-markets-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">Loading...</div>
         </div>
 
-        <!-- Token Unlocks -->
+        <!-- Crypto Market Structure -->
+        <div class="card" style="padding:20px;margin-bottom:16px;">
+          <h3 style="margin-bottom:16px;">Crypto Market Structure</h3>
+          <div id="macro-market-structure" style="font-size:13px;">Loading...</div>
+        </div>
+
+        <!-- Dominance & Liquidity -->
         <div class="card" style="padding:20px;">
-          <h3 style="margin-bottom:16px;">Upcoming Token Unlocks (Selling Pressure)</h3>
-          <div id="macro-unlocks-list" style="font-size:13px;">Loading...</div>
+          <h3 style="margin-bottom:16px;">Dominance & Liquidity Trends</h3>
+          <div id="macro-dominance-bars" style="font-size:13px;">Loading...</div>
         </div>
       </div>
 
@@ -14770,7 +14776,6 @@ function macroRenderFed() {
 function macroRenderMarkets() {
   var macro = macroPageData.macro || {};
   var indices = macro.indices || {};
-  var unlocks = macro.token_unlocks || [];
 
   // Cross-market grid
   var grid = document.getElementById('macro-markets-grid');
@@ -14794,20 +14799,54 @@ function macroRenderMarkets() {
     grid.innerHTML = cards.join('') || '<div style="color:var(--text3);">No market data available. Server pushes data every 10 minutes.</div>';
   }
 
-  // Token unlocks
-  var unlockEl = document.getElementById('macro-unlocks-list');
-  if (unlockEl && Array.isArray(unlocks) && unlocks.length > 0) {
-    unlockEl.innerHTML = '<div style="display:grid;gap:8px;">' + unlocks.map(function(u) {
-      var pressureColor = u.selling_pressure === 'HIGH' ? 'var(--red)' : u.selling_pressure === 'MEDIUM' ? 'var(--orange)' : 'var(--green)';
-      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;">' +
-        '<div style="font-weight:700;min-width:60px;color:var(--accent2);">' + esc(u.protocol || '') + '</div>' +
-        '<div style="font-size:13px;color:var(--text2);">' + esc(u.date || '') + '</div>' +
-        '<div style="font-size:13px;font-weight:600;">$' + ((u.usd_value || 0) / 1e6).toFixed(0) + 'M</div>' +
-        '<span style="font-size:10px;padding:2px 8px;border-radius:4px;color:#fff;background:' + pressureColor + ';margin-left:auto;">' + esc(u.selling_pressure || '') + '</span>' +
+  // Crypto Market Structure
+  var dom = macro.btc_dominance || {};
+  var structEl = document.getElementById('macro-market-structure');
+  if (structEl) {
+    var structCards = [
+      {label: 'Total Market Cap', value: dom.total_market_cap ? '$' + fmtBigNum(dom.total_market_cap) : '--', detail: dom.market_cap_change_24h != null ? (dom.market_cap_change_24h > 0 ? '+' : '') + Number(dom.market_cap_change_24h).toFixed(2) + '% 24h' : '', color: dom.market_cap_change_24h > 0 ? 'var(--green)' : dom.market_cap_change_24h < 0 ? 'var(--red)' : 'var(--text)'},
+      {label: '24h Volume', value: dom.total_volume ? '$' + fmtBigNum(dom.total_volume) : '--', detail: dom.active_cryptos ? dom.active_cryptos.toLocaleString() + ' coins' : '', color: 'var(--accent2)'},
+      {label: 'BTC Dominance', value: dom.btc_dominance ? dom.btc_dominance.toFixed(1) + '%' : '--', detail: dom.btc_dominance > 55 ? 'BTC season' : dom.btc_dominance < 45 ? 'Alt season' : 'Neutral', color: dom.btc_dominance > 55 ? 'var(--orange)' : dom.btc_dominance < 45 ? 'var(--green)' : 'var(--text)'},
+      {label: 'ETH Dominance', value: dom.eth_dominance ? dom.eth_dominance.toFixed(1) + '%' : '--', detail: '', color: 'var(--accent2)'},
+      {label: 'USDT Dominance', value: dom.usdt_dominance != null ? Number(dom.usdt_dominance).toFixed(2) + '%' : '--', detail: dom.usdt_dominance > 7 ? 'Risk-off (high cash)' : dom.usdt_dominance < 5 ? 'Risk-on (deployed)' : 'Neutral', color: dom.usdt_dominance > 7 ? 'var(--red)' : dom.usdt_dominance < 5 ? 'var(--green)' : 'var(--blue)'},
+      {label: 'USDT MCap', value: dom.usdt_market_cap ? '$' + fmtBigNum(dom.usdt_market_cap) : '--', detail: 'Stablecoin liquidity', color: 'var(--blue)'},
+    ];
+    structEl.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">' + structCards.map(function(c) {
+      return '<div style="background:var(--bg3);border-radius:8px;padding:14px;">' +
+        '<div style="font-size:10px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">' + c.label + '</div>' +
+        '<div style="font-size:22px;font-weight:700;color:' + c.color + ';">' + c.value + '</div>' +
+        (c.detail ? '<div style="font-size:11px;color:var(--text2);margin-top:4px;">' + c.detail + '</div>' : '') +
       '</div>';
     }).join('') + '</div>';
-  } else if (unlockEl) {
-    unlockEl.innerHTML = '<div style="color:var(--text3);">No upcoming unlocks tracked.</div>';
+  }
+
+  // Dominance & Liquidity bars
+  var domBars = document.getElementById('macro-dominance-bars');
+  if (domBars && dom.btc_dominance) {
+    var btcD = dom.btc_dominance || 0;
+    var ethD = dom.eth_dominance || 0;
+    var usdtD = dom.usdt_dominance || 0;
+    var altD = Math.max(0, 100 - btcD - ethD - usdtD);
+    var barData = [
+      {label: 'BTC', pct: btcD, color: 'var(--orange)'},
+      {label: 'ETH', pct: ethD, color: 'var(--accent2)'},
+      {label: 'USDT', pct: usdtD, color: 'var(--blue)'},
+      {label: 'Alts', pct: altD, color: 'var(--green)'},
+    ];
+    var html = '<div style="display:flex;height:28px;border-radius:6px;overflow:hidden;margin-bottom:14px;">';
+    barData.forEach(function(b) { html += '<div style="width:' + b.pct + '%;background:' + b.color + ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;min-width:' + (b.pct > 3 ? '0' : '0') + 'px;" title="' + b.label + ': ' + b.pct.toFixed(1) + '%">' + (b.pct > 5 ? b.label + ' ' + b.pct.toFixed(1) + '%' : '') + '</div>'; });
+    html += '</div>';
+    // Interpretation
+    var interp = '';
+    if (btcD > 55) interp = 'BTC-dominant market — capital concentrated in BTC. Alts tend to underperform. Wait for dominance reversal for alt entries.';
+    else if (btcD < 45) interp = 'Alt season conditions — capital flowing into alts. Look for high-conviction alt setups. Watch for BTC dominance bottoming as exit signal.';
+    else if (usdtD > 7) interp = 'High stablecoin dominance — capital sitting on sidelines. Potential dry powder for a move. Watch for USDT.D breakdown as bullish trigger.';
+    else if (usdtD < 4.5) interp = 'Low stablecoin dominance — most capital deployed. Less dry powder available. Be cautious on new entries.';
+    else interp = 'Balanced market structure. No extreme dominance signals. Trade individual setups.';
+    html += '<div style="background:var(--bg3);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--text2);line-height:1.6;">' + interp + '</div>';
+    domBars.innerHTML = html;
+  } else if (domBars) {
+    domBars.innerHTML = '<div style="color:var(--text3);">No dominance data. Refresh to load.</div>';
   }
 }
 
