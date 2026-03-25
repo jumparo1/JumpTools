@@ -12633,6 +12633,19 @@ function vcStarHtml(name, raise) {
   return '<span style="font-size:12px;letter-spacing:1px;cursor:help;" title="Auto-scored">' + stars + '</span>';
 }
 
+function vcQuickLinks(r) {
+  var name = r.name || '';
+  var key = r.key || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  var links = [];
+  // CryptoRank project page
+  links.push('<a href="https://cryptorank.io/ico/' + encodeURIComponent(key) + '" target="_blank" style="color:var(--accent2);" title="CryptoRank">CR</a>');
+  // Twitter/X search
+  links.push('<a href="https://x.com/search?q=' + encodeURIComponent(name + ' crypto') + '&f=live" target="_blank" style="color:var(--accent2);" title="Search X/Twitter">X</a>');
+  // Google search
+  links.push('<a href="https://www.google.com/search?q=' + encodeURIComponent(name + ' crypto fundraise') + '" target="_blank" style="color:var(--accent2);" title="Google">G</a>');
+  return '<span style="font-size:10px;">' + links.join(' · ') + '</span>';
+}
+
 function vcNormalizeRound(round) {
   if (!round || round === 'Unknown' || round === '?') return 'Undisclosed';
   var r = round.trim();
@@ -13223,6 +13236,7 @@ function vcRenderFeed() {
             (r.category || '') +
             (r.chains && r.chains.length ? ' &middot; ' + r.chains.join(', ') : '') +
             (dateStr ? ' &middot; ' + dateStr : '') +
+            ' &middot; ' + vcQuickLinks(r) +
           '</div>' +
           '<div style="font-size:11px;color:var(--text3);">' + investorStr + '</div>' +
         '</div>' +
