@@ -1619,7 +1619,18 @@ tbody tr:hover { background: var(--bg3); }
         <div id="vc-feed-empty" style="display:none;padding:40px;text-align:center;">
           <div style="font-size:32px;margin-bottom:8px;">&#128225;</div>
           <p style="color:var(--text3);font-size:13px;">No feed data yet. The daily scan will populate this automatically.</p>
-          <p style="color:var(--text3);font-size:11px;margin-top:8px;">Data source: DefiLlama Raises API (fetched server-side daily)</p>
+          <p style="color:var(--text3);font-size:11px;margin-top:8px;">Data source: CryptoRank (fetched by daemon daily at 7 AM CET)</p>
+        </div>
+
+        <!-- Manual Paste Box -->
+        <div class="card admin-only" style="padding:16px;margin-top:20px;">
+          <h3 style="font-size:13px;color:var(--text2);margin-bottom:8px;">Add Raises Manually</h3>
+          <p style="font-size:11px;color:var(--text3);margin-bottom:10px;">Paste data from DefiLlama, RootData, or any source. One raise per line: <code>Name | $Amount | Round | Investors</code></p>
+          <textarea id="vc-paste-input" rows="4" placeholder="Example:&#10;Monad | $225M | Series A | Paradigm, Dragonfly&#10;EigenLayer | $100M | Series B | a16z" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:monospace;padding:10px;resize:vertical;"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button class="btn btn-primary btn-sm" onclick="vcParsePaste()">Add Raises</button>
+            <span id="vc-paste-status" style="font-size:11px;color:var(--text3);line-height:32px;"></span>
+          </div>
         </div>
       </div>
       <div id="teach-vc-box"></div>
@@ -12915,51 +12926,58 @@ function vcFetchDefiLlama() {
 }
 
 function vcFetchDirect() {
+  // CryptoRank can't be fetched from browser (CORS). Just show status.
   var status = document.getElementById('vc-feed-status');
-  if (status) status.textContent = 'Fetching live from DefiLlama...';
-  fetch('https://api.llama.fi/raises')
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(data) {
-      var allRaises = data && data.raises ? data.raises : [];
-      var cutoff = Date.now() / 1000 - 30 * 86400;
-      var raises = [];
-      for (var i = 0; i < allRaises.length; i++) {
-        var r = allRaises[i];
-        if (!r || typeof r !== 'object') continue;
-        var amount = r.amount || 0;
-        if (amount < 1) continue;
-        var dateTs = r.date;
-        if (dateTs && dateTs < cutoff) continue;
-        var leads = (r.leadInvestors || []).map(function(x) { return typeof x === 'string' ? x : (x && x.name || ''); }).filter(Boolean);
-        var others = (r.otherInvestors || []).map(function(x) { return typeof x === 'string' ? x : (x && x.name || ''); }).filter(Boolean);
-        raises.push({
-          name: r.name || 'Unknown', amount: amount, round: r.round || 'Unknown',
-          category: r.category || '', chains: r.chains || [],
-          date: dateTs ? new Date(dateTs * 1000).toISOString() : '',
-          leadInvestors: leads, otherInvestors: others, has_tier1: vcIsTier1(leads.concat(others).join(', ')),
-          source: r.source || 'DefiLlama', valuation: r.valuation || null
-        });
-      }
-      raises.sort(function(a, b) { return new Date(b.date || 0) - new Date(a.date || 0); });
-      vcFeedData = raises;
-      var now = new Date().toISOString();
-      localStorage.setItem('vc_feed', JSON.stringify(vcFeedData));
-      localStorage.setItem('vc_feed_updated', now);
-      vcShowFeedAge(now);
-      try { if (typeof dbRef !== 'undefined' && dbRef) { dbRef.child('vcFeed').set({ raises: raises.slice(0, 100), updated: now }); } } catch(e) {}
-      var badge = document.getElementById('vc-feed-badge');
-      if (badge) { badge.textContent = raises.length; badge.style.display = 'inline'; }
-      if (status) status.textContent = raises.length + ' raises loaded from DefiLlama';
-      vcRenderFeed();
-      vcResetBtns();
-    })
-    .catch(function(err) {
-      if (status) status.textContent = vcFeedData.length > 0
-        ? vcFeedData.length + ' raises (cached). Live fetch unavailable — daemon will retry at 7 AM CET.'
-        : 'No data available. Daemon will fetch at 7 AM CET.';
-      vcRenderFeed();
-      vcResetBtns();
+  if (vcFeedData.length > 0) {
+    if (status) status.textContent = vcFeedData.length + ' raises loaded. Daemon refreshes daily at 7 AM CET.';
+  } else {
+    if (status) status.textContent = 'No data yet. Daemon triggered — data will appear shortly.';
+  }
+  vcRenderFeed();
+  vcResetBtns();
+}
+
+function vcParsePaste() {
+  var input = document.getElementById('vc-paste-input');
+  var status = document.getElementById('vc-paste-status');
+  if (!input || !input.value.trim()) { if (status) status.textContent = 'Paste some data first'; return; }
+  var lines = input.value.trim().split('\n').filter(Boolean);
+  var added = 0;
+  var existingNames = new Set(vcFeedData.map(function(r) { return (r.name || '').toLowerCase(); }));
+  lines.forEach(function(line) {
+    var parts = line.split('|').map(function(s) { return s.trim(); });
+    if (parts.length < 2) return;
+    var name = parts[0];
+    if (existingNames.has(name.toLowerCase())) return;
+    var amountStr = (parts[1] || '').replace(/[^0-9.]/g, '');
+    var amount = parseFloat(amountStr) || 0;
+    // Detect if amount is in millions
+    if (parts[1] && /m/i.test(parts[1])) amount = amount * 1e6;
+    else if (parts[1] && /b/i.test(parts[1])) amount = amount * 1e9;
+    else if (amount < 1000) amount = amount * 1e6; // assume millions if small number
+    var round = parts[2] || 'Unknown';
+    var investors = parts[3] ? parts[3].split(',').map(function(s) { return s.trim(); }) : [];
+    vcFeedData.unshift({
+      name: name, amount: amount, round: round, category: '',
+      chains: [], date: new Date().toISOString(), investors: investors,
+      leadInvestors: investors.slice(0, 2), otherInvestors: investors.slice(2),
+      has_tier1: vcIsTier1(investors.join(', ')), source: 'Manual', valuation: null
     });
+    existingNames.add(name.toLowerCase());
+    added++;
+  });
+  if (added > 0) {
+    var now = new Date().toISOString();
+    localStorage.setItem('vc_feed', JSON.stringify(vcFeedData));
+    localStorage.setItem('vc_feed_updated', now);
+    vcShowFeedAge(now);
+    try { if (typeof dbRef !== 'undefined' && dbRef) { dbRef.child('vcFeed').set({ raises: vcFeedData.slice(0, 100), updated: now }); } } catch(e) {}
+    vcRenderFeed();
+    input.value = '';
+    var badge = document.getElementById('vc-feed-badge');
+    if (badge) { badge.textContent = vcFeedData.length; badge.style.display = 'inline'; }
+  }
+  if (status) status.textContent = added > 0 ? added + ' raises added' : 'No new raises (duplicates or invalid format)';
 }
 
 function vcResetBtns() {
