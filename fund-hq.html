@@ -7852,6 +7852,21 @@ if (firebaseReady) {
   dbRef.child('agentStatus').on('value', (snap) => {
     renderAgentStatus(snap.val());
   });
+  // Server status via Firebase (avoids mixed-content HTTPS→HTTP block)
+  dbRef.child('serverStatus').on('value', (snap) => {
+    const data = snap.val();
+    const dot = document.getElementById('backend-status-dot');
+    const label = document.getElementById('backend-status-label');
+    const detail = document.getElementById('backend-status-detail');
+    if (!data) { backendOnline = false; if (dot) dot.style.color = 'var(--red)'; if (label) { label.textContent = 'Offline'; label.style.color = 'var(--red)'; } return; }
+    const hb = data.heartbeat ? new Date(data.heartbeat) : null;
+    const agoS = hb ? Math.round((Date.now() - hb.getTime()) / 1000) : null;
+    const stale = agoS !== null && agoS > 120;
+    backendOnline = data.online === true && !stale;
+    if (dot) { dot.style.color = backendOnline ? 'var(--green)' : 'var(--red)'; }
+    if (label) { label.textContent = backendOnline ? 'Online' : 'Offline'; label.style.color = backendOnline ? 'var(--green)' : 'var(--red)'; }
+    if (detail && hb) { detail.textContent = 'Port ' + (data.port || 8888) + ' · ' + (agoS < 60 ? agoS + 's ago' : Math.round(agoS/60) + 'min ago'); }
+  });
   // Agent activity log
   dbRef.child('agentLog').orderByChild('timestamp').limitToLast(30).on('value', (snap) => {
     renderAgentLog(snap.val());
@@ -17550,10 +17565,8 @@ if (!firebaseReady) {
 
 // --- Dashboard Macro Data ---
 async function loadDashMacro() {
-  // Check backend status
-  var online = await checkBackendStatus();
-  var label = document.getElementById('backend-status-label');
-  if (label) { label.textContent = online ? 'Online' : 'Offline'; label.style.color = online ? 'var(--green)' : 'var(--red)'; }
+  // Backend status is now read from Firebase (see serverStatus listener below)
+  var online = backendOnline;
 
   if (online) {
     // Try backend first
