@@ -1064,9 +1064,14 @@ tbody tr:hover { background: var(--bg3); }
             <div id="macro-btc-dom-detail" style="font-size:12px;color:var(--text2);">--</div>
           </div>
           <div class="card" style="padding:16px;">
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">DeFi TVL</div>
-            <div id="macro-defi-tvl" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
-            <div id="macro-defi-tvl-change" style="font-size:12px;color:var(--text2);">--</div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Total MCap</div>
+            <div id="macro-total-mcap" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-total-mcap-detail" style="font-size:12px;color:var(--text2);">--</div>
+          </div>
+          <div class="card" style="padding:16px;">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">USDT.D</div>
+            <div id="macro-usdt-dom" style="font-size:24px;font-weight:700;margin-top:6px;">--</div>
+            <div id="macro-usdt-dom-detail" style="font-size:12px;color:var(--text2);">--</div>
           </div>
         </div>
 
@@ -14652,8 +14657,6 @@ function macroRenderOverview() {
   var indices = macro.indices || {};
   var fng = macro.fear_greed || {};
   var dom = macro.btc_dominance || {};
-  var tvl = macro.defi_tvl || {};
-
   // Fear & Greed
   var fngEl = document.getElementById('macro-fng');
   if (fngEl && fng.value !== undefined) {
@@ -14693,14 +14696,24 @@ function macroRenderOverview() {
   var btcDomDetail = document.getElementById('macro-btc-dom-detail');
   if (btcDomDetail && dom.eth_dominance) btcDomDetail.textContent = 'ETH: ' + dom.eth_dominance.toFixed(1) + '%';
 
-  // DeFi TVL
-  var tvlEl = document.getElementById('macro-defi-tvl');
-  if (tvlEl && tvl.total_tvl) tvlEl.textContent = '$' + (tvl.total_tvl / 1e9).toFixed(1) + 'B';
-  var tvlChange = document.getElementById('macro-defi-tvl-change');
-  if (tvlChange && tvl.tvl_change_7d !== undefined) {
-    tvlChange.textContent = (tvl.tvl_change_7d > 0 ? '+' : '') + tvl.tvl_change_7d + '% (7d)';
-    tvlChange.style.color = tvl.tvl_change_7d > 0 ? 'var(--green)' : 'var(--red)';
+  // Total MCap
+  var mcapEl = document.getElementById('macro-total-mcap');
+  if (mcapEl && dom.total_market_cap) mcapEl.textContent = '$' + fmtBigNum(dom.total_market_cap);
+  var mcapDetail = document.getElementById('macro-total-mcap-detail');
+  if (mcapDetail && dom.market_cap_change_24h != null) {
+    var ch = Number(dom.market_cap_change_24h);
+    mcapDetail.textContent = (ch > 0 ? '+' : '') + ch.toFixed(1) + '% (24h)';
+    mcapDetail.style.color = ch > 0 ? 'var(--green)' : 'var(--red)';
   }
+
+  // USDT.D
+  var usdtDom = document.getElementById('macro-usdt-dom');
+  if (usdtDom && dom.usdt_dominance != null) {
+    usdtDom.textContent = Number(dom.usdt_dominance).toFixed(2) + '%';
+    usdtDom.style.color = dom.usdt_dominance > 7 ? 'var(--red)' : dom.usdt_dominance < 5 ? 'var(--green)' : 'var(--blue)';
+  }
+  var usdtDetail = document.getElementById('macro-usdt-dom-detail');
+  if (usdtDetail && dom.usdt_market_cap) usdtDetail.textContent = '$' + fmtBigNum(dom.usdt_market_cap);
 
   // Briefing
   var briefEl = document.getElementById('macro-briefing');
