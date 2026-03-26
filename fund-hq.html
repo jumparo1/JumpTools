@@ -796,9 +796,15 @@ tbody tr:hover { background: var(--bg3); }
 
     <!-- ===== DASHBOARD ===== -->
     <div id="page-dashboard" class="page">
-      <div class="page-header">
-        <h1>Command Center</h1>
-        <p>What should I pay attention to today?</p>
+      <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+        <div>
+          <h1>Command Center</h1>
+          <p>What should I pay attention to today?</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg width="36" height="36" viewBox="0 0 512 512" style="flex-shrink:0;"><defs><linearGradient id="dash-logo-bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="50%" stop-color="#6d28d9"/><stop offset="100%" stop-color="#4c1d95"/></linearGradient></defs><rect width="512" height="512" rx="108" fill="url(#dash-logo-bg)"/><path d="M256 68 L444 256 L256 444 L68 256 Z" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="14" stroke-linejoin="round"/><path d="M186 362 L186 150 L332 150 L332 206 L252 206 L252 248 L316 248 L316 304 L252 304 L252 362 Z" fill="white"/></svg>
+          <span style="font-size:20px;font-weight:700;color:var(--text);">Fund HQ</span>
+        </div>
       </div>
       <div class="stats-row" id="stats-row"></div>
 
