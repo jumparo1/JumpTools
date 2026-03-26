@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fund HQ</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjOGI1Y2Y2Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjNmQyOGQ5Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRjMWQ5NSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMDgiIGZpbGw9InVybCgjYmcpIi8+CiAgPHBhdGggZD0iTTI1NiA2OCBMNDQ0IDI1NiBMMjU2IDQ0NCBMNjggMjU2IFoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjE4KSIgc3Ryb2tlLXdpZHRoPSIxNCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xODYgMzYyIEwxODYgMTUwIEwzMzIgMTUwIEwzMzIgMjA2IEwyNTIgMjA2IEwyNTIgMjQ4IEwzMTYgMjQ4IEwzMTYgMzA0IEwyNTIgMzA0IEwyNTIgMzYyIFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=">
 <!-- Firebase SDK (compat mode — no build tools needed) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
@@ -39,7 +40,7 @@ input, textarea, select { font-family: inherit; }
 
 /* ===== SIDEBAR ===== */
 .logo { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
-.logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.logo-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 .logo-sub { font-size: 11px; color: var(--text3); margin-bottom: 28px; letter-spacing: 0.5px; text-transform: uppercase; }
 .nav-section { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 8px; font-weight: 600; }
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); color: var(--text2); font-size: 14px; font-weight: 500; transition: all 0.15s; cursor: pointer; margin-bottom: 2px; }
@@ -748,7 +749,7 @@ tbody tr:hover { background: var(--bg3); }
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
-    <div class="logo" onclick="showPage('dashboard')" style="cursor:pointer;" title="Go to Dashboard"><div class="logo-icon">F</div> Fund HQ</div>
+    <div class="logo" onclick="showPage('dashboard')" style="cursor:pointer;" title="Go to Dashboard"><svg width="32" height="32" viewBox="0 0 512 512" style="border-radius:8px;flex-shrink:0;"><defs><linearGradient id="logo-bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="50%" stop-color="#6d28d9"/><stop offset="100%" stop-color="#4c1d95"/></linearGradient></defs><rect width="512" height="512" rx="108" fill="url(#logo-bg)"/><path d="M256 68 L444 256 L256 444 L68 256 Z" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="14" stroke-linejoin="round"/><path d="M186 362 L186 150 L332 150 L332 206 L252 206 L252 248 L316 248 L316 304 L252 304 L252 362 Z" fill="white"/></svg> Fund HQ</div>
     <div class="logo-sub">Private Investment Fund</div>
 
     <div class="nav-item active" data-page="dashboard"><span class="icon">&#9632;</span> Dashboard</div>
@@ -1207,27 +1208,8 @@ tbody tr:hover { background: var(--bg3); }
           <div id="macro-agent-memories" style="font-size:13px;">Loading...</div>
         </div>
 
-        <!-- Teach the Agent -->
-        <div class="card" style="padding:20px;">
-          <h3 style="margin-bottom:8px;">Teach the Macro Agent</h3>
-          <p style="color:var(--text2);font-size:12px;margin-bottom:12px;">Paste articles, analysis, frameworks, or data below. The agent stores these as learnings and injects them into its macro analysis. Lyn Alden newsletters, macro threads, Fed analysis &mdash; anything that makes the agent smarter.</p>
-          <div style="margin-bottom:12px;">
-            <select id="macro-teach-type" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;width:100%;margin-bottom:8px;">
-              <option value="framework">Framework (macro model, thesis, mental model)</option>
-              <option value="analysis">Analysis (newsletter, report, thread)</option>
-              <option value="data">Data Point (specific stat, chart reading, metric)</option>
-              <option value="rule">Trading Rule (if X then Y, regime-based rule)</option>
-              <option value="lesson">Lesson Learned (what worked/didn't, post-mortem)</option>
-            </select>
-            <input id="macro-teach-title" placeholder="Title (e.g. 'Lyn Alden March 2026 — Gradual Print thesis')" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:13px;width:100%;box-sizing:border-box;margin-bottom:8px;" />
-            <textarea id="macro-teach-content" placeholder="Paste the content here. Key insights, data points, frameworks, rules. The agent will store this and use it in future macro analysis and Bull/Bear debates." style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:13px;width:100%;box-sizing:border-box;min-height:180px;resize:vertical;line-height:1.7;font-family:inherit;"></textarea>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button class="btn btn-primary" onclick="macroTeachAgent()" style="font-size:13px;padding:8px 20px;">Save to Agent Memory</button>
-            <span id="macro-teach-status" style="font-size:12px;color:var(--text3);"></span>
-          </div>
-          <div id="macro-teach-history" style="margin-top:16px;"></div>
-        </div>
+        <!-- Teach the Agent (unified system) -->
+        <div id="teach-macro-box"></div>
       </div>
     </div>
 
@@ -15568,54 +15550,25 @@ function macroRenderLearning() {
       memEl.innerHTML = '<div style="color:var(--text3);">No learnings yet. The Macro agent stores insights as it detects regime transitions and narrative shifts.</div>';
     }
   }
-}
 
-// ===== TEACH THE MACRO AGENT =====
-function macroTeachAgent() {
-  var type = document.getElementById('macro-teach-type').value;
-  var title = document.getElementById('macro-teach-title').value.trim();
-  var content = document.getElementById('macro-teach-content').value.trim();
-  var statusEl = document.getElementById('macro-teach-status');
-
-  if (!content) { statusEl.textContent = 'Please paste some content.'; statusEl.style.color = 'var(--red)'; return; }
-  if (!title) { title = type + ' — ' + new Date().toLocaleDateString(); }
-
-  var key = 'teach_' + Date.now().toString(36);
-  var entry = {
-    content: (title ? '**' + title + '**: ' : '') + content.substring(0, 5000),
-    type: type,
-    agent: 'macro',
-    tags: [type, 'user-taught'],
-    metadata: { title: title, source: 'user', char_count: content.length },
-    created: new Date().toISOString(),
-    used_count: 0
-  };
-
-  var fbUrl = 'https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app';
-  fetch(fbUrl + '/fundHQ/agentMemory/macro/' + key + '.json', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(entry)
-  }).then(function(r) {
-    if (r.ok) {
-      statusEl.textContent = 'Saved! Agent will use this in next macro cycle.';
-      statusEl.style.color = 'var(--green)';
-      document.getElementById('macro-teach-title').value = '';
-      document.getElementById('macro-teach-content').value = '';
-      // Refresh learning tab
-      macroLoadData();
-    } else {
-      statusEl.textContent = 'Error saving. Try again.';
-      statusEl.style.color = 'var(--red)';
-    }
-  }).catch(function(e) {
-    statusEl.textContent = 'Error: ' + e.message;
-    statusEl.style.color = 'var(--red)';
-  });
+  // Render the teach box (needs to run after panel is visible)
+  if (typeof renderTeachBoxes === 'function') renderTeachBoxes();
 }
 
 // ===== TEACH ALL AGENTS — Reusable teach box =====
 var agentTeachConfig = {
+  macro: {
+    label: 'Macro Agent',
+    color: 'var(--orange)',
+    description: 'Teach the Macro Agent about macro frameworks, Fed policy, liquidity cycles, regime transitions. Paste Lyn Alden newsletters, macro threads, FOMC analysis — anything that makes the agent smarter.',
+    types: [
+      {value: 'framework', label: 'Framework (macro model, thesis, mental model)'},
+      {value: 'analysis', label: 'Analysis (newsletter, report, thread)'},
+      {value: 'data', label: 'Data Point (specific stat, chart reading, metric)'},
+      {value: 'rule', label: 'Trading Rule (if X then Y, regime-based rule)'},
+      {value: 'lesson', label: 'Lesson Learned (what worked/didn\'t, post-mortem)'},
+    ]
+  },
   sentinel: {
     label: 'Sentinel Agent',
     color: 'var(--purple)',
@@ -15716,6 +15669,7 @@ function teachAgent(agent) {
       statusEl.style.color = 'var(--green)';
       document.getElementById('teach-' + agent + '-title').value = '';
       document.getElementById('teach-' + agent + '-content').value = '';
+      if (agent === 'macro' && typeof macroLoadData === 'function') macroLoadData();
     } else {
       statusEl.textContent = 'Error saving.';
       statusEl.style.color = 'var(--red)';
