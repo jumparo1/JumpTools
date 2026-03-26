@@ -3701,9 +3701,29 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
           <p style="margin-top:8px;color:var(--text3);">Both users are synced in real-time via Firebase. Changes appear on the other screen within seconds.</p>
         </div>
         <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;">
-        <h3 style="font-size:15px;margin-bottom:12px;">Backup</h3>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Download a local JSON backup of all fund data.</p>
-        <button class="btn btn-ghost" onclick="exportBackup()">Download Backup</button>
+        <h3 style="font-size:15px;margin-bottom:12px;">Backup System</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:12px;">Automatic backups every 6h via daemon. Local files + Firebase snapshots. Can't be deleted by accident.</p>
+        <!-- Backup Status -->
+        <div id="backup-status-panel" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:12px;font-weight:600;">Last Backup</span>
+            <span id="backup-status-badge" style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--bg3);color:var(--text3);">checking...</span>
+          </div>
+          <div id="backup-status-info" style="font-size:11px;color:var(--text3);line-height:1.6;">Loading...</div>
+        </div>
+        <!-- Actions -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-primary btn-sm" onclick="triggerBackupNow()">Backup Now</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportBackup()">Download JSON</button>
+        </div>
+        <!-- Restore Panel -->
+        <details style="margin-top:8px;">
+          <summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);">Restore from Backup</summary>
+          <div style="margin-top:8px;">
+            <p style="font-size:11px;color:var(--text3);margin-bottom:8px;">Restore critical nodes from Firebase snapshots (last 14 days).</p>
+            <div id="backup-restore-list" style="font-size:11px;color:var(--text3);">Loading snapshots...</div>
+          </div>
+        </details>
       </div>
       <!-- ===== BACKEND SERVER ===== -->
       <div class="card" style="max-width:560px;margin-top:20px;">
@@ -8044,6 +8064,7 @@ function showPage(pageName) {
     var kb = document.getElementById('settings-birdeye-key'); if (kb && !kb.value) kb.value = localStorage.getItem('birdeyeKey') || '';
     var kc = document.getElementById('settings-coinglass-key'); if (kc && !kc.value) kc.value = localStorage.getItem('coinglassKey') || '';
     if (typeof refreshApiStatus === 'function') refreshApiStatus();
+    if (typeof loadBackupSnapshots === 'function') loadBackupSnapshots();
   }
   if (pageName === 'macro') {
     if (!_macroInitialized) { macroLoadData(); _macroInitialized = true; }
@@ -11405,6 +11426,75 @@ function exportBackup() {
   a.download = 'fund-hq-backup-' + today() + '.json';
   a.click();
 }
+
+// ===== BACKUP SYSTEM =====
+
+function triggerBackupNow() {
+  if (!dbRef) return alert('Firebase not connected');
+  dbRef.child('agentCommands/backup').set({ action: 'backup_now', requested: new Date().toISOString(), by: MY_NAME });
+  const badge = document.getElementById('backup-status-badge');
+  if (badge) { badge.textContent = 'backup requested...'; badge.style.background = 'var(--purple)'; badge.style.color = '#fff'; }
+}
+
+function renderBackupStatus(meta) {
+  const info = document.getElementById('backup-status-info');
+  const badge = document.getElementById('backup-status-badge');
+  if (!info || !badge) return;
+  if (!meta) {
+    info.textContent = 'No backups yet. Daemon will create the first one automatically.';
+    badge.textContent = 'none'; badge.style.background = 'var(--red)'; badge.style.color = '#fff';
+    return;
+  }
+  const ts = new Date(meta.timestamp);
+  const ageH = (Date.now() - ts.getTime()) / 3600000;
+  const ageStr = ageH < 1 ? Math.round(ageH * 60) + 'm ago' : Math.round(ageH) + 'h ago';
+  const nc = meta.node_counts || {};
+  const nodeStr = Object.entries(nc).map(([k, v]) => `${k}: ${v}`).join(', ');
+
+  info.innerHTML = `<div>${ts.toLocaleString()} (${ageStr})</div><div style="margin-top:4px;">${nodeStr}</div><div style="margin-top:4px;">Total: ${meta.total_items || '?'} items &middot; ${meta.size_kb || '?'}KB &middot; sha: ${(meta.sha256 || '?').substring(0, 12)}</div>`;
+
+  if (ageH < 8) { badge.textContent = 'healthy'; badge.style.background = 'var(--green)'; badge.style.color = '#000'; }
+  else if (ageH < 24) { badge.textContent = 'aging'; badge.style.background = '#f59e0b'; badge.style.color = '#000'; }
+  else { badge.textContent = 'stale'; badge.style.background = 'var(--red)'; badge.style.color = '#fff'; }
+}
+
+function loadBackupSnapshots() {
+  if (!firebaseReady) return;
+  const backupsRef = firebase.database().ref('fundHQ/backups');
+  backupsRef.child('latest').on('value', snap => renderBackupStatus(snap.val()));
+  backupsRef.child('history').orderByKey().limitToLast(7).once('value', snap => {
+    const hist = snap.val();
+    const el = document.getElementById('backup-restore-list');
+    if (!el || !hist) { if (el) el.textContent = 'No snapshots available.'; return; }
+    const dates = Object.keys(hist).sort().reverse();
+    el.innerHTML = dates.map(d => {
+      const m = hist[d];
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+        <span>${d} &middot; ${m.total_items || '?'} items &middot; ${m.size_kb || '?'}KB</span>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px;" onclick="restoreNode('reports','${d}')">Reports</button>
+          <button class="btn btn-ghost" style="font-size:10px;padding:2px 8px;" onclick="restoreNode('watchlist','${d}')">Watchlist</button>
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function restoreNode(node, date) {
+  if (!confirm('Restore ' + node + ' from ' + date + '? This will overwrite current data.')) return;
+  const snapRef = firebase.database().ref('fundHQ/backups/snapshots/' + node + '/' + date);
+  snapRef.once('value', snap => {
+    const data = snap.val();
+    if (!data) return alert('No snapshot found for ' + node + ' on ' + date);
+    const count = typeof data === 'object' ? Object.keys(data).length : 1;
+    dbRef.child(node).set(data).then(() => {
+      alert('Restored ' + count + ' ' + node + ' from ' + date);
+    }).catch(e => alert('Restore failed: ' + e.message));
+  });
+}
+
+// Init backup panel when Settings loads
+if (typeof firebaseReady !== 'undefined' && firebaseReady) { try { loadBackupSnapshots(); } catch(e) {} }
 
 // ===== RESET ALL DATA =====
 function resetAllData() {
