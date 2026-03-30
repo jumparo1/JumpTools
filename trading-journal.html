@@ -309,16 +309,16 @@ tr:hover td{background:var(--bg2)}
   <div class="page active" id="page-import">
     <div class="page-title">📂 Import Trade Data</div>
     <p style="color:var(--tx2);margin-bottom:20px;font-size:14px">
-      Export your Trading Log from Google Sheets as CSV, then drop it here or paste the data.
+      Drop any trading CSV — Trade Log, Daily Checklist, or other data. Auto-detected.
     </p>
     <div class="import-zone" id="dropZone">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
       <h3>Drop CSV file here</h3>
-      <p>or click to browse</p>
+      <p>Trade Log · Checklist · any trading data</p>
     </div>
-    <input type="file" id="fileInput" accept=".csv" style="display:none">
+    <input type="file" id="fileInput" accept=".csv" style="display:none" multiple>
     <div class="import-or">— or paste CSV data below —</div>
     <textarea class="import-paste" id="pasteArea" placeholder="Paste your CSV data here...&#10;Entry Date & Time,Entry Date,TradingView Link,Strategy,Market (Coin),..."></textarea>
     <div class="btn-row">
@@ -928,9 +928,84 @@ function mapTrade(raw) {
 }
 
 /* ── Import Functions ── */
+function detectAndImport(csvText) {
+  const lower = csvText.toLowerCase();
+  // Detect: Checklist CSV (has "market scan", "bias defined", etc.)
+  if (lower.includes('market scan') && lower.includes('bias defined') && lower.includes('meditation')) {
+    importChecklist(csvText);
+    return;
+  }
+  // Detect: Trade Log (has "entry date" or "entry price" + "strategy" or "market")
+  if ((lower.includes('entry date') || lower.includes('entry price')) && (lower.includes('strategy') || lower.includes('market'))) {
+    importData(csvText);
+    return;
+  }
+  // Fallback: try as trade log anyway
+  importData(csvText);
+}
+
+function importChecklist(csvText) {
+  const lines = csvText.split('\n').map(l => l.trim()).filter(l => l);
+  if (lines.length < 2) { showImportStatus('No valid checklist data found.', 'error'); return; }
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const FIELD_MAP = {
+    'market scan': 'market_scan', 'bias defined': 'bias', 'max trades today written': 'max_trades',
+    'max daily loss written': 'max_loss', 'first trade risk = 0.5% confirmed': 'risk',
+    'stop l rules read out loud': 'sl_rules', 'traded after a loss?': 'after_loss',
+    'added to postion?': 'added_pos', 'added to position?': 'added_pos',
+    'moved/removed sl?': 'moved_sl', 'meditation': 'meditation',
+    '7h sleep': 'sleep', 'emotion acknowledged': 'emotion', 'coffee max 2': 'coffee'
+  };
+  let imported = 0;
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(',').map(v => v.trim());
+    if (!vals[0] || vals[0] === 'FALSE') continue; // skip empty date rows
+    // Parse date (format: "6-Jan", "2-Feb", etc.)
+    const dateStr = vals[0];
+    const dateObj = parseChecklistDate(dateStr);
+    if (!dateObj) continue;
+    const key = dateObj.toISOString().slice(0,10).replace(/-/g,'');
+    const data = {};
+    let good = 0;
+    headers.forEach((h, j) => {
+      const field = FIELD_MAP[h];
+      if (field) {
+        const val = (vals[j]||'').toUpperCase() === 'TRUE';
+        data[field] = val;
+        // Score: violations (after_loss, added_pos, moved_sl) — off is good
+        if (['after_loss','added_pos','moved_sl'].includes(field)) { if (!val) good++; }
+        else { if (val) good++; }
+      }
+    });
+    // Grade from CSV if available
+    const gradeIdx = headers.indexOf('grade');
+    const scoreIdx = headers.indexOf('daily %');
+    data.score = scoreIdx >= 0 ? Math.round(parseFloat((vals[scoreIdx]||'0').replace('%',''))||0) : Math.round((good/13)*100);
+    data.grade = gradeIdx >= 0 && vals[gradeIdx] ? vals[gradeIdx].trim() : (data.score >= 90 ? 'A' : data.score >= 75 ? 'B' : data.score >= 50 ? 'C' : 'D');
+    localStorage.setItem('tj_checklist_'+key, JSON.stringify(data));
+    if (tjDbRef) tjDbRef.child('checklist/'+key).set(data);
+    imported++;
+  }
+  showImportStatus(`Imported ${imported} checklist days! Go to Checklist to view.`, 'success');
+}
+
+function parseChecklistDate(s) {
+  if (!s) return null;
+  // "6-Jan", "2-Feb", "10-Mar" etc.
+  const months = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const m = s.match(/(\d{1,2})-(\w{3})/i);
+  if (m) {
+    const month = months[m[2].toLowerCase()];
+    if (month !== undefined) return new Date(2026, month, parseInt(m[1]));
+  }
+  // Try other date formats
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function importData(csvText) {
   const raw = parseCSV(csvText);
-  if (raw.length === 0) { showImportStatus('No valid data found.', 'error'); return; }
+  if (raw.length === 0) { showImportStatus('No valid trade data found. Make sure this is a Trading Log CSV.', 'error'); return; }
   TRADES = raw.map(mapTrade).filter(t => t.entryDate && (t.winLoss === 'W' || t.winLoss === 'L' || t.netPL !== 0));
   TRADES.sort((a, b) => a.entryDate - b.entryDate);
   // Detect starting capital from first balance
@@ -947,7 +1022,7 @@ function importData(csvText) {
 function importFromPaste() {
   const text = document.getElementById('pasteArea').value.trim();
   if (!text) { showImportStatus('Please paste CSV data first.', 'error'); return; }
-  importData(text);
+  detectAndImport(text);
 }
 
 function loadFromStorage() {
@@ -986,12 +1061,20 @@ dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dra
 dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
 dz.addEventListener('drop', e => {
   e.preventDefault(); dz.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) { const r = new FileReader(); r.onload = ev => importData(ev.target.result); r.readAsText(file); }
+  const files = e.dataTransfer.files;
+  for (let i = 0; i < files.length; i++) {
+    const r = new FileReader();
+    r.onload = ev => detectAndImport(ev.target.result);
+    r.readAsText(files[i]);
+  }
 });
 fi.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (file) { const r = new FileReader(); r.onload = ev => importData(ev.target.result); r.readAsText(file); }
+  const files = e.target.files;
+  for (let i = 0; i < files.length; i++) {
+    const r = new FileReader();
+    r.onload = ev => detectAndImport(ev.target.result);
+    r.readAsText(files[i]);
+  }
 });
 
 /* ═══════════════════════════════════════════
