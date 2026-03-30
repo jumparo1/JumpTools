@@ -647,14 +647,20 @@ tr:hover td{background:var(--bg2)}
 
     <!-- Sub-tabs -->
     <div class="sub-tabs" style="margin-top:20px">
-      <button class="sub-tab active" onclick="switchTaxTab('ledger')">Transaction Ledger</button>
+      <button class="sub-tab active" onclick="switchTaxTab('todo')">📋 To-Do</button>
+      <button class="sub-tab" onclick="switchTaxTab('ledger')">Transaction Ledger</button>
       <button class="sub-tab" onclick="switchTaxTab('unresolved')">⚠️ Needs Review <span id="taxUnresolvedCount"></span></button>
       <button class="sub-tab" onclick="switchTaxTab('summary')">Tax Summary</button>
       <button class="sub-tab" onclick="switchTaxTab('export')">Export</button>
     </div>
 
+    <!-- To-Do -->
+    <div class="sub-panel active" id="taxpanel-todo">
+      <div style="margin-top:12px;max-width:800px" id="taxTodoList"></div>
+    </div>
+
     <!-- Ledger -->
-    <div class="sub-panel active" id="taxpanel-ledger">
+    <div class="sub-panel" id="taxpanel-ledger">
       <div class="filter-row" style="margin-top:12px">
         <label>Exchange:</label><select id="taxFExchange" onchange="renderTaxLedger()"><option value="">All</option></select>
         <label>Status:</label><select id="taxFStatus" onchange="renderTaxLedger()"><option value="">All</option>
@@ -3861,7 +3867,8 @@ function loadTaxData() {
 // ── Renderers ──
 function renderTaxes() {
   loadTaxData();
-  ensureEurUsdRate(); // auto-fetch if stale
+  ensureEurUsdRate();
+  renderTaxTodo();
   renderTaxImportBadges();
   renderTaxOverview();
   renderTaxLedger();
@@ -4029,6 +4036,92 @@ function renderTaxSummaryTable() {
   if (s.total_disposals >= 3) warnings += insightCard('warning', 'Professional Activity Risk', 'With ' + s.total_disposals + ' disposals, NRA may classify this as professional trading (15% tax). Consult your accountant.');
   if (s.total_txs === 0) warnings += insightCard('blue', 'No Data', 'Import your exchange CSVs to calculate taxes.');
   document.getElementById('taxWarnings').innerHTML = warnings;
+}
+
+// ── Tax To-Do Checklist ──
+const TAX_TODO_ITEMS = [
+  { group: 'Binance', items: [
+    { id: 'bnb_spot', label: 'Export Spot Trade History', path: 'Orders → Spot Order → Trade History → Export', done: false },
+    { id: 'bnb_deposit', label: 'Export Deposit History', path: 'Wallet → Transaction History → Deposit → Export', done: false },
+    { id: 'bnb_withdraw', label: 'Export Withdrawal History', path: 'Wallet → Transaction History → Withdrawal → Export', done: false },
+    { id: 'bnb_futures', label: 'Export Futures Trade History', path: 'Orders → Futures Order → Trade History → Export', done: false },
+    { id: 'bnb_earn', label: 'Export Earn/Distribution History', path: 'Wallet → Transaction History → Distribution → Export', done: false },
+  ]},
+  { group: 'Bybit', items: [
+    { id: 'byb_spot', label: 'Export Spot Trade History', path: 'Assets → Spot → Order History → Export', done: false },
+    { id: 'byb_futures', label: 'Export Derivatives/Futures History', path: 'Derivatives → Order History → Trade History → Export', done: false },
+    { id: 'byb_wallet', label: 'Export Transaction Log (deposits/withdrawals)', path: 'Assets → Transaction Log → Export', done: false },
+  ]},
+  { group: 'Kraken', items: [
+    { id: 'krk_trades', label: 'Export Trade History', path: 'History → Export → Trades → Export CSV', done: false },
+    { id: 'krk_ledger', label: 'Export Ledger (deposits, withdrawals, staking)', path: 'History → Export → Ledgers → Export CSV', done: false },
+  ]},
+  { group: 'Revolut (optional — audit trail)', items: [
+    { id: 'rev_statement', label: 'Export Account Statement', path: 'Profile → Statements → select year → CSV', done: false },
+  ]},
+  { group: 'Import & Review', items: [
+    { id: 'import_all', label: 'Drop all CSVs onto Tax page', path: 'Trading Journal → Taxes → drop files on import zone', done: false },
+    { id: 'review_transfers', label: 'Review auto-detected transfers', path: 'Taxes → Needs Review tab → classify unmatched items', done: false },
+    { id: 'review_missing', label: 'Resolve missing cost basis items', path: 'Taxes → Needs Review tab → check red-flagged items', done: false },
+    { id: 'verify_summary', label: 'Verify tax summary numbers', path: 'Taxes → Tax Summary tab → check totals match your records', done: false },
+    { id: 'export_pack', label: 'Export accountant package', path: 'Taxes → Export tab → download all 3 files', done: false },
+  ]},
+  { group: 'File Taxes', items: [
+    { id: 'file_form200', label: 'File Form 200 with NRA (Appendix 5)', path: 'nra.bg → Annual Tax Return → Appendix 5 → enter totals from summary', done: false },
+    { id: 'file_pay', label: 'Pay tax owed', path: 'Bank transfer to NRA or online payment', done: false },
+  ]},
+];
+
+function loadTaxTodo() {
+  try { const saved = JSON.parse(localStorage.getItem('tj_tax_todo') || '{}');
+    TAX_TODO_ITEMS.forEach(g => g.items.forEach(i => { if (saved[i.id] !== undefined) i.done = saved[i.id]; }));
+  } catch(e) {}
+}
+function saveTaxTodo() {
+  const data = {};
+  TAX_TODO_ITEMS.forEach(g => g.items.forEach(i => { data[i.id] = i.done; }));
+  localStorage.setItem('tj_tax_todo', JSON.stringify(data));
+  if (tjDbRef) tjDbRef.child('taxes/todo').set(data);
+}
+function toggleTaxTodo(id) {
+  TAX_TODO_ITEMS.forEach(g => g.items.forEach(i => { if (i.id === id) i.done = !i.done; }));
+  saveTaxTodo();
+  renderTaxTodo();
+}
+function renderTaxTodo() {
+  loadTaxTodo();
+  const total = TAX_TODO_ITEMS.reduce((s,g) => s + g.items.length, 0);
+  const done = TAX_TODO_ITEMS.reduce((s,g) => s + g.items.filter(i => i.done).length, 0);
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  let html = `<div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+    <div style="flex:1;height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:var(--green);border-radius:4px;transition:width .3s"></div>
+    </div>
+    <span style="font-size:13px;font-weight:600;color:${pct===100?'var(--green)':'var(--tx2)'}">${done}/${total} (${pct}%)</span>
+  </div>`;
+  TAX_TODO_ITEMS.forEach(g => {
+    const gDone = g.items.filter(i => i.done).length;
+    const gTotal = g.items.length;
+    html += `<div class="checklist-section" style="margin-bottom:12px">
+      <h4>${g.group} <span style="float:right;font-size:11px;color:${gDone===gTotal?'var(--green)':'var(--tx3)'}">${gDone}/${gTotal}</span></h4>`;
+    g.items.forEach(i => {
+      html += `<div class="check-item" style="cursor:pointer" onclick="toggleTaxTodo('${i.id}')">
+        <label style="pointer-events:none;${i.done?'text-decoration:line-through;color:var(--tx3)':''}">
+          <strong>${i.label}</strong><br>
+          <span style="font-size:11px;color:var(--tx3)">${i.path}</span>
+        </label>
+        <div class="toggle ${i.done?'on':''}" style="pointer-events:none"></div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  html += `<div class="insight-card" style="border-left-color:var(--purple);margin-top:16px">
+    <h4>Tax Year Dates</h4>
+    <p>Select your tax year above, then export <strong>all data for that full year</strong> (Jan 1 – Dec 31).<br>
+    Filing deadline: <strong>April 30</strong> (March 31 electronic = 5% discount up to 500 BGN).<br>
+    Keep all CSVs for 5 years — NRA can request them.</p>
+  </div>`;
+  document.getElementById('taxTodoList').innerHTML = html;
 }
 
 function switchTaxTab(tab) {
