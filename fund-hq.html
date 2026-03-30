@@ -3,69 +3,165 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fund HQ</title>
+<title>Fund HQ — AI-Powered Investment Intelligence</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjOGI1Y2Y2Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjNmQyOGQ5Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRjMWQ5NSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMDgiIGZpbGw9InVybCgjYmcpIi8+CiAgPHBhdGggZD0iTTI1NiA2OCBMNDQ0IDI1NiBMMjU2IDQ0NCBMNjggMjU2IFoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjE4KSIgc3Ryb2tlLXdpZHRoPSIxNCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xODYgMzYyIEwxODYgMTUwIEwzMzIgMTUwIEwzMzIgMjA2IEwyNTIgMjA2IEwyNTIgMjQ4IEwzMTYgMjQ4IEwzMTYgMzA0IEwyNTIgMzA0IEwyNTIgMzYyIFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #0f1117;
-  color: #e8eaed;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+:root {
+  --bg: #0f1117; --bg2: #1a1d27; --bg3: #242836;
+  --text: #e8eaed; --text2: #9aa0b0; --text3: #6b7280;
+  --accent: #6366f1; --accent2: #818cf8;
+  --green: #10b981; --purple: #a855f7; --orange: #f97316; --red: #ef4444;
+  --border: #2e3345; --radius: 10px;
 }
-.landing {
-  text-align: center;
-  max-width: 480px;
-  padding: 40px 24px;
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+
+/* Hero */
+.hero { text-align: center; padding: 80px 0 48px; }
+.hero svg { border-radius: 18px; margin-bottom: 24px; }
+.hero h1 { font-size: 38px; font-weight: 700; line-height: 1.2; margin-bottom: 16px; letter-spacing: -1px; }
+.hero h1 em { font-style: normal; background: linear-gradient(135deg, #818cf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero p { font-size: 17px; color: var(--text2); max-width: 560px; margin: 0 auto 40px; line-height: 1.6; }
+
+/* Features */
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 56px; }
+.feat { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+.feat-icon { font-size: 28px; margin-bottom: 10px; }
+.feat h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.feat p { font-size: 12px; color: var(--text3); line-height: 1.4; }
+
+/* Stats */
+.stats { display: flex; justify-content: center; gap: 40px; margin-bottom: 56px; }
+.stat { text-align: center; }
+.stat-num { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #818cf8, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stat-label { font-size: 11px; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Email signup */
+.signup { text-align: center; margin-bottom: 64px; }
+.signup h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.signup p { font-size: 14px; color: var(--text3); margin-bottom: 20px; }
+.signup-form { display: flex; gap: 10px; max-width: 420px; margin: 0 auto; }
+.signup-form input {
+  flex: 1; padding: 12px 16px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 14px; outline: none;
 }
-.landing svg { border-radius: 18px; margin-bottom: 24px; }
-.landing h1 {
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -1px;
-  margin-bottom: 12px;
+.signup-form input:focus { border-color: var(--accent); }
+.signup-form input::placeholder { color: var(--text3); }
+.signup-form button {
+  padding: 12px 24px; background: var(--accent); color: #fff; border: none;
+  border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap;
 }
-.landing p {
-  font-size: 16px;
-  color: #9aa0b0;
-  line-height: 1.6;
-  margin-bottom: 36px;
-}
-.landing .btn {
-  display: inline-block;
-  padding: 14px 32px;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.15s;
-  background: #6366f1;
-  color: #fff;
-}
-.landing .btn:hover { background: #818cf8; transform: translateY(-1px); }
-.footer {
-  position: fixed;
-  bottom: 24px;
-  left: 0; right: 0;
-  text-align: center;
-  font-size: 12px;
-  color: #6b7280;
+.signup-form button:hover { background: var(--accent2); }
+.signup-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+.signup-msg { font-size: 13px; margin-top: 12px; min-height: 20px; }
+
+/* Footer */
+.footer { text-align: center; padding: 32px 0; border-top: 1px solid var(--border); color: var(--text3); font-size: 12px; }
+
+@media (max-width: 600px) {
+  .hero h1 { font-size: 28px; }
+  .features { grid-template-columns: 1fr; }
+  .stats { gap: 24px; }
+  .signup-form { flex-direction: column; }
 }
 </style>
 </head>
 <body>
 
-<div class="landing">
-  <svg width="72" height="72" viewBox="0 0 512 512"><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="50%" stop-color="#6d28d9"/><stop offset="100%" stop-color="#4c1d95"/></linearGradient></defs><rect width="512" height="512" rx="108" fill="url(#lg)"/><path d="M256 68 L444 256 L256 444 L68 256 Z" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="14" stroke-linejoin="round"/><path d="M186 362 L186 150 L332 150 L332 206 L252 206 L252 248 L316 248 L316 304 L252 304 L252 362 Z" fill="white"/></svg>
-  <h1>Fund HQ</h1>
-  <p>Private investment intelligence platform.</p>
-  <a href="mailto:jumparo@proton.me?subject=Fund%20HQ%20Access" class="btn">Request Access</a>
+<div class="container">
+
+  <section class="hero">
+    <svg width="64" height="64" viewBox="0 0 512 512"><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="50%" stop-color="#6d28d9"/><stop offset="100%" stop-color="#4c1d95"/></linearGradient></defs><rect width="512" height="512" rx="108" fill="url(#lg)"/><path d="M256 68 L444 256 L256 444 L68 256 Z" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="14" stroke-linejoin="round"/><path d="M186 362 L186 150 L332 150 L332 206 L252 206 L252 248 L316 248 L316 304 L252 304 L252 362 Z" fill="white"/></svg>
+    <h1>AI Agents That <em>Find Alpha</em> for You</h1>
+    <p>Fund HQ runs 5 autonomous AI agents 24/7 — scanning markets, tracking whales, scoring setups, and surfacing high-conviction trades in crypto and equities.</p>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">5</div><div class="stat-label">AI Agents</div></div>
+    <div class="stat"><div class="stat-num">10+</div><div class="stat-label">Data Feeds</div></div>
+    <div class="stat"><div class="stat-num">24/7</div><div class="stat-label">Autonomous</div></div>
+    <div class="stat"><div class="stat-num">&lt;$1</div><div class="stat-label">/month</div></div>
+  </div>
+
+  <div class="features">
+    <div class="feat">
+      <div class="feat-icon">&#128270;</div>
+      <h3>On-Chain Intelligence</h3>
+      <p>Whale tracking, wallet scoring, entity profiling across Hyperliquid, Binance, and DEXs</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">&#128200;</div>
+      <h3>AI Research</h3>
+      <p>Deep-dive reports with live data, valuation models, and conviction scoring</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">&#9889;</div>
+      <h3>Trade Execution</h3>
+      <p>Setup scanner, confluence scoring, position sizing, and performance tracking</p>
+    </div>
+  </div>
+
+  <section class="signup">
+    <h2>Get Early Access</h2>
+    <p>We're opening Fund HQ to a small group of traders. Drop your email to get notified.</p>
+    <div class="signup-form">
+      <input type="email" id="signup-email" placeholder="you@example.com">
+      <button id="signup-btn" onclick="submitEmail()">Join Waitlist</button>
+    </div>
+    <div class="signup-msg" id="signup-msg"></div>
+  </section>
+
+  <footer class="footer">Fund HQ &copy; 2026</footer>
+
 </div>
 
-<div class="footer">Fund HQ &copy; 2026</div>
+<script>
+const FB_URL = 'https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app';
+
+async function submitEmail() {
+  const input = document.getElementById('signup-email');
+  const btn = document.getElementById('signup-btn');
+  const msg = document.getElementById('signup-msg');
+  const email = input.value.trim();
+
+  if (!email || !email.includes('@')) {
+    msg.style.color = '#ef4444';
+    msg.textContent = 'Please enter a valid email.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  msg.textContent = '';
+
+  try {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const data = { email, date: new Date().toISOString(), source: 'landing' };
+    const res = await fetch(FB_URL + '/fundHQ/waitlist/' + id + '.json', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      msg.style.color = '#10b981';
+      msg.textContent = "You're on the list! We'll be in touch.";
+      input.value = '';
+    } else {
+      throw new Error('Failed');
+    }
+  } catch (e) {
+    msg.style.color = '#ef4444';
+    msg.textContent = 'Something went wrong. Try again.';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Join Waitlist';
+}
+
+document.getElementById('signup-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitEmail();
+});
+</script>
 
 </body>
 </html>
