@@ -659,7 +659,9 @@ tr:hover td{background:var(--bg2)}
         <label>Exchange:</label><select id="taxFExchange" onchange="renderTaxLedger()"><option value="">All</option></select>
         <label>Status:</label><select id="taxFStatus" onchange="renderTaxLedger()"><option value="">All</option>
           <option value="taxable_disposal">Taxable</option><option value="acquisition">Acquisition</option>
-          <option value="self_transfer">Transfer</option><option value="needs_review">Needs Review</option></select>
+          <option value="futures_pnl">Futures</option><option value="earn_income">Earn/Staking</option>
+          <option value="self_transfer">Transfer</option><option value="fiat_in">Fiat In</option><option value="fiat_out">Fiat Out</option>
+          <option value="needs_review">Needs Review</option></select>
         <label>Asset:</label><input type="text" id="taxFAsset" placeholder="BTC..." oninput="renderTaxLedger()" style="width:80px">
       </div>
       <div class="tbl-wrap" id="taxLedgerTable" style="max-height:calc(100vh - 400px);overflow-y:auto"></div>
@@ -3330,13 +3332,53 @@ function normPair(p) {
   return [p, 'USD'];
 }
 
+// ── EUR/USD Rate ──
+async function fetchEurUsdRate() {
+  try {
+    const resp = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await resp.json();
+    if (data && data.rates && data.rates.EUR) {
+      const rate = data.rates.EUR;
+      localStorage.setItem('tj_eur_usd_rate', rate.toString());
+      localStorage.setItem('tj_eur_usd_rate_date', new Date().toISOString().slice(0,10));
+      return rate;
+    }
+  } catch(e) { console.warn('EUR/USD fetch failed:', e); }
+  return null;
+}
+// Auto-fetch on tax page load if stale
+async function ensureEurUsdRate() {
+  const lastDate = localStorage.getItem('tj_eur_usd_rate_date');
+  const today = new Date().toISOString().slice(0,10);
+  if (!lastDate || lastDate !== today) {
+    const rate = await fetchEurUsdRate();
+    if (rate) console.log('EUR/USD rate updated:', rate);
+  }
+}
+
 // ── Exchange CSV Detection & Parsing ──
 function detectExchangeCSV(text) {
-  const lower = text.slice(0, 500).toLowerCase();
-  if (lower.includes('date(utc)') && lower.includes('pair') && lower.includes('executed')) return 'binance';
-  if (lower.includes('avg. filled price') || (lower.includes('bybit') || (lower.includes('filled qty') && lower.includes('order price')))) return 'bybit';
-  if (lower.includes('txid') && lower.includes('ordertxid') && lower.includes('vol')) return 'kraken';
-  if (lower.includes('refid') && lower.includes('txid') && lower.includes('type') && lower.includes('aclass')) return 'kraken_ledger';
+  const lower = text.slice(0, 1000).toLowerCase();
+  // Binance spot trades
+  if (lower.includes('date(utc)') && lower.includes('pair') && (lower.includes('executed') || lower.includes('filled'))) return 'binance_spot';
+  // Binance deposit/withdrawal (Transaction History)
+  if (lower.includes('coin') && lower.includes('network') && (lower.includes('txid') || lower.includes('address')) && (lower.includes('amount') || lower.includes('quantity'))) return 'binance_wallet';
+  // Binance futures
+  if (lower.includes('realized profit') || (lower.includes('symbol') && lower.includes('side') && lower.includes('position'))) return 'binance_futures';
+  // Binance earn/distribution
+  if (lower.includes('distribution') || (lower.includes('operation') && lower.includes('coin') && lower.includes('change'))) return 'binance_earn';
+  // Bybit spot
+  if (lower.includes('avg. filled price') || lower.includes('avg filled price') || (lower.includes('filled qty') && lower.includes('order price'))) return 'bybit_spot';
+  // Bybit futures/derivatives
+  if ((lower.includes('contracts') || lower.includes('close price')) && (lower.includes('realized p&l') || lower.includes('closed p&l') || lower.includes('closed pnl'))) return 'bybit_futures';
+  // Bybit transaction log (deposits/withdrawals)
+  if (lower.includes('transaction type') && lower.includes('coin') && (lower.includes('amount') || lower.includes('quantity'))) return 'bybit_wallet';
+  // Kraken trades
+  if (lower.includes('txid') && lower.includes('ordertxid') && lower.includes('vol')) return 'kraken_trades';
+  // Kraken ledger (deposits, withdrawals, staking)
+  if (lower.includes('refid') && lower.includes('type') && lower.includes('aclass')) return 'kraken_ledger';
+  // Fallback: try Binance-like
+  if (lower.includes('date(utc)') || lower.includes('date (utc)')) return 'binance_spot';
   return null;
 }
 
@@ -3428,15 +3470,211 @@ function parseKrakenCSV(text) {
   return txs;
 }
 
+// ── Binance Deposit/Withdrawal Parser ──
+function parseBinanceWalletCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  const txs = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 3) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
+    const dateStr = obj['Date(UTC)'] || obj['Date'] || obj['UTC_Time'] || '';
+    if (!dateStr) continue;
+    const coin = (obj['Coin'] || obj['Asset'] || '').toUpperCase();
+    const amount = Math.abs(parseFloat((obj['Amount'] || obj['Quantity'] || obj['Change'] || '0').replace(/[^0-9.-]/g,'')));
+    if (!coin || !amount) continue;
+    const status = (obj['Status'] || '').toLowerCase();
+    if (status && status !== 'completed' && status !== 'successful') continue;
+    // Detect type from column hints
+    const txType = (obj['Type'] || obj['Operation'] || '').toLowerCase();
+    const isDeposit = txType.includes('deposit') || parseFloat(obj['Amount']||obj['Change']||'0') > 0;
+    txs.push({
+      id: 'bnbw_' + i + '_' + Date.now(), exchange: 'Binance', date: new Date(dateStr),
+      type: isDeposit ? 'deposit' : 'withdrawal', asset: coin, amount,
+      price_unit: 0, quote: '', total_value: 0, side: isDeposit ? 'in' : 'out',
+      fee_amount: parseFloat((obj['TransactionFee'] || obj['Fee'] || '0').replace(/[^0-9.]/g,'')),
+      fee_asset: coin, pair: '', order_id: obj['TxID'] || obj['TXID'] || '', status: '', notes: ''
+    });
+  }
+  return txs;
+}
+
+// ── Binance Futures Parser ──
+function parseBinanceFuturesCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  const txs = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 4) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
+    const dateStr = obj['Date(UTC)'] || obj['Date'] || obj['Time'] || '';
+    if (!dateStr) continue;
+    const symbol = (obj['Symbol'] || obj['Pair'] || '').replace('USDT','').replace('BUSD','');
+    const realizedPnl = parseFloat((obj['Realized Profit'] || obj['Realized PnL'] || obj['PnL'] || '0').replace(/[^0-9.-]/g,''));
+    const side = (obj['Side'] || '').toUpperCase();
+    const qty = Math.abs(parseFloat((obj['Qty'] || obj['Quantity'] || obj['Amount'] || '0').replace(/[^0-9.]/g,'')));
+    const price = parseFloat((obj['Price'] || obj['Avg Price'] || '0').replace(/[^0-9.]/g,''));
+    txs.push({
+      id: 'bnbf_' + i + '_' + Date.now(), exchange: 'Binance Futures', date: new Date(dateStr),
+      type: 'futures', asset: symbol || 'UNKNOWN', amount: qty || 1, price_unit: price,
+      quote: 'USDT', total_value: Math.abs(realizedPnl), side: realizedPnl >= 0 ? 'sell' : 'buy',
+      fee_amount: parseFloat((obj['Fee'] || obj['Commission'] || '0').replace(/[^0-9.]/g,'')),
+      fee_asset: 'USDT', pair: symbol + '/USDT', order_id: obj['Order ID'] || '',
+      status: 'futures_pnl', realized_gain_eur: realizedPnl * (getEurUsdRate() || 0.92),
+      notes: 'Futures PnL: ' + (realizedPnl >= 0 ? '+' : '') + realizedPnl.toFixed(2) + ' USDT'
+    });
+  }
+  return txs;
+}
+
+// ── Binance Earn/Distribution Parser ──
+function parseBinanceEarnCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  const txs = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 3) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
+    const dateStr = obj['UTC_Time'] || obj['Date(UTC)'] || obj['Date'] || obj['Time'] || '';
+    if (!dateStr) continue;
+    const coin = (obj['Coin'] || obj['Asset'] || '').toUpperCase();
+    const amount = Math.abs(parseFloat((obj['Change'] || obj['Amount'] || '0').replace(/[^0-9.-]/g,'')));
+    const operation = (obj['Operation'] || obj['Type'] || obj['Account'] || '').toLowerCase();
+    if (!coin || !amount || amount < 0.0000001) continue;
+    // Classify operation
+    let txType = 'earn';
+    if (operation.includes('distribution') || operation.includes('airdrop')) txType = 'airdrop';
+    else if (operation.includes('staking') || operation.includes('pos')) txType = 'staking';
+    else if (operation.includes('dust') || operation.includes('small')) txType = 'dust';
+    else if (operation.includes('savings') || operation.includes('interest') || operation.includes('earn')) txType = 'earn';
+    else if (operation.includes('referral') || operation.includes('commission')) txType = 'earn';
+    txs.push({
+      id: 'bnbe_' + i + '_' + Date.now(), exchange: 'Binance', date: new Date(dateStr),
+      type: txType, asset: coin, amount, price_unit: 0, quote: '',
+      total_value: 0, side: 'in', fee_amount: 0, fee_asset: '',
+      pair: '', order_id: '', status: 'earn_income',
+      notes: 'Earn: ' + operation + ' — ' + amount + ' ' + coin + ' (cost basis €0)'
+    });
+  }
+  return txs;
+}
+
+// ── Bybit Futures/Derivatives Parser ──
+function parseBybitFuturesCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  const txs = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 4) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
+    const dateStr = obj['Date'] || obj['Close Time'] || obj['Created Time'] || obj['Time'] || '';
+    if (!dateStr) continue;
+    const symbol = (obj['Symbol'] || obj['Contracts'] || obj['Pair'] || '').replace('USDT','').replace('USD','');
+    const pnl = parseFloat((obj['Realized P&L'] || obj['Closed P&L'] || obj['Closed PnL'] || obj['PnL'] || obj['Profit'] || '0').replace(/[^0-9.-]/g,''));
+    const side = (obj['Side'] || obj['Direction'] || '').toUpperCase();
+    const qty = Math.abs(parseFloat((obj['Qty'] || obj['Contracts'] || obj['Size'] || '0').replace(/[^0-9.]/g,'')));
+    const entryPrice = parseFloat((obj['Entry Price'] || obj['Avg Entry'] || '0').replace(/[^0-9.]/g,''));
+    const exitPrice = parseFloat((obj['Close Price'] || obj['Exit Price'] || obj['Avg Exit'] || '0').replace(/[^0-9.]/g,''));
+    txs.push({
+      id: 'bybf_' + i + '_' + Date.now(), exchange: 'Bybit Futures', date: new Date(dateStr),
+      type: 'futures', asset: symbol || 'UNKNOWN', amount: qty || 1,
+      price_unit: exitPrice || entryPrice, quote: 'USDT',
+      total_value: Math.abs(pnl), side: pnl >= 0 ? 'sell' : 'buy',
+      fee_amount: parseFloat((obj['Fee'] || obj['Trading Fee'] || '0').replace(/[^0-9.]/g,'')),
+      fee_asset: 'USDT', pair: symbol + '/USDT', order_id: obj['Order ID'] || '',
+      status: 'futures_pnl', realized_gain_eur: pnl * (getEurUsdRate() || 0.92),
+      notes: 'Futures PnL: ' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + ' USDT'
+    });
+  }
+  return txs;
+}
+
+// ── Bybit Wallet (Transaction Log) Parser ──
+function parseBybitWalletCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  const txs = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 3) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
+    const dateStr = obj['Date'] || obj['Time'] || obj['Created Time'] || '';
+    if (!dateStr) continue;
+    const coin = (obj['Coin'] || obj['Asset'] || obj['Currency'] || '').toUpperCase();
+    const amount = Math.abs(parseFloat((obj['Amount'] || obj['Quantity'] || '0').replace(/[^0-9.-]/g,'')));
+    if (!coin || !amount) continue;
+    const txType = (obj['Transaction Type'] || obj['Type'] || '').toLowerCase();
+    const isDeposit = txType.includes('deposit') || txType.includes('transfer in');
+    const isWithdrawal = txType.includes('withdraw') || txType.includes('transfer out');
+    if (!isDeposit && !isWithdrawal) continue;
+    txs.push({
+      id: 'bybw_' + i + '_' + Date.now(), exchange: 'Bybit', date: new Date(dateStr),
+      type: isDeposit ? 'deposit' : 'withdrawal', asset: coin, amount,
+      price_unit: 0, quote: '', total_value: 0, side: isDeposit ? 'in' : 'out',
+      fee_amount: parseFloat((obj['Fee'] || '0').replace(/[^0-9.]/g,'')),
+      fee_asset: coin, pair: '', order_id: obj['TxID'] || '', status: '', notes: ''
+    });
+  }
+  return txs;
+}
+
+// ── Kraken Ledger Parser (deposits, withdrawals, staking) ──
+function parseKrakenLedgerCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  const txs = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 5) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
+    const dateStr = obj['time'] || obj['date'] || '';
+    if (!dateStr) continue;
+    const asset = normTicker((obj['asset'] || '').toUpperCase());
+    const amount = Math.abs(parseFloat(obj['amount'] || 0));
+    const fee = Math.abs(parseFloat(obj['fee'] || 0));
+    const txType = (obj['type'] || '').toLowerCase();
+    if (!asset || !amount) continue;
+    // Skip trades (handled by kraken_trades parser) and transfers between subaccounts
+    if (txType === 'trade' || txType === 'margin') continue;
+    let type = 'needs_review';
+    if (txType === 'deposit') type = 'deposit';
+    else if (txType === 'withdrawal') type = 'withdrawal';
+    else if (txType === 'staking') type = 'staking';
+    else if (txType === 'earn' || txType === 'reward') type = 'earn';
+    else if (txType === 'transfer') continue; // internal subaccount transfer
+    const isFiat = ['EUR','USD','GBP','CHF','BGN'].includes(asset);
+    txs.push({
+      id: 'krkl_' + i + '_' + Date.now(), exchange: 'Kraken', date: new Date(dateStr),
+      type, asset, amount, price_unit: 0, quote: '', total_value: isFiat ? amount : 0,
+      side: type === 'deposit' || type === 'staking' || type === 'earn' ? 'in' : 'out',
+      fee_amount: fee, fee_asset: asset, pair: '',
+      order_id: obj['refid'] || '',
+      status: isFiat ? (type === 'withdrawal' ? 'fiat_out' : 'fiat_in') : (type === 'staking' || type === 'earn' ? 'earn_income' : ''),
+      notes: type === 'staking' ? 'Staking reward — cost basis €0' : (isFiat ? 'Fiat ' + type + ' (not taxable)' : '')
+    });
+  }
+  return txs;
+}
+
 // ── Import handler ──
 function importTaxCSV(text) {
   const exchange = detectExchangeCSV(text);
   let txs = [];
-  if (exchange === 'binance') txs = parseBinanceCSV(text);
-  else if (exchange === 'bybit') txs = parseBybitCSV(text);
-  else if (exchange === 'kraken' || exchange === 'kraken_ledger') txs = parseKrakenCSV(text);
-  else { showImportStatus('Could not detect exchange format. Supported: Binance, Bybit, Kraken spot trade CSVs.', 'error'); return; }
-  if (txs.length === 0) { showImportStatus('No trades found in CSV.', 'error'); return; }
+  if (exchange === 'binance_spot') txs = parseBinanceCSV(text);
+  else if (exchange === 'binance_wallet') txs = parseBinanceWalletCSV(text);
+  else if (exchange === 'binance_futures') txs = parseBinanceFuturesCSV(text);
+  else if (exchange === 'binance_earn') txs = parseBinanceEarnCSV(text);
+  else if (exchange === 'bybit_spot') txs = parseBybitCSV(text);
+  else if (exchange === 'bybit_futures') txs = parseBybitFuturesCSV(text);
+  else if (exchange === 'bybit_wallet') txs = parseBybitWalletCSV(text);
+  else if (exchange === 'kraken_trades') txs = parseKrakenCSV(text);
+  else if (exchange === 'kraken_ledger') txs = parseKrakenLedgerCSV(text);
+  else { showImportStatus('Could not detect exchange format. Supported: Binance, Bybit, Kraken (spot, futures, wallet, earn).', 'error'); return; }
+  if (txs.length === 0) { showImportStatus('No transactions found in CSV.', 'error'); return; }
   // Filter by tax year
   const year = parseInt(document.getElementById('taxYear').value);
   txs = txs.filter(t => t.date && t.date.getFullYear() === year);
@@ -3459,9 +3697,20 @@ function importTaxCSV(text) {
 // ── Classification ──
 function classifyAllTransactions() {
   TAX_TXS.forEach(tx => {
-    if (tx.status && tx.status !== 'needs_review') return; // already classified manually
+    if (tx.status && tx.status !== 'needs_review' && tx.status !== '') return; // already classified
+    // Futures PnL — already classified by parser
+    if (tx.type === 'futures' && tx.status === 'futures_pnl') return;
+    // Earn/staking/airdrop — income at €0 cost basis
+    if (tx.status === 'earn_income') return;
+    // Fiat movements — not taxable
+    if (tx.status === 'fiat_in' || tx.status === 'fiat_out') return;
+    // Deposits/withdrawals — resolve by transfer matching
     if (tx.type === 'deposit' || tx.type === 'withdrawal') {
-      tx.status = 'needs_review'; // will be resolved by transfer matching
+      tx.status = 'needs_review';
+    } else if (tx.type === 'staking' || tx.type === 'earn' || tx.type === 'airdrop') {
+      tx.status = 'earn_income';
+    } else if (tx.type === 'dust') {
+      tx.status = 'earn_income'; tx.notes = (tx.notes||'') + ' (dust conversion)';
     } else if (tx.side === 'buy') {
       tx.status = 'acquisition';
     } else if (tx.side === 'sell') {
@@ -3558,19 +3807,33 @@ function computeTaxSummary() {
   const disposals = TAX_TXS.filter(t => t.status === 'taxable_disposal' && t.realized_gain_eur !== undefined);
   const gains = disposals.filter(t => t.realized_gain_eur > 0).reduce((s,t) => s + t.realized_gain_eur, 0);
   const losses = disposals.filter(t => t.realized_gain_eur < 0).reduce((s,t) => s + Math.abs(t.realized_gain_eur), 0);
-  const net = gains - losses;
-  const expenseDeduction = net > 0 ? net * 0.10 : 0;
-  const taxableIncome = Math.max(0, net - expenseDeduction);
+  const spotNet = gains - losses;
+  // Futures PnL (separate line)
+  const futuresTxs = TAX_TXS.filter(t => t.status === 'futures_pnl' && t.realized_gain_eur !== undefined);
+  const futuresGains = futuresTxs.filter(t => t.realized_gain_eur > 0).reduce((s,t) => s + t.realized_gain_eur, 0);
+  const futuresLosses = futuresTxs.filter(t => t.realized_gain_eur < 0).reduce((s,t) => s + Math.abs(t.realized_gain_eur), 0);
+  const futuresNet = futuresGains - futuresLosses;
+  // Earn income (staking, airdrops — taxable on disposal, but track for awareness)
+  const earnTxs = TAX_TXS.filter(t => t.status === 'earn_income');
+  // Combined
+  const totalNet = spotNet + futuresNet;
+  const expenseDeduction = totalNet > 0 ? totalNet * 0.10 : 0;
+  const taxableIncome = Math.max(0, totalNet - expenseDeduction);
   const taxableIncomeBGN = taxableIncome * EUR_BGN;
   const taxOwed = taxableIncomeBGN * 0.10;
   return {
     year: document.getElementById('taxYear').value,
     total_disposals: disposals.length,
-    total_gains_eur: gains, total_losses_eur: losses, net_eur: net,
+    total_gains_eur: gains, total_losses_eur: losses, spot_net_eur: spotNet,
+    futures_gains_eur: futuresGains, futures_losses_eur: futuresLosses, futures_net_eur: futuresNet,
+    futures_count: futuresTxs.length, earn_count: earnTxs.length,
+    net_eur: totalNet,
     expense_deduction_eur: expenseDeduction, taxable_income_eur: taxableIncome,
     taxable_income_bgn: taxableIncomeBGN, tax_owed_bgn: taxOwed,
     unresolved: TAX_TXS.filter(t => t.status === 'needs_review').length,
-    total_txs: TAX_TXS.length
+    total_txs: TAX_TXS.length,
+    transfers: TAX_TXS.filter(t => t.status === 'self_transfer').length,
+    fiat_moves: TAX_TXS.filter(t => t.status === 'fiat_in' || t.status === 'fiat_out').length
   };
 }
 
@@ -3598,12 +3861,12 @@ function loadTaxData() {
 // ── Renderers ──
 function renderTaxes() {
   loadTaxData();
+  ensureEurUsdRate(); // auto-fetch if stale
   renderTaxImportBadges();
   renderTaxOverview();
   renderTaxLedger();
   renderTaxUnresolved();
   renderTaxSummaryTable();
-  // Setup drag & drop
   setupTaxDropZone();
 }
 
@@ -3629,26 +3892,29 @@ function setupTaxDropZone() {
 
 function renderTaxImportBadges() {
   const el = document.getElementById('taxImportBadges');
-  const exchanges = ['Binance', 'Bybit', 'Kraken'];
-  el.innerHTML = exchanges.map(ex => {
+  const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit Futures', 'Kraken'];
+  el.innerHTML = sources.map(ex => {
     const count = TAX_IMPORTS[ex] || 0;
+    if (!count && (ex === 'Binance Futures' || ex === 'Bybit Futures')) return ''; // hide if no futures data
     const cls = count > 0 ? 'ok' : 'none';
-    return `<div class="tax-badge ${cls}">${count > 0 ? '✅' : '○'} ${ex} ${count > 0 ? '(' + count + ' trades)' : '(not imported)'}</div>`;
-  }).join('');
+    const label = count > 0 ? count + ' txs' : 'not imported';
+    return `<div class="tax-badge ${cls}">${count > 0 ? '✅' : '○'} ${ex} (${label})</div>`;
+  }).filter(Boolean).join('');
 }
 
 function renderTaxOverview() {
   const s = computeTaxSummary();
-  const fmtE = v => '€' + Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtE = v => (v < 0 ? '-' : '') + '€' + Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fmtB = v => Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' BGN';
   document.getElementById('taxOverview').innerHTML = [
-    metricCard('Transactions', s.total_txs, 'val-blue'),
-    metricCard('Taxable Disposals', s.total_disposals, 'val-neutral'),
-    metricCard('Realized Gains', fmtE(s.total_gains_eur), 'val-green'),
-    metricCard('Realized Losses', fmtE(s.total_losses_eur), 'val-red'),
-    metricCard('Net Gain', fmtE(s.net_eur), s.net_eur >= 0 ? 'val-green' : 'val-red'),
-    metricCard('Tax Owed', fmtB(s.tax_owed_bgn), s.tax_owed_bgn > 0 ? 'val-yellow' : 'val-green'),
+    metricCard('Transactions', s.total_txs, 'val-blue', s.transfers + ' transfers · ' + s.fiat_moves + ' fiat'),
+    metricCard('Spot Disposals', s.total_disposals, 'val-neutral'),
+    metricCard('Spot Net', fmtE(s.spot_net_eur), s.spot_net_eur >= 0 ? 'val-green' : 'val-red', fmtE(s.total_gains_eur) + ' gains / ' + fmtE(s.total_losses_eur) + ' losses'),
+    metricCard('Futures Net', fmtE(s.futures_net_eur), s.futures_net_eur >= 0 ? 'val-green' : 'val-red', s.futures_count + ' trades'),
+    metricCard('Combined Net', fmtE(s.net_eur), s.net_eur >= 0 ? 'val-green' : 'val-red'),
+    metricCard('Tax Owed', fmtB(s.tax_owed_bgn), s.tax_owed_bgn > 0 ? 'val-yellow' : 'val-green', 'after 10% deduction'),
     metricCard('Needs Review', s.unresolved, s.unresolved > 0 ? 'val-yellow' : 'val-green'),
+    s.earn_count > 0 ? metricCard('Earn/Staking', s.earn_count + ' events', 'val-purple', 'cost basis €0') : '',
   ].join('');
 }
 
@@ -3671,10 +3937,14 @@ function renderTaxLedger() {
   let html = `<div style="margin-bottom:8px;font-size:12px;color:var(--tx2)">Showing ${filtered.length} of ${TAX_TXS.length} transactions</div>`;
   html += '<table><thead><tr><th>Date</th><th>Exchange</th><th>Side</th><th>Asset</th><th>Amount</th><th>Price EUR</th><th>Gain/Loss</th><th>Status</th></tr></thead><tbody>';
   filtered.slice(0, 500).forEach(t => {
-    const statusClass = t.status === 'taxable_disposal' ? 'taxable' : t.status === 'self_transfer' ? 'transfer' :
-      t.status === 'acquisition' ? 'acquisition' : t.status === 'needs_review' ? 'needs-review' : 'fee';
-    const statusLabel = t.status === 'taxable_disposal' ? 'TAXABLE' : t.status === 'self_transfer' ? 'TRANSFER' :
-      t.status === 'acquisition' ? 'BUY' : t.status === 'needs_review' ? 'REVIEW' : t.status.toUpperCase();
+    const STATUS_DISPLAY = {
+      'taxable_disposal': ['taxable','TAXABLE'], 'self_transfer': ['transfer','TRANSFER'],
+      'acquisition': ['acquisition','BUY'], 'needs_review': ['needs-review','REVIEW'],
+      'futures_pnl': ['taxable','FUTURES'], 'earn_income': ['acquisition','EARN'],
+      'fiat_in': ['transfer','FIAT IN'], 'fiat_out': ['transfer','FIAT OUT'],
+      'fee': ['fee','FEE']
+    };
+    const [statusClass, statusLabel] = STATUS_DISPLAY[t.status] || ['fee', (t.status||'?').toUpperCase()];
     const gainClass = (t.realized_gain_eur||0) >= 0 ? 'win' : 'loss';
     html += `<tr>
       <td>${t.date ? t.date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}) + ' ' + t.date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '-'}</td>
@@ -3727,18 +3997,31 @@ function reclassifyTx(id, newStatus) {
 
 function renderTaxSummaryTable() {
   const s = computeTaxSummary();
-  const fmtE = v => '€' + v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const fmtB = v => v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' BGN';
+  const fmtE = v => '€' + Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtB = v => Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' BGN';
+  const sign = v => v < 0 ? '-' : '';
+  const rate = getEurUsdRate() || 0.92;
   document.getElementById('taxSummaryTable').innerHTML = `
-    <tr><td>Total Realized Gains</td><td class="val-green">${fmtE(s.total_gains_eur)}</td></tr>
-    <tr><td>Total Realized Losses</td><td class="val-red">-${fmtE(s.total_losses_eur)}</td></tr>
-    <tr><td>Net Gain/Loss (EUR)</td><td class="${s.net_eur >= 0 ? 'val-green' : 'val-red'}">${fmtE(s.net_eur)}</td></tr>
-    <tr><td>10% Expense Deduction (automatic)</td><td>-${fmtE(s.expense_deduction_eur)}</td></tr>
+    <tr><td colspan="2" style="font-weight:700;color:var(--tx);padding-top:16px">SPOT TRADING</td></tr>
+    <tr><td>Realized Gains (spot)</td><td class="val-green">${fmtE(s.total_gains_eur)}</td></tr>
+    <tr><td>Realized Losses (spot)</td><td class="val-red">-${fmtE(s.total_losses_eur)}</td></tr>
+    <tr><td>Spot Net</td><td class="${s.spot_net_eur >= 0 ? 'val-green' : 'val-red'}">${sign(s.spot_net_eur)}${fmtE(s.spot_net_eur)}</td></tr>
+    ${s.futures_count > 0 ? `
+    <tr><td colspan="2" style="font-weight:700;color:var(--tx);padding-top:16px">FUTURES / DERIVATIVES</td></tr>
+    <tr><td>Futures Gains</td><td class="val-green">${fmtE(s.futures_gains_eur)}</td></tr>
+    <tr><td>Futures Losses</td><td class="val-red">-${fmtE(s.futures_losses_eur)}</td></tr>
+    <tr><td>Futures Net (${s.futures_count} trades)</td><td class="${s.futures_net_eur >= 0 ? 'val-green' : 'val-red'}">${sign(s.futures_net_eur)}${fmtE(s.futures_net_eur)}</td></tr>
+    ` : ''}
+    ${s.earn_count > 0 ? `<tr><td>Earn/Staking Events</td><td>${s.earn_count} (cost basis €0 — taxable on disposal)</td></tr>` : ''}
+    <tr><td colspan="2" style="font-weight:700;color:var(--tx);padding-top:16px">TAX CALCULATION</td></tr>
+    <tr><td>Combined Net Gain/Loss (EUR)</td><td class="${s.net_eur >= 0 ? 'val-green' : 'val-red'}">${sign(s.net_eur)}${fmtE(s.net_eur)}</td></tr>
+    <tr><td>10% Expense Deduction (automatic, Art. 33 PITA)</td><td>-${fmtE(s.expense_deduction_eur)}</td></tr>
     <tr class="highlight"><td>Taxable Income (EUR)</td><td>${fmtE(s.taxable_income_eur)}</td></tr>
-    <tr><td>Taxable Income (BGN) — rate 1.95583</td><td>${fmtB(s.taxable_income_bgn)}</td></tr>
-    <tr class="total"><td>Tax Owed (10%)</td><td class="val-yellow">${fmtB(s.tax_owed_bgn)}</td></tr>
-    <tr><td>Disposals Count</td><td>${s.total_disposals}</td></tr>
-    <tr><td>Unresolved Items</td><td class="${s.unresolved > 0 ? 'val-yellow' : ''}">${s.unresolved}</td></tr>
+    <tr><td>Taxable Income (BGN) — fixed rate 1.95583</td><td>${fmtB(s.taxable_income_bgn)}</td></tr>
+    <tr class="total"><td>TAX OWED (10%)</td><td class="val-yellow">${fmtB(s.tax_owed_bgn)}</td></tr>
+    <tr><td colspan="2" style="padding-top:16px;font-size:12px;color:var(--tx3)">
+      EUR/USD rate: ${rate} | Self-transfers: ${s.transfers} | Fiat moves: ${s.fiat_moves} | Unresolved: ${s.unresolved}
+    </td></tr>
   `;
   // Warnings
   let warnings = '';
@@ -3759,27 +4042,50 @@ function switchTaxTab(tab) {
 // ── Exports ──
 function exportTaxSummary() {
   const s = computeTaxSummary();
+  const rate = getEurUsdRate() || 0.92;
   const lines = [
     'BULGARIA CRYPTO TAX SUMMARY — ' + s.year,
     'Individual · 10% Flat Tax · FIFO · Appendix 5 / Form 200',
     '═══════════════════════════════════════',
     '',
-    'Total Realized Gains (EUR):    €' + s.total_gains_eur.toFixed(2),
-    'Total Realized Losses (EUR):  -€' + s.total_losses_eur.toFixed(2),
-    'Net Gain/Loss (EUR):           €' + s.net_eur.toFixed(2),
+    'SPOT TRADING',
+    '  Realized Gains (EUR):        €' + s.total_gains_eur.toFixed(2),
+    '  Realized Losses (EUR):      -€' + s.total_losses_eur.toFixed(2),
+    '  Spot Net (EUR):              €' + s.spot_net_eur.toFixed(2),
     '',
-    '10% Expense Deduction:        -€' + s.expense_deduction_eur.toFixed(2),
-    'Taxable Income (EUR):          €' + s.taxable_income_eur.toFixed(2),
-    'Taxable Income (BGN):          ' + s.taxable_income_bgn.toFixed(2) + ' BGN  (rate: 1.95583)',
+  ];
+  if (s.futures_count > 0) {
+    lines.push('FUTURES / DERIVATIVES (' + s.futures_count + ' trades)',
+    '  Futures Gains (EUR):         €' + s.futures_gains_eur.toFixed(2),
+    '  Futures Losses (EUR):       -€' + s.futures_losses_eur.toFixed(2),
+    '  Futures Net (EUR):           €' + s.futures_net_eur.toFixed(2),
+    '');
+  }
+  if (s.earn_count > 0) {
+    lines.push('EARN / STAKING: ' + s.earn_count + ' events (cost basis €0, taxable on disposal)', '');
+  }
+  lines.push(
+    'TAX CALCULATION',
+    '  Combined Net Gain/Loss:      €' + s.net_eur.toFixed(2),
+    '  10% Expense Deduction:      -€' + s.expense_deduction_eur.toFixed(2),
+    '  Taxable Income (EUR):        €' + s.taxable_income_eur.toFixed(2),
+    '  Taxable Income (BGN):        ' + s.taxable_income_bgn.toFixed(2) + ' BGN  (rate: 1.95583)',
     '',
-    'TAX OWED (10%):                ' + s.tax_owed_bgn.toFixed(2) + ' BGN',
+    '  TAX OWED (10%):              ' + s.tax_owed_bgn.toFixed(2) + ' BGN',
     '',
     '═══════════════════════════════════════',
-    'Disposals: ' + s.total_disposals + ' | Total Txs: ' + s.total_txs + ' | Unresolved: ' + s.unresolved,
+    'Spot disposals: ' + s.total_disposals + ' | Futures trades: ' + s.futures_count,
+    'Self-transfers: ' + s.transfers + ' | Fiat moves: ' + s.fiat_moves,
+    'Total txs: ' + s.total_txs + ' | Unresolved: ' + s.unresolved,
+    'EUR/USD rate used: ' + rate,
     'Generated: ' + new Date().toISOString().slice(0,10),
     '',
-    'NOTE: This is a tool-generated estimate. Consult a licensed Bulgarian accountant before filing.'
-  ];
+    'Legal basis: Art. 33 PITA, Appendix 5, Form 200',
+    'Filing deadline: April 30 (March 31 electronic = 5% discount up to 500 BGN)',
+    '',
+    'NOTE: This is a tool-generated estimate. Consult a licensed Bulgarian accountant before filing.',
+    'Futures PnL classification may differ — confirm with your accountant.'
+  );
   downloadText('tax_summary_' + s.year + '.txt', lines.join('\n'));
 }
 
