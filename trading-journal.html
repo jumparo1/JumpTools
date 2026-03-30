@@ -4,45 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trading Journal Analyst</title>
-<!-- Auth Gate -->
-<style id="authCSS">
-html{overflow:hidden}
-#authGate{position:fixed;inset:0;z-index:99999;background:#0d1117;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-#authGate .auth-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px 36px;width:340px;text-align:center}
-#authGate h2{color:#e6edf3;margin-bottom:6px;font-size:1.4rem}
-#authGate .auth-sub{color:#8b949e;font-size:.85rem;margin-bottom:24px}
-#authGate input{width:100%;padding:10px 14px;margin-bottom:12px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:.95rem;outline:none}
-#authGate input:focus{border-color:#58a6ff}
-#authGate button{width:100%;padding:10px;background:#238636;border:none;border-radius:8px;color:#fff;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .2s}
-#authGate button:hover{background:#2ea043}
-#authGate .auth-err{color:#f85149;font-size:.8rem;margin-top:8px;min-height:18px}
-</style>
-<script>
-(function(){
-  var users=['jumparo'];
-  var storedUser=sessionStorage.getItem('jt_user');
-  if(sessionStorage.getItem('jt_auth')==='ok'&&storedUser&&users.indexOf(storedUser)!==-1)return;
-  var H='e4c4b39a9eba7912b04d982fdd0057906871a4b4395ca564fd4a10a8d79a4f9f';
-  async function sha(s){var b=new TextEncoder().encode(s);var h=await crypto.subtle.digest('SHA-256',b);return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join('')}
-  document.addEventListener('DOMContentLoaded',function(){
-    var su=sessionStorage.getItem('jt_user');
-    if(sessionStorage.getItem('jt_auth')==='ok'&&su&&users.indexOf(su)!==-1){var g=document.getElementById('authGate');if(g)g.remove();return;}
-    var d=document.createElement('div');d.id='authGate';
-    d.innerHTML='<div class="auth-box"><h2>🔐 JumpTrading</h2><p class="auth-sub">Enter your credentials to continue</p><input id="authUser" placeholder="Username" autocomplete="username"><input id="authPass" type="password" placeholder="Password" autocomplete="current-password"><button id="authBtn">Sign In</button><div class="auth-err" id="authErr"></div></div>';
-    document.body.prepend(d);
-    async function tryLogin(){
-      var u=document.getElementById('authUser').value.trim().toLowerCase();
-      var p=document.getElementById('authPass').value;
-      var ph=await sha(p);
-      if(users.indexOf(u)!==-1&&ph===H){sessionStorage.setItem('jt_auth','ok');sessionStorage.setItem('jt_user',u);d.remove();document.getElementById('authCSS').remove();}
-      else{document.getElementById('authErr').textContent='Invalid username or password';}
-    }
-    document.getElementById('authBtn').addEventListener('click',tryLogin);
-    document.getElementById('authPass').addEventListener('keydown',function(e){if(e.key==='Enter')tryLogin();});
-    document.getElementById('authUser').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('authPass').focus();});
-  });
-})();
-</script>
 <style>
 /* ── Reset & Base ── */
 *{margin:0;padding:0;box-sizing:border-box}
@@ -190,6 +151,57 @@ tr:hover td{background:var(--bg2)}
 .pf-participant-hdr{padding:10px 0 6px;font-size:14px;font-weight:700;color:var(--blue);border-bottom:1px solid var(--bg3)}
 .pf-subtotal{background:var(--bg2);font-weight:600;color:var(--tx2)}
 
+/* ── Checklist ── */
+.checklist-grid{display:grid;gap:12px;margin-bottom:24px}
+.checklist-section{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);padding:16px}
+.checklist-section h4{font-size:13px;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.check-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)}
+.check-item:last-child{border-bottom:none}
+.check-item label{font-size:14px;cursor:pointer;flex:1}
+.check-item .toggle{position:relative;width:44px;height:24px;background:var(--bg4);border-radius:12px;cursor:pointer;transition:background .2s;flex-shrink:0}
+.check-item .toggle.on{background:var(--green2)}
+.check-item .toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s}
+.check-item .toggle.on::after{transform:translateX(20px)}
+.check-warn{color:var(--yellow);font-size:11px;margin-left:8px}
+.grade-display{text-align:center;padding:20px;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2)}
+.grade-display .grade{font-size:64px;font-weight:800}
+.grade-display .grade-a{color:var(--green)}.grade-display .grade-b{color:var(--blue)}.grade-display .grade-c{color:var(--yellow)}.grade-display .grade-d{color:var(--red)}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:16px}
+.week-cell{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);padding:8px;text-align:center;font-size:12px}
+.week-cell .day{color:var(--tx2);font-size:10px;text-transform:uppercase}
+
+/* ── Sub-tabs ── */
+.sub-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--bg4);padding-bottom:0}
+.sub-tab{padding:8px 16px;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;
+  background:none;border-top:none;border-left:none;border-right:none;transition:all .15s}
+.sub-tab:hover{color:var(--tx)}
+.sub-tab.active{color:var(--green);border-bottom-color:var(--green)}
+.sub-panel{display:none}.sub-panel.active{display:block}
+
+/* ── Missed trade form ── */
+.missed-form{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.missed-form input,.missed-form select{background:var(--bg2);border:1px solid var(--bg4);
+  border-radius:var(--radius);color:var(--tx);padding:6px 10px;font-size:13px}
+
+/* ── Tag buttons in trade log ── */
+.tag-btn{font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;border:1px solid var(--bg4);
+  background:transparent;color:var(--tx2);transition:all .15s;margin-left:4px}
+.tag-btn:hover{border-color:var(--yellow);color:var(--yellow)}
+.tag-btn.tagged{background:var(--yellow);color:var(--bg);border-color:var(--yellow)}
+
+/* ── Benchmark ── */
+.benchmark-table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px}
+.benchmark-table th{text-align:left;padding:10px 16px;background:var(--bg3);color:var(--tx2);font-size:12px;text-transform:uppercase}
+.benchmark-table td{padding:10px 16px;border-bottom:1px solid var(--bg3)}
+.benchmark-delta{font-weight:700;font-size:13px}
+.benchmark-delta.pos{color:var(--green)}.benchmark-delta.neg{color:var(--red)}
+.benchmark-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;
+  background:var(--bg3);border:1px solid var(--bg4)}
+.benchmark-loading{background:rgba(210,153,34,.1);border:1px solid var(--yellow);border-radius:var(--radius2);
+  padding:24px;text-align:center;color:var(--yellow)}
+.benchmark-loading .dots::after{content:'';animation:dots 1.5s infinite}
+@keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
+
 /* ── Chat Coach ── */
 .chat-fab{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;
   background:linear-gradient(135deg,var(--green2),var(--blue2));border:none;color:#fff;font-size:22px;
@@ -253,9 +265,17 @@ tr:hover td{background:var(--bg2)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     Analysis
   </div>
+  <div class="nav-item" onclick="showPage('checklist')" data-page="checklist">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    Checklist
+  </div>
   <div class="nav-item" onclick="showPage('patterns')" data-page="patterns">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
     Patterns
+  </div>
+  <div class="nav-item" onclick="showPage('benchmark')" data-page="benchmark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Benchmark
   </div>
   <div class="nav-item" onclick="showPage('coach')" data-page="coach">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -360,6 +380,54 @@ tr:hover td{background:var(--bg2)}
     </div>
   </div>
 
+  <!-- ═══ CHECKLIST PAGE ═══ -->
+  <div class="page" id="page-checklist">
+    <div class="page-title">✅ Daily Checklist</div>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px">
+      <label style="font-size:13px;color:var(--tx2)">Date:</label>
+      <input type="date" id="checklistDate" onchange="loadChecklist()" style="background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);color:var(--tx);padding:6px 10px;font-size:13px">
+      <button class="btn" onclick="checklistPrevDay()">← Prev</button>
+      <button class="btn" onclick="checklistNextDay()">Next →</button>
+      <button class="btn btn-primary" onclick="checklistToday()">Today</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 200px;gap:20px;align-items:start">
+      <div>
+        <div class="checklist-section">
+          <h4>Pre-Trade Routine</h4>
+          <div class="check-item"><label>Market scan completed</label><div class="toggle" id="chk_market_scan" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Bias defined</label><div class="toggle" id="chk_bias" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Max trades today written</label><div class="toggle" id="chk_max_trades" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Max daily loss written</label><div class="toggle" id="chk_max_loss" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>First trade risk = 0.5% confirmed</label><div class="toggle" id="chk_risk" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Stop loss rules read out loud</label><div class="toggle" id="chk_sl_rules" onclick="toggleCheck(this)"></div></div>
+        </div>
+        <div class="checklist-section" style="margin-top:12px">
+          <h4>During Trading (Violations)</h4>
+          <div class="check-item"><label>Traded after a loss?</label><span class="check-warn">violation</span><div class="toggle" id="chk_after_loss" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Added to position?</label><span class="check-warn">violation</span><div class="toggle" id="chk_added_pos" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Moved/Removed SL?</label><span class="check-warn">violation</span><div class="toggle" id="chk_moved_sl" onclick="toggleCheck(this)"></div></div>
+        </div>
+        <div class="checklist-section" style="margin-top:12px">
+          <h4>Lifestyle</h4>
+          <div class="check-item"><label>Meditation</label><div class="toggle" id="chk_meditation" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>7h+ Sleep</label><div class="toggle" id="chk_sleep" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Emotion Acknowledged</label><div class="toggle" id="chk_emotion" onclick="toggleCheck(this)"></div></div>
+          <div class="check-item"><label>Coffee max 2</label><div class="toggle" id="chk_coffee" onclick="toggleCheck(this)"></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="grade-display">
+          <div class="label" style="font-size:12px;color:var(--tx2);margin-bottom:8px">TODAY'S GRADE</div>
+          <div class="grade" id="checklistGrade">-</div>
+          <div id="checklistScore" style="font-size:14px;color:var(--tx2);margin-top:4px"></div>
+        </div>
+        <div id="checklistCorrelation" style="margin-top:16px"></div>
+      </div>
+    </div>
+    <h3 class="section-title" style="margin-top:24px">This Week</h3>
+    <div class="week-grid" id="checklistWeek"></div>
+  </div>
+
   <!-- ═══ PATTERNS PAGE ═══ -->
   <div class="page" id="page-patterns">
     <div class="page-title">🔍 Patterns & Insights</div>
@@ -380,6 +448,56 @@ tr:hover td{background:var(--bg2)}
       <div class="chart-container"><h3>Trade Duration vs Net P/L</h3><canvas id="durationChart" height="220"></canvas></div>
       <h3 class="section-title">Session Performance</h3>
       <div class="metric-grid" id="sessionMetrics"></div>
+    </div>
+  </div>
+
+  <!-- ═══ BENCHMARK PAGE ═══ -->
+  <div class="page" id="page-benchmark">
+    <div class="page-title">⚡ Strategy Benchmark</div>
+    <div id="benchNoData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <h3>No data loaded</h3><p>Import your trades to benchmark against backtested strategies</p>
+    </div>
+    <div id="benchContent" style="display:none">
+      <div class="filter-row">
+        <label>Strategy:</label>
+        <select id="benchStrategy" onchange="onBenchStrategyChange()" style="min-width:200px"><option value="">Select strategy...</option></select>
+        <label>Period:</label>
+        <select id="benchPeriod">
+          <option value="0">All Time</option><option value="90">90 days</option>
+          <option value="180">180 days</option><option value="365" selected>1 Year</option><option value="1825">5 Years</option>
+        </select>
+        <button class="btn btn-primary" id="benchRunBtn" onclick="runBenchmark(false)">Run Benchmark</button>
+        <button class="btn" onclick="runBenchmark(true)" style="font-size:12px">Force Refresh</button>
+      </div>
+      <div id="benchLoading" style="display:none">
+        <div class="benchmark-loading">
+          <div style="font-size:18px;margin-bottom:8px">⏳</div>
+          <div id="benchLoadingText">Warming up backtest engine<span class="dots"></span></div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:8px">Render free tier cold start can take 30-60s</div>
+        </div>
+      </div>
+      <div id="benchResults" style="display:none">
+        <div id="benchProxyNote" style="display:none;margin-bottom:12px;padding:8px 12px;background:rgba(210,153,34,.1);border:1px solid var(--yellow);border-radius:var(--radius);font-size:12px;color:var(--yellow)"></div>
+        <div class="metric-grid" id="benchMetrics"></div>
+        <div class="chart-container"><h3>Equity: Actual vs Backtest</h3><canvas id="benchEquityChart" height="280"></canvas></div>
+        <div class="tbl-wrap">
+          <table class="benchmark-table" id="benchTable"></table>
+        </div>
+        <h3 class="section-title">Insights</h3>
+        <div id="benchInsights"></div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:12px" id="benchCacheInfo"></div>
+      </div>
+      <div id="benchNoStrategy" style="display:none">
+        <div class="insight-card warning">
+          <h4>No backtest mapping for this strategy</h4>
+          <p>Enter a custom backtest idea below to benchmark against:</p>
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <input type="text" id="benchCustomIdea" placeholder="e.g. buy when RSI below 30" style="flex:1;background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--radius);color:var(--tx);padding:6px 10px;font-size:13px">
+            <button class="btn btn-primary" onclick="runBenchmarkCustom()">Run</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -414,16 +532,55 @@ tr:hover td{background:var(--bg2)}
       <h3>No data loaded</h3><p>Import your trades to see the log</p>
     </div>
     <div id="logContent" style="display:none">
-      <div class="filter-row">
-        <label>Strategy:</label><select id="fStrategy" onchange="renderTradeLog()"><option value="">All</option></select>
-        <label>Market:</label><select id="fMarket" onchange="renderTradeLog()"><option value="">All</option></select>
-        <label>Side:</label><select id="fSide" onchange="renderTradeLog()"><option value="">All</option><option>Long</option><option>Short</option></select>
-        <label>Result:</label><select id="fResult" onchange="renderTradeLog()"><option value="">All</option><option>W</option><option>L</option></select>
-        <label>From:</label><input type="date" id="fFrom" onchange="renderTradeLog()">
-        <label>To:</label><input type="date" id="fTo" onchange="renderTradeLog()">
-        <input type="text" id="fSearch" placeholder="Search market..." oninput="renderTradeLog()" style="width:140px">
+      <div class="sub-tabs">
+        <button class="sub-tab active" onclick="switchLogTab('trades')">Trade Log</button>
+        <button class="sub-tab" onclick="switchLogTab('aplus')">⭐ A+ Trades</button>
+        <button class="sub-tab" onclick="switchLogTab('worst')">💀 Worst Trades</button>
+        <button class="sub-tab" onclick="switchLogTab('missed')">👻 Missed Trades</button>
       </div>
-      <div class="tbl-wrap" id="tradeLogTable" style="max-height:calc(100vh - 200px);overflow-y:auto"></div>
+
+      <!-- Trade Log sub-panel -->
+      <div class="sub-panel active" id="subpanel-trades">
+        <div class="filter-row">
+          <label>Strategy:</label><select id="fStrategy" onchange="renderTradeLog()"><option value="">All</option></select>
+          <label>Market:</label><select id="fMarket" onchange="renderTradeLog()"><option value="">All</option></select>
+          <label>Side:</label><select id="fSide" onchange="renderTradeLog()"><option value="">All</option><option>Long</option><option>Short</option></select>
+          <label>Result:</label><select id="fResult" onchange="renderTradeLog()"><option value="">All</option><option>W</option><option>L</option></select>
+          <label>From:</label><input type="date" id="fFrom" onchange="renderTradeLog()">
+          <label>To:</label><input type="date" id="fTo" onchange="renderTradeLog()">
+          <input type="text" id="fSearch" placeholder="Search market..." oninput="renderTradeLog()" style="width:140px">
+        </div>
+        <div class="tbl-wrap" id="tradeLogTable" style="max-height:calc(100vh - 260px);overflow-y:auto"></div>
+      </div>
+
+      <!-- A+ Trades sub-panel -->
+      <div class="sub-panel" id="subpanel-aplus">
+        <div id="aplusPatternSummary" style="margin-bottom:16px"></div>
+        <div class="tbl-wrap" id="aplusTable"></div>
+        <div style="margin-top:12px;color:var(--tx2);font-size:13px">Tag trades as A+ from the Trade Log tab using the ⭐ button.</div>
+      </div>
+
+      <!-- Worst Trades sub-panel -->
+      <div class="sub-panel" id="subpanel-worst">
+        <div id="worstPatternSummary" style="margin-bottom:16px"></div>
+        <div class="tbl-wrap" id="worstTable"></div>
+        <div style="margin-top:12px;color:var(--tx2);font-size:13px">Tag trades as Worst from the Trade Log tab using the 💀 button.</div>
+      </div>
+
+      <!-- Missed Trades sub-panel -->
+      <div class="sub-panel" id="subpanel-missed">
+        <div class="missed-form">
+          <input type="date" id="missedDate">
+          <select id="missedStrategy"><option value="">Strategy...</option></select>
+          <input type="text" id="missedMarket" placeholder="Coin" style="width:80px">
+          <select id="missedSide"><option>Long</option><option>Short</option></select>
+          <input type="text" id="missedLink" placeholder="TradingView Link" style="width:180px">
+          <select id="missedResult"><option value="">Would it hit 2R?</option><option>2R</option><option>Back to Entry</option><option>Unknown</option></select>
+          <button class="btn btn-primary" onclick="addMissedTrade()">+ Add Missed</button>
+        </div>
+        <div id="missedStats" style="margin-bottom:12px"></div>
+        <div class="tbl-wrap" id="missedTable"></div>
+      </div>
     </div>
   </div>
 
@@ -565,6 +722,21 @@ function initFirebaseListeners() {
     }
   });
 
+  // Trade tags (A+ / Worst)
+  tjDbRef.child('tradeTags').on('value', snap => {
+    const data = snap.val();
+    if (data) { TRADE_TAGS = data; localStorage.setItem('tj_trade_tags', JSON.stringify(data)); }
+  });
+
+  // Missed trades
+  tjDbRef.child('missedTrades').on('value', snap => {
+    const data = snap.val();
+    if (data) {
+      MISSED_TRADES = Array.isArray(data) ? data : Object.values(data);
+      localStorage.setItem('tj_missed_trades', JSON.stringify(MISSED_TRADES));
+    }
+  });
+
   tjDbRef.child('settings/prices_updated').on('value', snap => {
     const val = snap.val();
     if (val) {
@@ -617,7 +789,7 @@ function showPage(id) {
   if (pg) pg.classList.add('active');
   const nav = document.querySelector(`.nav-item[data-page="${id}"]`);
   if (nav) nav.classList.add('active');
-  if (id === 'portfolio') renderPage(id);
+  if (id === 'portfolio' || id === 'checklist') renderPage(id);
   else if (TRADES.length > 0 && id !== 'import') renderPage(id);
 }
 
@@ -737,16 +909,16 @@ function mapTrade(raw) {
     accountRisk: g(['Account Risk']),
     stopLoss: num(g(['Stop Loss'])),
     takeProfit: num(g(['Take Profit'])),
-    rRatio: num(g(['R'])),
+    rRatio: num(g(['R:R', 'R/R', 'RR', 'Risk/Reward', 'R'])),
     fees: num(g(['Fees'])),
     exitPrice: num(g(['Exit Price'])),
     grossPL: num(g(['Gross P/L', 'Gross PL'])),
-    netPL: num(g(['Net P/L', 'Net PL'])),
+    netPL: num(g(['Trade P/L', 'Net P/L', 'Net PL', 'P/L', 'PnL', 'Closed P/L'])),
     winLoss: g(['Win / Loss', 'Win/Loss', 'W/L', 'Result']),
-    cumulativePL: num(g(['Cumulative P/L', 'Cumulative PL'])),
+    cumulativePL: num(g(['Cumulative P/L', 'Cumulative PL', 'Running Total'])),
     balance: num(g(['Account Balance', 'Balance'])),
     duration: num(g(['Trade Duration', 'Duration'])),
-    emotional: num(g(['Emotional', 'Emotion'])),
+    emotional: num(g(['Setup Quality', 'Quality', 'Emotional', 'Emotion'])),
     reason: g(['Reason', 'Comment', 'Notes']),
   };
 }
@@ -825,7 +997,9 @@ fi.addEventListener('change', e => {
 function renderPage(id) {
   if (id === 'dashboard') renderDashboard();
   else if (id === 'analysis') renderAnalysis();
+  else if (id === 'checklist') renderChecklist();
   else if (id === 'patterns') renderPatterns();
+  else if (id === 'benchmark') renderBenchmark();
   else if (id === 'coach') renderCoach();
   else if (id === 'tradelog') renderTradeLog();
   else if (id === 'portfolio') { renderPortfolio(); updatePriceTimestamp(); autoRefreshIfStale(); }
@@ -1647,7 +1821,7 @@ function renderTradeLog() {
     P/L: <span class="${fStats.totalPL>=0?'win':'loss'}">${fmt$(fStats.totalPL)}</span> |
     Exp: <span class="${fStats.expectancy>=0?'win':'loss'}">${fmt$(fStats.expectancy)}/trade</span>
   </div>`;
-  html += '<table><thead><tr><th>Date</th><th>Market</th><th>Side</th><th>Strategy</th><th>Entry</th><th>Exit</th><th>Size</th><th>Net P/L</th><th>R</th><th>Result</th><th>Emotion</th><th>Duration</th></tr></thead><tbody>';
+  html += '<table><thead><tr><th>Date</th><th>Market</th><th>Side</th><th>Strategy</th><th>Entry</th><th>Exit</th><th>Size</th><th>Net P/L</th><th>R</th><th>Result</th><th>Quality</th><th>Duration</th><th>Tag</th></tr></thead><tbody>';
   filtered.slice(0, 200).forEach(t => {
     const cls = t.winLoss === 'W' ? 'win' : 'loss';
     html += `<tr>
@@ -1661,6 +1835,10 @@ function renderTradeLog() {
       <td class="${cls}">${t.winLoss}</td>
       <td>${t.emotional || '-'}</td>
       <td>${t.duration ? t.duration.toFixed(1)+'h' : '-'}</td>
+      <td>
+        <button class="tag-btn ${TRADE_TAGS[tradeKey(t)]?.type==='aplus'?'tagged':''}" onclick="tagTrade(${TRADES.indexOf(t)},'aplus')" title="Tag A+">⭐</button>
+        <button class="tag-btn ${TRADE_TAGS[tradeKey(t)]?.type==='worst'?'tagged':''}" onclick="tagTrade(${TRADES.indexOf(t)},'worst')" title="Tag Worst">💀</button>
+      </td>
     </tr>`;
   });
   if (filtered.length > 200) html += `<tr><td colspan="12" style="text-align:center;color:var(--tx2);padding:12px">Showing first 200 of ${filtered.length} trades</td></tr>`;
@@ -2279,6 +2457,665 @@ function coachProcess(input){
 }
 
 /* ═══════════════════════════════════════════
+   CHECKLIST
+   ═══════════════════════════════════════════ */
+const CHECKLIST_FIELDS = ['market_scan','bias','max_trades','max_loss','risk','sl_rules','after_loss','added_pos','moved_sl','meditation','sleep','emotion','coffee'];
+const CHECKLIST_VIOLATIONS = ['after_loss','added_pos','moved_sl']; // these are bad when ON
+
+function toggleCheck(el) {
+  el.classList.toggle('on');
+  saveChecklist();
+  updateChecklistGrade();
+}
+
+function getChecklistDate() {
+  return document.getElementById('checklistDate').value;
+}
+
+function checklistToday() {
+  document.getElementById('checklistDate').value = new Date().toISOString().slice(0,10);
+  loadChecklist();
+}
+function checklistPrevDay() {
+  const d = new Date(getChecklistDate()); d.setDate(d.getDate()-1);
+  document.getElementById('checklistDate').value = d.toISOString().slice(0,10);
+  loadChecklist();
+}
+function checklistNextDay() {
+  const d = new Date(getChecklistDate()); d.setDate(d.getDate()+1);
+  document.getElementById('checklistDate').value = d.toISOString().slice(0,10);
+  loadChecklist();
+}
+
+function saveChecklist() {
+  const date = getChecklistDate();
+  if (!date) return;
+  const data = {};
+  CHECKLIST_FIELDS.forEach(f => { data[f] = document.getElementById('chk_'+f).classList.contains('on'); });
+  // Compute score
+  let good = 0, total = CHECKLIST_FIELDS.length;
+  CHECKLIST_FIELDS.forEach(f => {
+    const isOn = data[f];
+    if (CHECKLIST_VIOLATIONS.includes(f)) { if (!isOn) good++; } // violations: off is good
+    else { if (isOn) good++; } // routines: on is good
+  });
+  data.score = Math.round((good/total)*100);
+  data.grade = data.score >= 90 ? 'A' : data.score >= 75 ? 'B' : data.score >= 50 ? 'C' : 'D';
+
+  const key = date.replace(/-/g,'');
+  localStorage.setItem('tj_checklist_'+key, JSON.stringify(data));
+  if (tjDbRef) tjDbRef.child('checklist/'+key).set(data);
+}
+
+function loadChecklist() {
+  const date = getChecklistDate();
+  if (!date) return;
+  const key = date.replace(/-/g,'');
+  // Try localStorage first
+  const saved = localStorage.getItem('tj_checklist_'+key);
+  if (saved) {
+    applyChecklistData(JSON.parse(saved));
+  } else {
+    // Clear all toggles
+    CHECKLIST_FIELDS.forEach(f => document.getElementById('chk_'+f).classList.remove('on'));
+    updateChecklistGrade();
+  }
+  // Try Firebase
+  if (tjDbRef) {
+    tjDbRef.child('checklist/'+key).once('value', snap => {
+      const data = snap.val();
+      if (data) {
+        localStorage.setItem('tj_checklist_'+key, JSON.stringify(data));
+        applyChecklistData(data);
+      }
+    });
+  }
+  renderChecklistWeek();
+  renderChecklistCorrelation();
+}
+
+function applyChecklistData(data) {
+  CHECKLIST_FIELDS.forEach(f => {
+    const el = document.getElementById('chk_'+f);
+    if (data[f]) el.classList.add('on'); else el.classList.remove('on');
+  });
+  updateChecklistGrade();
+}
+
+function updateChecklistGrade() {
+  let good = 0;
+  CHECKLIST_FIELDS.forEach(f => {
+    const isOn = document.getElementById('chk_'+f).classList.contains('on');
+    if (CHECKLIST_VIOLATIONS.includes(f)) { if (!isOn) good++; }
+    else { if (isOn) good++; }
+  });
+  const pct = Math.round((good/CHECKLIST_FIELDS.length)*100);
+  const grade = pct >= 90 ? 'A' : pct >= 75 ? 'B' : pct >= 50 ? 'C' : 'D';
+  const gradeEl = document.getElementById('checklistGrade');
+  gradeEl.textContent = grade;
+  gradeEl.className = 'grade grade-' + grade.toLowerCase();
+  document.getElementById('checklistScore').textContent = pct + '%';
+}
+
+function renderChecklist() {
+  const dateInput = document.getElementById('checklistDate');
+  if (!dateInput.value) dateInput.value = new Date().toISOString().slice(0,10);
+  loadChecklist();
+}
+
+function renderChecklistWeek() {
+  const date = new Date(getChecklistDate());
+  const dayOfWeek = date.getDay();
+  const monday = new Date(date); monday.setDate(date.getDate() - ((dayOfWeek + 6) % 7));
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const key = d.toISOString().slice(0,10).replace(/-/g,'');
+    const saved = localStorage.getItem('tj_checklist_'+key);
+    const data = saved ? JSON.parse(saved) : null;
+    const isToday = d.toISOString().slice(0,10) === getChecklistDate();
+    const border = isToday ? 'border-color:var(--green)' : '';
+    html += `<div class="week-cell" style="${border}">
+      <div class="day">${days[i]}</div>
+      <div style="font-size:11px;color:var(--tx2)">${d.getDate()}/${d.getMonth()+1}</div>
+      ${data ? `<div class="grade grade-${data.grade.toLowerCase()}" style="font-size:24px;font-weight:800">${data.grade}</div>
+        <div style="font-size:10px;color:var(--tx2)">${data.score}%</div>` : '<div style="font-size:20px;color:var(--tx3);margin-top:4px">-</div>'}
+    </div>`;
+  }
+  document.getElementById('checklistWeek').innerHTML = html;
+}
+
+function renderChecklistCorrelation() {
+  if (TRADES.length < 20) { document.getElementById('checklistCorrelation').innerHTML = ''; return; }
+  // Gather all checklist data from localStorage
+  const gradeGroups = {A:[],B:[],C:[],D:[]};
+  const allKeys = Object.keys(localStorage).filter(k => k.startsWith('tj_checklist_'));
+  allKeys.forEach(k => {
+    const data = JSON.parse(localStorage.getItem(k));
+    if (!data || !data.grade) return;
+    const dateStr = k.replace('tj_checklist_','');
+    const y = dateStr.slice(0,4), m = dateStr.slice(4,6), d = dateStr.slice(6,8);
+    const dateObj = new Date(+y, +m-1, +d);
+    // Find trades on this date
+    const dayTrades = TRADES.filter(t => t.entryDate && t.entryDate.toDateString() === dateObj.toDateString());
+    if (dayTrades.length > 0 && gradeGroups[data.grade]) {
+      gradeGroups[data.grade].push(...dayTrades);
+    }
+  });
+  let html = '<div class="insight-card" style="border-left-color:var(--purple)"><h4>Discipline vs Performance</h4><p style="margin-top:8px">';
+  let hasData = false;
+  ['A','B','C','D'].forEach(g => {
+    if (gradeGroups[g].length >= 3) {
+      hasData = true;
+      const s = stats(gradeGroups[g]);
+      html += `<strong>Grade ${g}:</strong> ${fmtPct(s.winRate)} WR, ${fmt$(s.expectancy)}/trade (${s.total} trades)<br>`;
+    }
+  });
+  if (!hasData) html += 'Fill in more checklists to see how discipline correlates with trading performance.';
+  html += '</p></div>';
+  document.getElementById('checklistCorrelation').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════
+   TRADE LOG SUB-TABS + LIBRARIES
+   ═══════════════════════════════════════════ */
+let TRADE_TAGS = {}; // {tradeKey: {type:'aplus'|'worst', notes:''}}
+let MISSED_TRADES = [];
+let currentLogTab = 'trades';
+
+function switchLogTab(tab) {
+  currentLogTab = tab;
+  document.querySelectorAll('#page-tradelog .sub-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#page-tradelog .sub-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#page-tradelog .sub-tab[onclick*="${tab}"]`).classList.add('active');
+  document.getElementById('subpanel-'+tab).classList.add('active');
+  if (tab === 'aplus') renderAplusTrades();
+  else if (tab === 'worst') renderWorstTrades();
+  else if (tab === 'missed') renderMissedTrades();
+}
+
+function tradeKey(t) {
+  return (t.entryDateStr||'') + '_' + (t.market||'') + '_' + (t.strategy||'');
+}
+
+function tagTrade(idx, type) {
+  const t = TRADES[idx];
+  if (!t) return;
+  const key = tradeKey(t);
+  const notes = prompt(`Notes for this ${type === 'aplus' ? 'A+' : 'Worst'} trade (reason / what to improve):`);
+  if (notes === null) return; // cancelled
+  if (TRADE_TAGS[key] && TRADE_TAGS[key].type === type) {
+    delete TRADE_TAGS[key]; // untag
+  } else {
+    TRADE_TAGS[key] = { type, notes, market: t.market, strategy: t.strategy, side: t.side, netPL: t.netPL, date: t.entryDateStr, tvLink: t.tvLink };
+  }
+  saveTradeTags();
+  renderTradeLog();
+}
+
+function saveTradeTags() {
+  localStorage.setItem('tj_trade_tags', JSON.stringify(TRADE_TAGS));
+  if (tjDbRef) tjDbRef.child('tradeTags').set(TRADE_TAGS);
+}
+
+function loadTradeTags() {
+  try { TRADE_TAGS = JSON.parse(localStorage.getItem('tj_trade_tags')) || {}; } catch(e) { TRADE_TAGS = {}; }
+}
+
+function renderAplusTrades() {
+  const tagged = Object.entries(TRADE_TAGS).filter(([,v]) => v.type === 'aplus');
+  // Pattern summary
+  const stratCounts = {};
+  tagged.forEach(([,v]) => { stratCounts[v.strategy||'Unknown'] = (stratCounts[v.strategy||'Unknown']||0) + 1; });
+  const topPattern = Object.entries(stratCounts).sort((a,b) => b[1]-a[1])[0];
+  let summary = '';
+  if (topPattern) {
+    summary = `<div class="insight-card positive"><h4>Your A+ Pattern</h4><p>Most common: <strong>${topPattern[0]}</strong> (${topPattern[1]} trades). `;
+    const notes = tagged.filter(([,v]) => v.notes && v.strategy === topPattern[0]).map(([,v]) => v.notes);
+    if (notes.length > 0) summary += `Key traits: ${notes.slice(0,3).join(' | ')}`;
+    summary += '</p></div>';
+  }
+  document.getElementById('aplusPatternSummary').innerHTML = summary;
+  renderTaggedTable('aplusTable', tagged);
+}
+
+function renderWorstTrades() {
+  const tagged = Object.entries(TRADE_TAGS).filter(([,v]) => v.type === 'worst');
+  const stratCounts = {};
+  tagged.forEach(([,v]) => { stratCounts[v.strategy||'Unknown'] = (stratCounts[v.strategy||'Unknown']||0) + 1; });
+  const topPattern = Object.entries(stratCounts).sort((a,b) => b[1]-a[1])[0];
+  let summary = '';
+  if (topPattern) {
+    summary = `<div class="insight-card negative"><h4>Worst Trade Pattern</h4><p>Most common: <strong>${topPattern[0]}</strong> (${topPattern[1]} trades). `;
+    const notes = tagged.filter(([,v]) => v.notes && v.strategy === topPattern[0]).map(([,v]) => v.notes);
+    if (notes.length > 0) summary += `Mistakes: ${notes.slice(0,3).join(' | ')}`;
+    summary += '</p></div>';
+  }
+  document.getElementById('worstPatternSummary').innerHTML = summary;
+  renderTaggedTable('worstTable', tagged);
+}
+
+function renderTaggedTable(containerId, tagged) {
+  if (tagged.length === 0) {
+    document.getElementById(containerId).innerHTML = '<p style="color:var(--tx2);padding:20px;text-align:center">No tagged trades yet.</p>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Date</th><th>Market</th><th>Strategy</th><th>Side</th><th>P/L</th><th>Notes</th><th></th></tr></thead><tbody>';
+  tagged.forEach(([key, v]) => {
+    const cls = (v.netPL||0) >= 0 ? 'win' : 'loss';
+    html += `<tr>
+      <td>${v.date||'-'}</td>
+      <td>${v.tvLink ? `<a href="${v.tvLink}" target="_blank">${v.market||'-'}</a>` : (v.market||'-')}</td>
+      <td>${v.strategy||'-'}</td><td>${v.side||'-'}</td>
+      <td class="${cls}">${fmt$(v.netPL||0)}</td>
+      <td style="max-width:300px;white-space:normal;font-size:12px;color:var(--tx2)">${v.notes||'-'}</td>
+      <td><button class="btn btn-danger" onclick="removeTag('${key}')" style="font-size:10px;padding:2px 6px">✕</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function removeTag(key) {
+  delete TRADE_TAGS[key];
+  saveTradeTags();
+  if (currentLogTab === 'aplus') renderAplusTrades();
+  else if (currentLogTab === 'worst') renderWorstTrades();
+}
+
+// Missed Trades
+function loadMissedTrades() {
+  try { MISSED_TRADES = JSON.parse(localStorage.getItem('tj_missed_trades')) || []; } catch(e) { MISSED_TRADES = []; }
+}
+
+function saveMissedTrades() {
+  localStorage.setItem('tj_missed_trades', JSON.stringify(MISSED_TRADES));
+  if (tjDbRef) tjDbRef.child('missedTrades').set(MISSED_TRADES);
+}
+
+function addMissedTrade() {
+  const date = document.getElementById('missedDate').value;
+  const strategy = document.getElementById('missedStrategy').value;
+  const market = document.getElementById('missedMarket').value.trim().toUpperCase();
+  const side = document.getElementById('missedSide').value;
+  const link = document.getElementById('missedLink').value.trim();
+  const result = document.getElementById('missedResult').value;
+  if (!market) return alert('Enter a coin/market');
+  MISSED_TRADES.push({ date, strategy, market, side, link, result, id: Date.now() });
+  saveMissedTrades();
+  document.getElementById('missedMarket').value = '';
+  document.getElementById('missedLink').value = '';
+  renderMissedTrades();
+}
+
+function removeMissedTrade(id) {
+  MISSED_TRADES = MISSED_TRADES.filter(t => t.id !== id);
+  saveMissedTrades();
+  renderMissedTrades();
+}
+
+function renderMissedTrades() {
+  // Populate strategy dropdown
+  const sel = document.getElementById('missedStrategy');
+  if (sel.options.length <= 1 && TRADES.length > 0) {
+    [...new Set(TRADES.map(t => t.strategy).filter(Boolean))].sort().forEach(s => {
+      const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o);
+    });
+  }
+  // Stats
+  const longs = MISSED_TRADES.filter(t => t.side === 'Long').length;
+  const shorts = MISSED_TRADES.filter(t => t.side === 'Short').length;
+  const hit2R = MISSED_TRADES.filter(t => t.result === '2R').length;
+  document.getElementById('missedStats').innerHTML = MISSED_TRADES.length > 0 ?
+    `<div class="insight-card warning"><h4>${MISSED_TRADES.length} Missed Setups</h4><p>${longs} Long, ${shorts} Short. <strong>${hit2R} would have hit 2R</strong>.</p></div>` : '';
+  // Table
+  if (MISSED_TRADES.length === 0) {
+    document.getElementById('missedTable').innerHTML = '<p style="color:var(--tx2);padding:20px;text-align:center">No missed trades logged yet.</p>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Date</th><th>Market</th><th>Strategy</th><th>Side</th><th>Result</th><th>Link</th><th></th></tr></thead><tbody>';
+  MISSED_TRADES.slice().reverse().forEach(t => {
+    const resultCls = t.result === '2R' ? 'win' : '';
+    html += `<tr>
+      <td>${t.date||'-'}</td><td>${t.market}</td><td>${t.strategy||'-'}</td><td>${t.side}</td>
+      <td class="${resultCls}">${t.result||'-'}</td>
+      <td>${t.link ? `<a href="https://www.tradingview.com/x/${t.link}" target="_blank">Chart</a>` : '-'}</td>
+      <td><button class="btn btn-danger" onclick="removeMissedTrade(${t.id})" style="font-size:10px;padding:2px 6px">✕</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('missedTable').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════
+   BENCHMARK (Backtest Bridge)
+   ═══════════════════════════════════════════ */
+const BT_API = 'https://backtesting-api-6vb0.onrender.com';
+const BT_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+const STRATEGY_MAP = {
+  'mr long': { idea: 'mr long journal edge', label: 'MR Long (Journal Edge)' },
+  'mr short': { idea: 'mr long journal edge', label: 'MR Long (proxy for MR Short)', note: 'Backtester is long-only — using MR Long as proxy' },
+  'mr fast spike': { idea: 'spike exhaustion reversal', label: 'Spike Exhaustion Reversal' },
+  'momo long': { idea: 'spike exhaustion reversal', label: 'Spike Exhaustion Reversal', note: 'Using Spike Reversal as closest proxy' },
+  'momo long - 2 candles close': { idea: 'spike exhaustion reversal', label: 'Spike Exhaustion Reversal', note: 'Proxy: Spike Reversal' },
+  'momo long - retest buy': { idea: 'spike exhaustion reversal', label: 'Spike Exhaustion Reversal', note: 'Proxy: Spike Reversal' },
+  'momo short': { idea: 'spike exhaustion reversal', label: 'Spike Exhaustion Reversal', note: 'Backtester is long-only — proxy' },
+  'crt': { idea: 'crt cisd', label: 'CRT + CISD' },
+  'range trading': { idea: 'buy when RSI below 30 sell when RSI above 70', label: 'RSI Range Trading' }
+};
+
+function mapStrategyToIdea(name) {
+  const lower = (name||'').toLowerCase().trim();
+  if (STRATEGY_MAP[lower]) return STRATEGY_MAP[lower];
+  // Fuzzy: check if any key is a substring
+  for (const [k,v] of Object.entries(STRATEGY_MAP)) {
+    if (lower.includes(k) || k.includes(lower)) return v;
+  }
+  if (lower.includes('crt') || lower.includes('cisd')) return STRATEGY_MAP['crt'];
+  if (lower.includes('spike')) return STRATEGY_MAP['mr fast spike'];
+  return null;
+}
+
+async function fetchBacktest(idea, symbols, periodDays, forceRefresh) {
+  const cacheKey = 'bt_' + idea.toLowerCase().replace(/\s+/g,'_');
+  if (!forceRefresh) {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Date.now() - parsed.timestamp < BT_CACHE_TTL) return parsed;
+    }
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 65000);
+  const resp = await fetch(BT_API + '/api/backtest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idea, symbols: symbols.slice(0,10), capital: STARTING_CAPITAL, fee_pct: 0.001, slippage_pct: 0.001, period_days: periodDays || 365 }),
+    signal: ctrl.signal
+  });
+  clearTimeout(timer);
+  if (!resp.ok) throw new Error('Backtest API returned ' + resp.status);
+  const data = await resp.json();
+  const valid = (data.results||[]).filter(r => !r.error && r.metrics);
+  if (valid.length === 0) throw new Error('No valid results from backtest');
+  // Aggregate
+  const agg = aggregateBacktestResults(valid);
+  const result = { timestamp: Date.now(), idea, strategyName: data.strategy_name, description: data.strategy_description, aggregated: agg, perSymbol: valid };
+  localStorage.setItem(cacheKey, JSON.stringify(result));
+  if (tjDbRef) tjDbRef.child('benchmarks/'+cacheKey.replace(/[.#$/[\]]/g,'_')).set(result);
+  return result;
+}
+
+function aggregateBacktestResults(results) {
+  let totalTrades = 0, weightedWR = 0, weightedPF = 0, totalReturn = 0;
+  let maxDD = 0, totalAvgWin = 0, totalAvgLoss = 0, weightedSharpe = 0;
+  results.forEach(r => {
+    const m = r.metrics;
+    const n = m.total_trades || 0;
+    totalTrades += n;
+    weightedWR += (m.win_rate||0) * n;
+    weightedPF += (m.profit_factor||0) * n;
+    weightedSharpe += (m.sharpe_ratio||0) * n;
+    totalReturn += (m.total_return||0);
+    maxDD = Math.max(maxDD, Math.abs(m.max_drawdown||0));
+    totalAvgWin += (m.avg_win||0) * n;
+    totalAvgLoss += (Math.abs(m.avg_loss||0)) * n;
+  });
+  const n = totalTrades || 1;
+  return {
+    total_trades: totalTrades,
+    win_rate: weightedWR / n,
+    profit_factor: weightedPF / n,
+    sharpe_ratio: weightedSharpe / n,
+    total_return: totalReturn / results.length,
+    max_drawdown: maxDD,
+    avg_win: totalAvgWin / n,
+    avg_loss: totalAvgLoss / n
+  };
+}
+
+function renderBenchmark() {
+  if (TRADES.length === 0) { show('benchNoData'); hide('benchContent'); return; }
+  hide('benchNoData'); show('benchContent');
+  // Populate strategy dropdown
+  const sel = document.getElementById('benchStrategy');
+  const current = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  [...new Set(TRADES.map(t => t.strategy).filter(Boolean))].sort().forEach(s => {
+    const o = document.createElement('option'); o.value = s; o.textContent = s;
+    const mapping = mapStrategyToIdea(s);
+    if (mapping) o.textContent += ' → ' + mapping.label;
+    sel.appendChild(o);
+  });
+  if (current) sel.value = current;
+}
+
+function onBenchStrategyChange() {
+  const strat = document.getElementById('benchStrategy').value;
+  hide('benchResults'); hide('benchNoStrategy'); hide('benchLoading');
+  if (!strat) return;
+  const mapping = mapStrategyToIdea(strat);
+  if (!mapping) { show('benchNoStrategy'); return; }
+  // Check cache
+  const cacheKey = 'bt_' + mapping.idea.toLowerCase().replace(/\s+/g,'_');
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    const parsed = JSON.parse(cached);
+    if (Date.now() - parsed.timestamp < BT_CACHE_TTL) {
+      displayBenchmarkResults(strat, parsed);
+    }
+  }
+}
+
+async function runBenchmark(forceRefresh) {
+  const strat = document.getElementById('benchStrategy').value;
+  if (!strat) return alert('Select a strategy first');
+  const mapping = mapStrategyToIdea(strat);
+  if (!mapping) { show('benchNoStrategy'); return; }
+  const period = parseInt(document.getElementById('benchPeriod').value) || 365;
+  const symbols = [...new Set(TRADES.filter(t => t.strategy === strat).map(t => t.market).filter(Boolean))];
+  if (symbols.length === 0) return alert('No trades found for this strategy');
+
+  hide('benchResults'); hide('benchNoStrategy');
+  show('benchLoading');
+  document.getElementById('benchRunBtn').disabled = true;
+
+  // Progress messages
+  const msgs = ['Warming up backtest engine','Still warming up (cold start)','Running backtest across '+symbols.length+' coins','Almost there'];
+  let msgIdx = 0;
+  const msgTimer = setInterval(() => {
+    msgIdx = Math.min(msgIdx+1, msgs.length-1);
+    document.getElementById('benchLoadingText').innerHTML = msgs[msgIdx] + '<span class="dots"></span>';
+  }, 12000);
+
+  try {
+    const result = await fetchBacktest(mapping.idea, symbols, period, forceRefresh);
+    clearInterval(msgTimer);
+    hide('benchLoading');
+    displayBenchmarkResults(strat, result);
+  } catch(e) {
+    clearInterval(msgTimer);
+    hide('benchLoading');
+    show('benchResults');
+    document.getElementById('benchMetrics').innerHTML = '';
+    document.getElementById('benchTable').innerHTML = '';
+    document.getElementById('benchInsights').innerHTML = insightCard('negative', 'Benchmark Failed',
+      e.name === 'AbortError' ? 'Request timed out (60s). Render free tier may be cold starting — try again in 30s.' : 'Error: ' + e.message,
+      'Click "Run Benchmark" to retry');
+    document.getElementById('benchCacheInfo').textContent = '';
+  }
+  document.getElementById('benchRunBtn').disabled = false;
+}
+
+async function runBenchmarkCustom() {
+  const idea = document.getElementById('benchCustomIdea').value.trim();
+  if (!idea) return;
+  const strat = document.getElementById('benchStrategy').value;
+  const symbols = strat ? [...new Set(TRADES.filter(t => t.strategy === strat).map(t => t.market).filter(Boolean))] : ['BTC','ETH'];
+  const period = parseInt(document.getElementById('benchPeriod').value) || 365;
+
+  hide('benchNoStrategy'); show('benchLoading');
+  try {
+    const result = await fetchBacktest(idea, symbols, period, true);
+    hide('benchLoading');
+    displayBenchmarkResults(strat || 'Custom', result);
+  } catch(e) {
+    hide('benchLoading');
+    show('benchResults');
+    document.getElementById('benchInsights').innerHTML = insightCard('negative', 'Failed', e.message);
+  }
+}
+
+function displayBenchmarkResults(stratName, btData) {
+  show('benchResults');
+  const mapping = mapStrategyToIdea(stratName);
+  // Proxy note
+  const noteEl = document.getElementById('benchProxyNote');
+  if (mapping && mapping.note) { noteEl.textContent = mapping.note; noteEl.style.display = ''; }
+  else { noteEl.style.display = 'none'; }
+
+  // Actual stats
+  const actual = stats(TRADES.filter(t => t.strategy === stratName));
+  const bt = btData.aggregated;
+
+  // Metrics cards
+  const wrDelta = actual.winRate - bt.win_rate;
+  const pfDelta = actual.profitFactor - bt.profit_factor;
+  document.getElementById('benchMetrics').innerHTML = [
+    metricCard('Your Win Rate', fmtPct(actual.winRate), actual.winRate >= 0.5 ? 'val-green' : 'val-red', actual.total + ' trades'),
+    metricCard('Backtest Win Rate', fmtPct(bt.win_rate), bt.win_rate >= 0.5 ? 'val-green' : 'val-red', bt.total_trades + ' trades'),
+    metricCard('WR Delta', (wrDelta >= 0 ? '+' : '') + (wrDelta*100).toFixed(1) + '%', wrDelta >= 0 ? 'val-green' : 'val-red', wrDelta >= 0 ? 'You beat backtest' : 'Below backtest'),
+    metricCard('Backtest Sharpe', bt.sharpe_ratio ? bt.sharpe_ratio.toFixed(2) : 'N/A', bt.sharpe_ratio > 1 ? 'val-green' : 'val-yellow'),
+  ].join('');
+
+  // Comparison table
+  const rows = [
+    ['Win Rate', fmtPct(actual.winRate), fmtPct(bt.win_rate), wrDelta],
+    ['Profit Factor', actual.profitFactor.toFixed(2), bt.profit_factor.toFixed(2), pfDelta],
+    ['Avg Win', fmt$(actual.avgWin), fmt$(bt.avg_win), actual.avgWin - bt.avg_win],
+    ['Avg Loss', fmt$(actual.avgLoss), fmt$(Math.abs(bt.avg_loss)), -(actual.avgLoss - Math.abs(bt.avg_loss))],
+    ['Max Drawdown', 'N/A', fmtPct(bt.max_drawdown), null],
+    ['Trade Count', actual.total.toString(), bt.total_trades.toString(), null],
+  ];
+  let thtml = '<thead><tr><th>Metric</th><th>Your Actual</th><th>Backtest</th><th>Delta</th></tr></thead><tbody>';
+  rows.forEach(([label, yours, bt2, delta]) => {
+    let deltaHtml = '-';
+    if (delta !== null && !isNaN(delta)) {
+      const cls = delta >= 0 ? 'pos' : 'neg';
+      const arrow = delta >= 0 ? '▲' : '▼';
+      const val = typeof delta === 'number' && Math.abs(delta) < 1 ? (delta*100).toFixed(1)+'%' : (delta >= 0 ? '+' : '') + delta.toFixed(0);
+      deltaHtml = `<span class="benchmark-delta ${cls}">${arrow} ${val}</span>`;
+    }
+    thtml += `<tr><td><strong>${label}</strong></td><td>${yours}</td><td>${bt2}</td><td>${deltaHtml}</td></tr>`;
+  });
+  thtml += '</tbody>';
+  document.getElementById('benchTable').innerHTML = thtml;
+
+  // Equity curve overlay
+  drawBenchmarkEquity(stratName, btData);
+
+  // Insights
+  let insights = '';
+  if (wrDelta < -0.05) insights += insightCard('negative', 'Execution Gap: Win Rate',
+    `Your ${stratName} WR (${fmtPct(actual.winRate)}) trails the backtest by ${(Math.abs(wrDelta)*100).toFixed(1)}%. This could mean missed entries, early exits, or emotional interference.`,
+    'Review your last 10 losing trades with this strategy — look for patterns in why you exited early or entered late.');
+  else if (wrDelta > 0.03) insights += insightCard('positive', 'Discretionary Edge',
+    `Your actual WR beats the backtest by ${(wrDelta*100).toFixed(1)}%. Your discretionary filtering is adding value.`,
+    'Keep being selective. The backtest takes every signal — you\'re correctly skipping the weak ones.');
+  if (pfDelta < -0.3) insights += insightCard('warning', 'Risk/Reward Gap',
+    `Your profit factor (${actual.profitFactor.toFixed(2)}) is below the backtest (${bt.profit_factor.toFixed(2)}). You may be cutting winners too early.`,
+    'Try letting winners run to the backtest\'s target level before taking profits.');
+  if (actual.total < bt.total_trades * 0.3) insights += insightCard('blue', 'Trade Frequency',
+    `The backtest found ${bt.total_trades} setups but you only took ${actual.total}. You might be missing valid entries.`,
+    'Consider reviewing missed setups to see if the backtest catches ones you skip.');
+  if (!insights) insights = insightCard('positive', 'Well Aligned', 'Your actual performance closely matches the backtest expectations. Keep it up!');
+  document.getElementById('benchInsights').innerHTML = insights;
+
+  // Cache info
+  const age = Date.now() - btData.timestamp;
+  const ageStr = age < 3600000 ? Math.floor(age/60000) + 'm ago' : Math.floor(age/3600000) + 'h ago';
+  document.getElementById('benchCacheInfo').textContent = 'Cached: ' + ageStr + ' | Strategy: ' + (btData.strategyName||'');
+}
+
+function drawBenchmarkEquity(stratName, btData) {
+  const canvas = document.getElementById('benchEquityChart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 280;
+  ctx.clearRect(0, 0, W, 280);
+
+  // Actual equity for this strategy
+  const stratTrades = TRADES.filter(t => t.strategy === stratName).sort((a,b) => a.entryDate - b.entryDate);
+  const actualEquity = [0];
+  stratTrades.forEach(t => actualEquity.push(actualEquity[actualEquity.length-1] + t.netPL));
+
+  // Backtest equity (first symbol or aggregate)
+  let btEquity = [];
+  if (btData.perSymbol && btData.perSymbol[0] && btData.perSymbol[0].equity_curve) {
+    const curve = btData.perSymbol[0].equity_curve;
+    const start = curve[0]?.equity || STARTING_CAPITAL;
+    btEquity = curve.map(p => p.equity - start);
+  }
+
+  if (actualEquity.length < 2 && btEquity.length < 2) return;
+
+  const allVals = [...actualEquity, ...btEquity];
+  const min = Math.min(...allVals) * 1.1;
+  const max = Math.max(...allVals) * 1.1;
+  const range = (max - min) || 1;
+  const pad = {l:60, r:20, t:20, b:30};
+  const cw = W - pad.l - pad.r;
+  const ch = 280 - pad.t - pad.b;
+
+  // Grid
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (ch/4)*i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(fmt$(max - (range/4)*i), pad.l-8, y+4);
+  }
+
+  // Zero line
+  const zeroY = pad.t + ch - ((0 - min)/range)*ch;
+  ctx.setLineDash([4,4]); ctx.strokeStyle = '#484f58'; ctx.beginPath();
+  ctx.moveTo(pad.l, zeroY); ctx.lineTo(W-pad.r, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Actual line (blue)
+  if (actualEquity.length > 1) {
+    ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2; ctx.beginPath();
+    actualEquity.forEach((v, i) => {
+      const x = pad.l + (i/(actualEquity.length-1))*cw;
+      const y = pad.t + ch - ((v-min)/range)*ch;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  // Backtest line (purple dashed)
+  if (btEquity.length > 1) {
+    ctx.strokeStyle = '#bc8cff'; ctx.lineWidth = 1.5; ctx.setLineDash([6,4]); ctx.beginPath();
+    btEquity.forEach((v, i) => {
+      const x = pad.l + (i/(btEquity.length-1))*cw;
+      const y = pad.t + ch - ((v-min)/range)*ch;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Legend
+  ctx.fillStyle = '#58a6ff'; ctx.fillRect(pad.l, 4, 16, 3);
+  ctx.fillStyle = '#e6edf3'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('Your Actual', pad.l+20, 10);
+  ctx.fillStyle = '#bc8cff'; ctx.fillRect(pad.l+120, 4, 16, 3);
+  ctx.fillStyle = '#e6edf3'; ctx.fillText('Backtest', pad.l+140, 10);
+}
+
+/* ═══════════════════════════════════════════
    PORTFOLIO
    ═══════════════════════════════════════════ */
 let PORTFOLIO = [];
@@ -2686,6 +3523,8 @@ window.addEventListener('DOMContentLoaded', () => {
   initFirebaseListeners();
   // Load from localStorage immediately (Firebase will override when data arrives)
   loadPortfolio();
+  loadTradeTags();
+  loadMissedTrades();
   const saved = localStorage.getItem('tj_trades');
   if (saved) {
     importData(saved);
