@@ -3373,6 +3373,8 @@ function detectExchangeCSV(text) {
   if (lower.includes('realized profit') || (lower.includes('symbol') && lower.includes('side') && lower.includes('position'))) return 'binance_futures';
   // Binance earn/distribution
   if (lower.includes('distribution') || (lower.includes('operation') && lower.includes('coin') && lower.includes('change'))) return 'binance_earn';
+  // Bybit copy trading (AssetChangeDetails)
+  if (lower.includes('cash flow') && lower.includes('wallet balance') && lower.includes('filled price')) return 'bybit_copytrading';
   // Bybit spot
   if (lower.includes('avg. filled price') || lower.includes('avg filled price') || (lower.includes('filled qty') && lower.includes('order price'))) return 'bybit_spot';
   // Bybit futures/derivatives
@@ -3599,6 +3601,82 @@ function parseBybitFuturesCSV(text) {
   return txs;
 }
 
+// ── Bybit Copy Trading (AssetChangeDetails) Parser ──
+function parseBybitCopytradingCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  // First row might be "UID: xxx, Name: xxx" — skip it
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, rows.length); i++) {
+    const joined = rows[i].join(',').toLowerCase();
+    if (joined.includes('time') && joined.includes('currency') && joined.includes('type')) { headerIdx = i; break; }
+  }
+  const headers = rows[headerIdx].map(h => h.trim());
+  const txs = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 8) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
+    const dateStr = obj['Time'] || '';
+    if (!dateStr) continue;
+    const currency = (obj['Currency'] || 'USDT').toUpperCase();
+    const contract = obj['Contract'] || '';
+    const type = (obj['Type'] || '').toLowerCase();
+    const direction = (obj['Direction'] || '').toLowerCase();
+    const qty = Math.abs(parseFloat(obj['Quantity'] || 0));
+    const price = parseFloat(obj['Filled Price'] || 0);
+    const fee = Math.abs(parseFloat((obj['Fee Paid'] || '0').replace(/[^0-9.-]/g,'')));
+    const cashFlow = parseFloat((obj['Cash Flow'] || '0').replace(/[^0-9.-]/g,''));
+    const change = parseFloat((obj['Change'] || '0').replace(/[^0-9.-]/g,''));
+    const orderId = obj['Order ID'] || obj['Trade ID'] || '';
+    // Parse contract to get base asset (e.g. BTCUSDT → BTC)
+    const base = contract.replace(/USDT$|USD$|BUSD$/,'') || 'UNKNOWN';
+    if (type === 'trade' || type === 'liquidation') {
+      const isClose = direction.includes('close');
+      const isLong = direction.includes('long');
+      // For closed positions, Cash Flow = realized PnL
+      txs.push({
+        id: 'bybc_' + i + '_' + Date.now(), exchange: 'Bybit CopyTrading', date: new Date(dateStr),
+        type: 'futures', asset: base, amount: qty || 1, price_unit: price,
+        quote: currency, total_value: Math.abs(cashFlow),
+        side: isClose ? 'sell' : 'buy',
+        fee_amount: fee, fee_asset: currency, pair: contract,
+        order_id: orderId,
+        status: isClose ? 'futures_pnl' : 'futures_open',
+        realized_gain_eur: isClose ? cashFlow * (getEurUsdRate() || 0.92) : undefined,
+        notes: type === 'liquidation' ? 'LIQUIDATION — ' + direction + ' ' + base : direction + ' ' + base
+      });
+    } else if (type === 'funding fee') {
+      txs.push({
+        id: 'bybc_' + i + '_' + Date.now(), exchange: 'Bybit CopyTrading', date: new Date(dateStr),
+        type: 'funding', asset: base || currency, amount: Math.abs(change), price_unit: 0,
+        quote: currency, total_value: Math.abs(change), side: change >= 0 ? 'in' : 'out',
+        fee_amount: 0, fee_asset: '', pair: contract, order_id: '',
+        status: 'futures_pnl', realized_gain_eur: change * (getEurUsdRate() || 0.92),
+        notes: 'Funding fee: ' + (change >= 0 ? '+' : '') + change.toFixed(4) + ' ' + currency
+      });
+    } else if (type === 'transferred in' || type === 'transferred out') {
+      txs.push({
+        id: 'bybc_' + i + '_' + Date.now(), exchange: 'Bybit CopyTrading', date: new Date(dateStr),
+        type: type === 'transferred in' ? 'deposit' : 'withdrawal',
+        asset: currency, amount: Math.abs(change), price_unit: 0,
+        quote: '', total_value: Math.abs(change), side: type === 'transferred in' ? 'in' : 'out',
+        fee_amount: 0, fee_asset: '', pair: '', order_id: '',
+        status: 'self_transfer', notes: 'Copy trading ' + type
+      });
+    } else if (type === 'pre-deduction return') {
+      txs.push({
+        id: 'bybc_' + i + '_' + Date.now(), exchange: 'Bybit CopyTrading', date: new Date(dateStr),
+        type: 'earn', asset: currency, amount: Math.abs(change), price_unit: 0,
+        quote: '', total_value: Math.abs(change), side: 'in',
+        fee_amount: 0, fee_asset: '', pair: '', order_id: '',
+        status: 'futures_pnl', realized_gain_eur: change * (getEurUsdRate() || 0.92),
+        notes: 'Copy trading pre-deduction return'
+      });
+    }
+  }
+  return txs;
+}
+
 // ── Bybit Wallet (Transaction Log) Parser ──
 function parseBybitWalletCSV(text) {
   const rows = parseCSVRows(text);
@@ -3675,6 +3753,7 @@ function importTaxCSV(text) {
   else if (exchange === 'binance_futures') txs = parseBinanceFuturesCSV(text);
   else if (exchange === 'binance_earn') txs = parseBinanceEarnCSV(text);
   else if (exchange === 'bybit_spot') txs = parseBybitCSV(text);
+  else if (exchange === 'bybit_copytrading') txs = parseBybitCopytradingCSV(text);
   else if (exchange === 'bybit_futures') txs = parseBybitFuturesCSV(text);
   else if (exchange === 'bybit_wallet') txs = parseBybitWalletCSV(text);
   else if (exchange === 'kraken_trades') txs = parseKrakenCSV(text);
@@ -3705,7 +3784,7 @@ function classifyAllTransactions() {
   TAX_TXS.forEach(tx => {
     if (tx.status && tx.status !== 'needs_review' && tx.status !== '') return; // already classified
     // Futures PnL — already classified by parser
-    if (tx.type === 'futures' && tx.status === 'futures_pnl') return;
+    if (tx.status === 'futures_pnl' || tx.status === 'futures_open') return;
     // Earn/staking/airdrop — income at €0 cost basis
     if (tx.status === 'earn_income') return;
     // Fiat movements — not taxable
@@ -3899,7 +3978,7 @@ function setupTaxDropZone() {
 
 function renderTaxImportBadges() {
   const el = document.getElementById('taxImportBadges');
-  const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit Futures', 'Kraken'];
+  const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit CopyTrading', 'Bybit Futures', 'Kraken'];
   el.innerHTML = sources.map(ex => {
     const count = TAX_IMPORTS[ex] || 0;
     if (!count && (ex === 'Binance Futures' || ex === 'Bybit Futures')) return ''; // hide if no futures data
@@ -3947,7 +4026,8 @@ function renderTaxLedger() {
     const STATUS_DISPLAY = {
       'taxable_disposal': ['taxable','TAXABLE'], 'self_transfer': ['transfer','TRANSFER'],
       'acquisition': ['acquisition','BUY'], 'needs_review': ['needs-review','REVIEW'],
-      'futures_pnl': ['taxable','FUTURES'], 'earn_income': ['acquisition','EARN'],
+      'futures_pnl': ['taxable','FUTURES'], 'futures_open': ['acquisition','OPEN POS'],
+      'earn_income': ['acquisition','EARN'],
       'fiat_in': ['transfer','FIAT IN'], 'fiat_out': ['transfer','FIAT OUT'],
       'fee': ['fee','FEE']
     };
