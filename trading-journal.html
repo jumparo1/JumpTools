@@ -646,6 +646,7 @@ tr:hover td{background:var(--bg2)}
     </div>
     <div class="import-status" id="taxImportStatus"></div>
     <div class="tax-import-badges" id="taxImportBadges"></div>
+    <div id="taxDocuments" style="margin-bottom:16px"></div>
 
     <!-- Overview -->
     <div class="metric-grid" id="taxOverview"></div>
@@ -4154,6 +4155,13 @@ function importTaxCSV(text) {
     runFIFO();
     saveTaxData();
     renderTaxes();
+    // Save document reference
+    if (importTaxCSV._currentFileName) {
+      saveTaxDoc(importTaxCSV._currentFileName, text, exName, newTxs.length);
+    } else {
+      saveTaxDoc(exName + '_' + year + '.csv', text, exName, newTxs.length);
+    }
+
     showTaxStatus(`Imported ${newTxs.length} transactions from ${exName} (${year}). Detected format: ${exchange}.`, 'success');
   } catch(e) {
     console.error('Tax import error:', e);
@@ -4365,8 +4373,10 @@ function loadTaxData() {
 // ── Renderers ──
 function renderTaxes() {
   loadTaxData();
+  loadTaxDocs();
   ensureEurUsdRate();
   renderTaxTodo();
+  renderTaxDocs();
   renderTaxImportBadges();
   renderTaxOverview();
   renderTaxLedger();
@@ -4394,7 +4404,10 @@ function setupTaxDropZone() {
         showTaxStatus('Skipped "' + file.name + '" — only CSV files are supported.', 'error');
         continue;
       }
-      const r = new FileReader(); r.onload = ev => importTaxCSV(ev.target.result); r.readAsText(file);
+      const r = new FileReader();
+      const fname = file.name;
+      r.onload = ev => { importTaxCSV._currentFileName = fname; importTaxCSV(ev.target.result); importTaxCSV._currentFileName = null; };
+      r.readAsText(file);
     }
   });
   fi.addEventListener('change', e => {
@@ -4404,7 +4417,9 @@ function setupTaxDropZone() {
         showTaxStatus('PDF files cannot be imported — use them as reference. Drop CSV files only.', 'error');
         continue;
       }
-      const r = new FileReader(); r.onload = ev => importTaxCSV(ev.target.result); r.readAsText(file);
+      const r = new FileReader();
+      const fname = file.name;
+      r.onload = ev => { importTaxCSV._currentFileName = fname; importTaxCSV(ev.target.result); importTaxCSV._currentFileName = null; };
     }
   });
 }
@@ -4637,14 +4652,95 @@ function renderTaxTodo() {
   document.getElementById('taxTodoList').innerHTML = html;
 }
 
+// ── Document Storage ──
+let TAX_DOCS = []; // { id, name, exchange, type, rows, year, uploadedAt, size }
+
+function saveTaxDoc(fileName, csvText, exchange, rowCount) {
+  const year = document.getElementById('taxYear').value;
+  const doc = {
+    id: 'doc_' + Date.now(),
+    name: fileName || exchange + '_' + year + '.csv',
+    exchange: exchange,
+    rows: rowCount,
+    year: year,
+    uploadedAt: new Date().toISOString(),
+    size: csvText.length
+  };
+  TAX_DOCS.push(doc);
+  // Save metadata to Firebase
+  if (tjDbRef) tjDbRef.child('taxes/docs/' + doc.id).set(doc);
+  // Save raw CSV to Firebase (for re-processing)
+  if (tjDbRef) tjDbRef.child('taxes/rawFiles/' + doc.id).set(csvText).catch(e => console.warn('Raw file save failed (too large?):', e));
+  try { localStorage.setItem('tj_tax_docs', JSON.stringify(TAX_DOCS)); } catch(e) {}
+  renderTaxDocs();
+}
+
+function loadTaxDocs() {
+  try { TAX_DOCS = JSON.parse(localStorage.getItem('tj_tax_docs')) || []; } catch(e) { TAX_DOCS = []; }
+  if (tjDbRef) {
+    tjDbRef.child('taxes/docs').once('value', snap => {
+      const data = snap.val();
+      if (data) {
+        TAX_DOCS = Object.values(data);
+        try { localStorage.setItem('tj_tax_docs', JSON.stringify(TAX_DOCS)); } catch(e) {}
+        renderTaxDocs();
+      }
+    });
+  }
+}
+
+function removeTaxDoc(id) {
+  TAX_DOCS = TAX_DOCS.filter(d => d.id !== id);
+  if (tjDbRef) { tjDbRef.child('taxes/docs/' + id).remove(); tjDbRef.child('taxes/rawFiles/' + id).remove(); }
+  try { localStorage.setItem('tj_tax_docs', JSON.stringify(TAX_DOCS)); } catch(e) {}
+  renderTaxDocs();
+}
+
+async function reprocessTaxDoc(id) {
+  if (!tjDbRef) { showTaxStatus('Firebase not connected — cannot re-process stored files.', 'error'); return; }
+  showTaxStatus('Re-processing...', 'success');
+  const snap = await tjDbRef.child('taxes/rawFiles/' + id).once('value');
+  const csv = snap.val();
+  if (!csv) { showTaxStatus('Raw file not found in Firebase. Re-upload the CSV.', 'error'); return; }
+  importTaxCSV(csv);
+}
+
+function renderTaxDocs() {
+  const el = document.getElementById('taxDocuments');
+  if (!el) return;
+  const year = document.getElementById('taxYear').value;
+  const docs = TAX_DOCS.filter(d => d.year === year);
+  if (docs.length === 0) { el.innerHTML = ''; return; }
+  let html = '<div style="background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius2);padding:12px;margin-bottom:4px">';
+  html += '<div style="font-size:12px;color:var(--tx2);font-weight:600;margin-bottom:8px">UPLOADED DOCUMENTS (' + docs.length + ')</div>';
+  html += '<table style="width:100%;font-size:12px"><tbody>';
+  docs.forEach(d => {
+    const sizeKB = (d.size / 1024).toFixed(0);
+    const date = d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString('en-GB') : '—';
+    html += `<tr style="border-bottom:1px solid var(--bg3)">
+      <td style="padding:4px 8px"><strong>${d.name}</strong></td>
+      <td style="padding:4px 8px;color:var(--blue)">${d.exchange}</td>
+      <td style="padding:4px 8px;color:var(--tx2)">${d.rows} rows</td>
+      <td style="padding:4px 8px;color:var(--tx3)">${sizeKB} KB</td>
+      <td style="padding:4px 8px;color:var(--tx3)">${date}</td>
+      <td style="padding:4px 4px;text-align:right">
+        <button class="btn" onclick="reprocessTaxDoc('${d.id}')" style="font-size:10px;padding:2px 6px" title="Re-import from stored file">↻</button>
+        <button class="btn btn-danger" onclick="removeTaxDoc('${d.id}')" style="font-size:10px;padding:2px 6px">✕</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
 function clearTaxData() {
-  if (!confirm('Clear ALL tax data for ' + document.getElementById('taxYear').value + '?')) return;
+  if (!confirm('Clear ALL tax data for ' + document.getElementById('taxYear').value + '? Documents will be kept — you can re-process them.')) return;
   const year = document.getElementById('taxYear').value;
   TAX_TXS = []; TAX_LOTS = []; TAX_IMPORTS = {};
   try { localStorage.removeItem('tj_taxes_' + year); localStorage.removeItem('tj_taxes_meta_' + year); } catch(e) {}
-  if (tjDbRef) tjDbRef.child('taxes/' + year).remove();
+  if (tjDbRef) { tjDbRef.child('taxes/' + year + '/transactions').remove(); tjDbRef.child('taxes/' + year + '/lots').remove(); tjDbRef.child('taxes/' + year + '/imports').remove(); }
   renderTaxes();
-  showTaxStatus('Tax data cleared for ' + year + '. Re-import your CSVs.', 'success');
+  showTaxStatus('Tax data cleared for ' + year + '. Documents preserved — click ↻ to re-process.', 'success');
 }
 
 function purgeTaxYear() {
