@@ -4155,11 +4155,13 @@ function importTaxCSV(text) {
     runFIFO();
     saveTaxData();
     renderTaxes();
-    // Save document reference
-    if (importTaxCSV._currentFileName) {
-      saveTaxDoc(importTaxCSV._currentFileName, text, exName, newTxs.length);
-    } else {
-      saveTaxDoc(exName + '_' + year + '.csv', text, exName, newTxs.length);
+    // Save document reference (skip during auto-reprocessing)
+    if (!importTaxCSV._skipDocSave) {
+      if (importTaxCSV._currentFileName) {
+        saveTaxDoc(importTaxCSV._currentFileName, text, exName, newTxs.length);
+      } else {
+        saveTaxDoc(exName + '_' + year + '.csv', text, exName, newTxs.length);
+      }
     }
 
     showTaxStatus(`Imported ${newTxs.length} transactions from ${exName} (${year}). Detected format: ${exchange}.`, 'success');
@@ -4313,60 +4315,53 @@ function computeTaxSummary() {
 }
 
 // ── Persistence ──
+// Strategy: save ONLY metadata + imports to storage. Raw CSVs are in Firebase.
+// On page load, auto-reprocess from stored CSVs if transactions are empty.
 function saveTaxData() {
   const year = document.getElementById('taxYear').value;
-  // Save summary + imports to localStorage (small), full data to Firebase only
-  const summary = { imports: TAX_IMPORTS, txCount: TAX_TXS.length, lotsCount: TAX_LOTS.length, savedAt: Date.now() };
-  try { localStorage.setItem('tj_taxes_meta_' + year, JSON.stringify(summary)); } catch(e) { console.warn('localStorage meta save failed:', e); }
-  // Try saving full data to localStorage — if too big, just skip (Firebase is primary)
-  try {
-    const data = { transactions: TAX_TXS, lots: TAX_LOTS, imports: TAX_IMPORTS };
-    localStorage.setItem('tj_taxes_' + year, JSON.stringify(data));
-  } catch(e) {
-    console.warn('localStorage full save too large, using Firebase only. Rows:', TAX_TXS.length);
-    try { localStorage.removeItem('tj_taxes_' + year); } catch(e2) {}
-  }
-  // Always save to Firebase (no size limit) — strip undefined values
-  if (tjDbRef) {
-    const cleanForFB = obj => JSON.parse(JSON.stringify(obj, (k,v) => v === undefined ? null : v));
-    const fbData = cleanForFB({ transactions: TAX_TXS, lots: TAX_LOTS, imports: TAX_IMPORTS });
-    tjDbRef.child('taxes/' + year).set(fbData).catch(e => console.warn('Firebase tax save failed:', e));
-  }
+  const meta = { imports: TAX_IMPORTS, txCount: TAX_TXS.length, lotsCount: TAX_LOTS.length, savedAt: Date.now() };
+  try { localStorage.setItem('tj_taxes_meta_' + year, JSON.stringify(meta)); } catch(e) {}
+  // Don't try to save 65K+ transactions — too large for localStorage AND Firebase single write
+  // Raw CSVs are already stored in Firebase (taxes/rawFiles/) via saveTaxDoc()
 }
 
 function loadTaxData() {
   const year = document.getElementById('taxYear').value;
-  // Try localStorage first
-  const saved = localStorage.getItem('tj_taxes_' + year);
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      TAX_TXS = (data.transactions || []).map(t => ({ ...t, date: new Date(t.date) }));
-      TAX_LOTS = data.lots || [];
-      TAX_IMPORTS = data.imports || {};
-      return;
-    } catch(e) { console.warn('localStorage parse failed:', e); }
-  }
-  // Check meta to see if data exists in Firebase
+  // Load metadata
   const meta = localStorage.getItem('tj_taxes_meta_' + year);
   if (meta) {
-    const m = JSON.parse(meta);
-    TAX_IMPORTS = m.imports || {};
-    // Data is in Firebase — will load async
+    try { const m = JSON.parse(meta); TAX_IMPORTS = m.imports || {}; } catch(e) {}
   } else {
     TAX_TXS = []; TAX_LOTS = []; TAX_IMPORTS = {};
   }
-  // Try Firebase
-  if (tjDbRef) {
-    tjDbRef.child('taxes/' + year).once('value', snap => {
-      const data = snap.val();
-      if (data && data.transactions) {
-        TAX_TXS = (Array.isArray(data.transactions) ? data.transactions : Object.values(data.transactions)).map(t => ({ ...t, date: new Date(t.date) }));
-        TAX_LOTS = data.lots ? (Array.isArray(data.lots) ? data.lots : Object.values(data.lots)) : [];
-        TAX_IMPORTS = data.imports || {};
-        renderTaxes();
+  // If we have documents but no transactions, auto-reprocess
+  if (TAX_TXS.length === 0 && TAX_DOCS.length > 0) {
+    autoReprocessDocs();
+  }
+}
+
+async function autoReprocessDocs() {
+  if (!tjDbRef) return;
+  const year = document.getElementById('taxYear').value;
+  const docs = TAX_DOCS.filter(d => d.year === year);
+  if (docs.length === 0) return;
+  showTaxStatus('Reloading ' + docs.length + ' stored documents...', 'success');
+  let loaded = 0;
+  for (const doc of docs) {
+    try {
+      const snap = await tjDbRef.child('taxes/rawFiles/' + doc.id).once('value');
+      const csv = snap.val();
+      if (csv) {
+        // Import without re-saving doc metadata
+        importTaxCSV._skipDocSave = true;
+        importTaxCSV(csv);
+        importTaxCSV._skipDocSave = false;
+        loaded++;
       }
-    });
+    } catch(e) { console.warn('Failed to reload doc:', doc.name, e); }
+  }
+  if (loaded > 0) {
+    showTaxStatus('Reloaded ' + loaded + ' documents (' + TAX_TXS.length + ' transactions). Data restored.', 'success');
   }
 }
 
