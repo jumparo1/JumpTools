@@ -639,7 +639,8 @@ tr:hover td{background:var(--bg2)}
       <div style="font-size:15px;font-weight:600;margin-bottom:4px">Drop exchange CSVs here</div>
       <div style="font-size:12px;color:var(--tx2)">Binance Spot · Bybit Spot · Kraken Trades — auto-detected</div>
     </div>
-    <input type="file" id="taxFileInput" accept=".csv" style="display:none" multiple>
+    <input type="file" id="taxFileInput" accept=".csv,.pdf" style="display:none" multiple>
+    <div class="import-status" id="taxImportStatus"></div>
     <div class="tax-import-badges" id="taxImportBadges"></div>
 
     <!-- Overview -->
@@ -4074,40 +4075,86 @@ function parseKrakenLedgerCSV(text) {
 }
 
 // ── Import handler ──
+function showTaxStatus(msg, type) {
+  const el = document.getElementById('taxImportStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'import-status ' + type;
+  // Auto-hide after 10s
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.className = 'import-status'; }, 10000);
+}
+
 function importTaxCSV(text) {
-  text = cleanCSV(text);
-  const exchange = detectExchangeCSV(text);
-  let txs = [];
-  if (exchange === 'binance_statements') txs = parseBinanceStatementsCSV(text);
-  else if (exchange === 'binance_spot') txs = parseBinanceCSV(text);
-  else if (exchange === 'binance_wallet') txs = parseBinanceWalletCSV(text);
-  else if (exchange === 'binance_futures') txs = parseBinanceFuturesCSV(text);
-  else if (exchange === 'binance_earn') txs = parseBinanceEarnCSV(text);
-  else if (exchange === 'bybit_spot') txs = parseBybitCSV(text);
-  else if (exchange === 'bybit_copytrading') txs = parseBybitCopytradingCSV(text);
-  else if (exchange === 'bybit_futures') txs = parseBybitFuturesCSV(text);
-  else if (exchange === 'bybit_wallet') txs = parseBybitWalletCSV(text);
-  else if (exchange === 'kraken_trades') txs = parseKrakenCSV(text);
-  else if (exchange === 'kraken_ledger') txs = parseKrakenLedgerCSV(text);
-  else { showImportStatus('Could not detect exchange format. Supported: Binance, Bybit, Kraken (spot, futures, wallet, earn).', 'error'); return; }
-  if (txs.length === 0) { showImportStatus('No transactions found in CSV.', 'error'); return; }
-  // Filter by tax year
-  const year = parseInt(document.getElementById('taxYear').value);
-  txs = txs.filter(t => t.date && t.date.getFullYear() === year);
-  // Add to unified ledger (dedupe by order_id if exists)
-  const existingIds = new Set(TAX_TXS.map(t => t.order_id).filter(Boolean));
-  const newTxs = txs.filter(t => !t.order_id || !existingIds.has(t.order_id));
-  TAX_TXS.push(...newTxs);
-  TAX_TXS.sort((a,b) => a.date - b.date);
-  // Track imports
-  const exName = exchange === 'kraken_ledger' ? 'Kraken' : exchange.charAt(0).toUpperCase() + exchange.slice(1);
-  TAX_IMPORTS[exName] = (TAX_IMPORTS[exName]||0) + newTxs.length;
-  // Run engines
-  classifyAllTransactions();
-  runFIFO();
-  saveTaxData();
-  renderTaxes();
-  showImportStatus(`Imported ${newTxs.length} trades from ${exName} (${year}).`, 'success');
+  try {
+    text = cleanCSV(text);
+    const exchange = detectExchangeCSV(text);
+    if (!exchange) {
+      showTaxStatus('Could not detect exchange format. Supported: Binance, Bybit, Kraken CSV files. PDFs are not supported — use them as reference only.', 'error');
+      return;
+    }
+    let txs = [];
+    if (exchange === 'binance_statements') txs = parseBinanceStatementsCSV(text);
+    else if (exchange === 'binance_spot') txs = parseBinanceCSV(text);
+    else if (exchange === 'binance_wallet') txs = parseBinanceWalletCSV(text);
+    else if (exchange === 'binance_futures') txs = parseBinanceFuturesCSV(text);
+    else if (exchange === 'binance_earn') txs = parseBinanceEarnCSV(text);
+    else if (exchange === 'bybit_spot') txs = parseBybitCSV(text);
+    else if (exchange === 'bybit_copytrading') txs = parseBybitCopytradingCSV(text);
+    else if (exchange === 'bybit_futures') txs = parseBybitFuturesCSV(text);
+    else if (exchange === 'bybit_wallet') txs = parseBybitWalletCSV(text);
+    else if (exchange === 'kraken_trades') txs = parseKrakenCSV(text);
+    else if (exchange === 'kraken_ledger') txs = parseKrakenLedgerCSV(text);
+    else { showTaxStatus('Unknown format: ' + exchange, 'error'); return; }
+
+    if (txs.length === 0) {
+      showTaxStatus('Parsed 0 transactions from detected format: ' + exchange + '. File may be empty or have unexpected structure.', 'error');
+      return;
+    }
+
+    // Filter by tax year — but auto-detect if all get filtered out
+    const year = parseInt(document.getElementById('taxYear').value);
+    const yearFiltered = txs.filter(t => t.date && t.date.getFullYear() === year);
+    if (yearFiltered.length === 0 && txs.length > 0) {
+      // Find what years ARE in the data
+      const years = [...new Set(txs.filter(t => t.date).map(t => t.date.getFullYear()))].sort();
+      showTaxStatus(`Parsed ${txs.length} transactions (${exchange}) but NONE match tax year ${year}. Data contains years: ${years.join(', ')}. Change the tax year dropdown and re-import.`, 'error');
+      return;
+    }
+    txs = yearFiltered;
+
+    // Dedupe by order_id
+    const existingIds = new Set(TAX_TXS.map(t => t.order_id).filter(Boolean));
+    const newTxs = txs.filter(t => !t.order_id || !existingIds.has(t.order_id));
+
+    if (newTxs.length === 0) {
+      showTaxStatus(`All ${txs.length} transactions from ${exchange} already imported (duplicates).`, 'error');
+      return;
+    }
+
+    TAX_TXS.push(...newTxs);
+    TAX_TXS.sort((a,b) => a.date - b.date);
+
+    // Track imports — use friendly name
+    const EXCHANGE_NAMES = {
+      'binance_statements': 'Binance', 'binance_spot': 'Binance', 'binance_wallet': 'Binance',
+      'binance_futures': 'Binance Futures', 'binance_earn': 'Binance',
+      'bybit_spot': 'Bybit', 'bybit_copytrading': 'Bybit CopyTrading',
+      'bybit_futures': 'Bybit Futures', 'bybit_wallet': 'Bybit',
+      'kraken_trades': 'Kraken', 'kraken_ledger': 'Kraken'
+    };
+    const exName = EXCHANGE_NAMES[exchange] || exchange;
+    TAX_IMPORTS[exName] = (TAX_IMPORTS[exName]||0) + newTxs.length;
+
+    classifyAllTransactions();
+    runFIFO();
+    saveTaxData();
+    renderTaxes();
+    showTaxStatus(`Imported ${newTxs.length} transactions from ${exName} (${year}). Detected format: ${exchange}.`, 'success');
+  } catch(e) {
+    console.error('Tax import error:', e);
+    showTaxStatus('Import error: ' + e.message + '. Check browser console for details.', 'error');
+  }
 }
 
 // ── Classification ──
@@ -4297,12 +4344,26 @@ function setupTaxDropZone() {
   dz.addEventListener('drop', e => {
     e.preventDefault(); dz.classList.remove('drag-over');
     for (let i = 0; i < e.dataTransfer.files.length; i++) {
-      const r = new FileReader(); r.onload = ev => importTaxCSV(ev.target.result); r.readAsText(e.dataTransfer.files[i]);
+      const file = e.dataTransfer.files[i];
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        showTaxStatus('PDF files cannot be imported — use them as reference. Drop CSV files only.', 'error');
+        continue;
+      }
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        showTaxStatus('Skipped "' + file.name + '" — only CSV files are supported.', 'error');
+        continue;
+      }
+      const r = new FileReader(); r.onload = ev => importTaxCSV(ev.target.result); r.readAsText(file);
     }
   });
   fi.addEventListener('change', e => {
     for (let i = 0; i < e.target.files.length; i++) {
-      const r = new FileReader(); r.onload = ev => importTaxCSV(ev.target.result); r.readAsText(e.target.files[i]);
+      const file = e.target.files[i];
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        showTaxStatus('PDF files cannot be imported — use them as reference. Drop CSV files only.', 'error');
+        continue;
+      }
+      const r = new FileReader(); r.onload = ev => importTaxCSV(ev.target.result); r.readAsText(file);
     }
   });
 }
