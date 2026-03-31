@@ -690,13 +690,35 @@ tr:hover td{background:var(--bg2)}
 
     <!-- Export -->
     <div class="sub-panel" id="taxpanel-export">
-      <div style="margin-top:12px;display:flex;flex-direction:column;gap:12px;max-width:500px">
-        <button class="btn btn-primary" onclick="exportTaxSummary()" style="padding:12px 20px">📋 Download Tax Summary (Appendix 5 ready)</button>
-        <button class="btn" onclick="exportFullLedger()" style="padding:12px 20px">📊 Download Full Transaction Ledger (CSV)</button>
-        <button class="btn" onclick="exportUnresolved()" style="padding:12px 20px">⚠️ Download Unresolved Items</button>
-        <div style="font-size:12px;color:var(--tx2);margin-top:8px">
-          Tip: File electronically by March 31 for a 5% discount (up to 500 BGN).<br>
-          EUR→BGN fixed rate: 1.95583. All amounts converted automatically.
+      <div style="margin-top:12px;max-width:700px">
+        <h3 class="section-title">Accountant Package</h3>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-primary" onclick="exportAppendix5()" style="padding:12px 20px">🇧🇬 Приложение 5 — готово за попълване (BG/EN)</button>
+          <button class="btn" onclick="exportTaxSummary()" style="padding:12px 20px">📋 Tax Summary (English — for accountant review)</button>
+          <button class="btn" onclick="exportFullLedger()" style="padding:12px 20px">📊 Full Transaction Ledger (CSV — all trades)</button>
+          <button class="btn" onclick="exportAccountantLetter()" style="padding:12px 20px">📝 Accountant Cover Letter (BG)</button>
+          <button class="btn" onclick="exportUnresolved()" style="padding:12px 20px">⚠️ Unresolved Items</button>
+        </div>
+
+        <div class="insight-card" style="border-left-color:var(--purple);margin-top:20px">
+          <h4>How to file (Как се подава)</h4>
+          <p>
+            <strong>1.</strong> Go to <a href="https://nra.bg" target="_blank">nra.bg</a> → Годишна данъчна декларация по чл. 50<br>
+            <strong>2.</strong> Fill in <strong>Приложение 5, Част I, Таблица 2, Код 508</strong><br>
+            <strong>3.</strong> Enter the values from the Appendix 5 export above:<br>
+            &nbsp;&nbsp;• Колона 3 (Продажна цена) = Total disposal proceeds in BGN<br>
+            &nbsp;&nbsp;• Колона 4 (Цена на придобиване) = Total acquisition costs in BGN<br>
+            &nbsp;&nbsp;• Колона 5 (Печалба) = Net gain in BGN (if positive)<br>
+            &nbsp;&nbsp;• Колона 6 (Загуба) = Net loss in BGN (if negative)<br>
+            <strong>4.</strong> The system auto-applies the 10% expense deduction (чл. 33, ал. 3 ЗДДФЛ)<br>
+            <strong>5.</strong> Pay 10% tax on the result<br>
+            <strong>6.</strong> File by <strong>March 31</strong> electronically for 5% discount (up to 500 лв)
+          </p>
+        </div>
+
+        <div style="font-size:12px;color:var(--tx3);margin-top:12px">
+          EUR→BGN fixed rate: 1.95583 (Currency Board). FIFO method for cost basis.<br>
+          Legal basis: чл. 33 ЗДДФЛ, Приложение 5, Формуляр 200.
         </div>
       </div>
     </div>
@@ -4282,6 +4304,178 @@ function exportUnresolved() {
     t.date ? t.date.toISOString() : '', t.exchange, t.side, t.asset, t.amount, (t.notes||'').replace(/,/g,';')
   ].join(','));
   downloadText('tax_unresolved_' + year + '.csv', headers + '\n' + rows.join('\n'));
+}
+
+function exportAppendix5() {
+  const s = computeTaxSummary();
+  const year = s.year;
+  const rate = EUR_BGN;
+  // Calculate Appendix 5 fields in BGN
+  const totalDisposals = TAX_TXS.filter(t => t.status === 'taxable_disposal');
+  const totalDisposalProceedsBGN = totalDisposals.reduce((sum, t) => {
+    const priceEur = t.disposal_price_eur || (t.price_unit * (getEurUsdRate()||0.92));
+    return sum + (t.amount * priceEur * rate);
+  }, 0);
+  const totalAcquisitionCostBGN = totalDisposals.reduce((sum, t) => sum + ((t.cost_basis_eur||0) * rate), 0);
+  const spotGainsBGN = s.total_gains_eur * rate;
+  const spotLossesBGN = s.total_losses_eur * rate;
+  const spotNetBGN = s.spot_net_eur * rate;
+  const futuresNetBGN = s.futures_net_eur * rate;
+  const combinedNetBGN = s.net_eur * rate;
+  const deductionBGN = s.expense_deduction_eur * rate;
+  const taxableIncomeBGN = s.taxable_income_bgn;
+  const taxOwedBGN = s.tax_owed_bgn;
+
+  const lines = [
+    '═══════════════════════════════════════════════════════════',
+    'ПРИЛОЖЕНИЕ 5 — ДОХОДИ ОТ ПРОДАЖБА НА ФИНАНСОВИ АКТИВИ',
+    'APPENDIX 5 — INCOME FROM SALE OF FINANCIAL ASSETS',
+    '═══════════════════════════════════════════════════════════',
+    'Данъчна година / Tax Year: ' + year,
+    'Формуляр 200, Приложение 5, Част I, Таблица 2, Код 508',
+    'Form 200, Appendix 5, Part I, Table 2, Code 508',
+    '',
+    '───────────────────────────────────────────────────────────',
+    'СТОЙНОСТИ ЗА ПОПЪЛВАНЕ / VALUES TO ENTER',
+    '───────────────────────────────────────────────────────────',
+    '',
+    'Колона 1 (Вид актив / Asset Type):',
+    '  Виртуални валути (криптовалути) / Virtual currencies (cryptocurrency)',
+    '',
+    'Колона 3 (Продажна цена / Sale Price):',
+    '  ' + totalDisposalProceedsBGN.toFixed(2) + ' лв. / BGN',
+    '  (' + (totalDisposalProceedsBGN / rate).toFixed(2) + ' EUR × 1.95583)',
+    '',
+    'Колона 4 (Цена на придобиване / Acquisition Cost):',
+    '  ' + totalAcquisitionCostBGN.toFixed(2) + ' лв. / BGN',
+    '  (' + (totalAcquisitionCostBGN / rate).toFixed(2) + ' EUR × 1.95583)',
+    '',
+  ];
+  if (combinedNetBGN >= 0) {
+    lines.push(
+      'Колона 5 (Печалба / Profit):',
+      '  ' + combinedNetBGN.toFixed(2) + ' лв. / BGN',
+      '',
+      'Колона 6 (Загуба / Loss):',
+      '  0.00 лв. / BGN',
+    );
+  } else {
+    lines.push(
+      'Колона 5 (Печалба / Profit):',
+      '  0.00 лв. / BGN',
+      '',
+      'Колона 6 (Загуба / Loss):',
+      '  ' + Math.abs(combinedNetBGN).toFixed(2) + ' лв. / BGN',
+    );
+  }
+  lines.push(
+    '',
+    '───────────────────────────────────────────────────────────',
+    'РАЗБИВКА / BREAKDOWN',
+    '───────────────────────────────────────────────────────────',
+    '',
+    'СПОТ ТЪРГОВИЯ / SPOT TRADING',
+    '  Печалби / Gains:     ' + spotGainsBGN.toFixed(2) + ' лв. (' + s.total_gains_eur.toFixed(2) + ' EUR)',
+    '  Загуби / Losses:    -' + spotLossesBGN.toFixed(2) + ' лв. (' + s.total_losses_eur.toFixed(2) + ' EUR)',
+    '  Нетен / Net:         ' + spotNetBGN.toFixed(2) + ' лв. (' + s.spot_net_eur.toFixed(2) + ' EUR)',
+    '  Брой сделки / Disposals: ' + s.total_disposals,
+  );
+  if (s.futures_count > 0) {
+    lines.push(
+      '',
+      'ДЕРИВАТИ / FUTURES & DERIVATIVES',
+      '  Печалби / Gains:     ' + (s.futures_gains_eur * rate).toFixed(2) + ' лв. (' + s.futures_gains_eur.toFixed(2) + ' EUR)',
+      '  Загуби / Losses:    -' + (s.futures_losses_eur * rate).toFixed(2) + ' лв. (' + s.futures_losses_eur.toFixed(2) + ' EUR)',
+      '  Нетен / Net:         ' + futuresNetBGN.toFixed(2) + ' лв. (' + s.futures_net_eur.toFixed(2) + ' EUR)',
+      '  Брой сделки / Trades: ' + s.futures_count,
+      '  ⚠️ Консултирайте се със счетоводител за класификацията на деривати',
+      '  ⚠️ Consult accountant on derivatives classification',
+    );
+  }
+  if (s.earn_count > 0) {
+    lines.push('', 'СТЕЙКИНГ / EARN: ' + s.earn_count + ' събития (цена на придобиване 0 лв.)');
+  }
+  lines.push(
+    '',
+    '───────────────────────────────────────────────────────────',
+    'ИЗЧИСЛЕНИЕ НА ДАНЪКА / TAX CALCULATION',
+    '───────────────────────────────────────────────────────────',
+    '',
+    'Общ нетен доход / Combined net:         ' + combinedNetBGN.toFixed(2) + ' лв.',
+    '10% нормативни разходи (чл.33 ал.3):   -' + deductionBGN.toFixed(2) + ' лв.',
+    'Данъчна основа / Taxable income:         ' + taxableIncomeBGN.toFixed(2) + ' лв.',
+    'Данък 10% / Tax owed:                    ' + taxOwedBGN.toFixed(2) + ' лв.',
+    '',
+    '═══════════════════════════════════════════════════════════',
+    'Курс EUR/BGN: 1.95583 (фиксиран / Currency Board)',
+    'Курс EUR/USD: ' + (getEurUsdRate()||0.92),
+    'Метод: FIFO (първи влязъл, първи излязъл)',
+    'Трансфери между собствени сметки: ' + s.transfers + ' (необлагаеми)',
+    'Неразрешени записи: ' + s.unresolved,
+    'Генерирано / Generated: ' + new Date().toISOString().slice(0,10),
+    '',
+    'ВНИМАНИЕ: Този документ е генериран автоматично.',
+    'Консултирайте се с лицензиран счетоводител преди подаване.',
+    'WARNING: Auto-generated. Consult a licensed accountant before filing.',
+  );
+  downloadText('Prilozhenie5_' + year + '.txt', lines.join('\n'));
+}
+
+function exportAccountantLetter() {
+  const s = computeTaxSummary();
+  const year = s.year;
+  const today = new Date().toLocaleDateString('bg-BG', {day:'numeric',month:'long',year:'numeric'});
+  const lines = [
+    'ДО: Счетоводител',
+    'ОТ: Борислав Йорданов',
+    'ДАТА: ' + today,
+    'ОТНОСНО: Годишна данъчна декларация ' + year + ' — доходи от криптовалути',
+    '',
+    '═══════════════════════════════════════════════════════════',
+    '',
+    'Уважаеми/а,',
+    '',
+    'Прилагам данните за моите сделки с криптовалути за ' + year + ' година',
+    'за целите на годишната данъчна декларация (Формуляр 200, Приложение 5).',
+    '',
+    'ОБОБЩЕНИЕ:',
+    '  • Общ брой транзакции: ' + s.total_txs,
+    '  • Облагаеми продажби (спот): ' + s.total_disposals,
+    '  • Деривати (фючърси): ' + s.futures_count + ' сделки',
+    '  • Трансфери между собствени сметки: ' + s.transfers + ' (необлагаеми)',
+    '  • Стейкинг/Earn: ' + s.earn_count + ' събития',
+    '  • Нетен резултат: ' + (s.net_eur >= 0 ? '+' : '') + s.net_eur.toFixed(2) + ' EUR (' + s.taxable_income_bgn.toFixed(2) + ' лв. данъчна основа)',
+    '  • Изчислен данък (10%): ' + s.tax_owed_bgn.toFixed(2) + ' лв.',
+    '',
+    'БОРСИ (EXCHANGES):',
+    '  • Binance (binance.com) — спот търговия, фючърси, earn',
+    '  • Bybit (bybit.com) — спот търговия, copy trading, деривати',
+    '  • Kraken (kraken.com) — спот търговия, превод към Revolut',
+    '  • Revolut — получаване на фиат (EUR) от Kraken',
+    '',
+    'ПРИЛОЖЕНИ ФАЙЛОВЕ:',
+    '  1. Приложение 5 — готови стойности за попълване (Код 508)',
+    '  2. Пълен регистър на транзакциите (CSV)',
+    '  3. Неразрешени записи за преглед (ако има)',
+    '  4. Оригинални CSV файлове от борсите',
+    '',
+    'МЕТОД НА ИЗЧИСЛЕНИЕ:',
+    '  • FIFO (First-In, First-Out) за определяне на цена на придобиване',
+    '  • Курс EUR/BGN: 1.95583 (фиксиран)',
+    '  • 10% нормативно признати разходи (чл. 33, ал. 3 ЗДДФЛ)',
+    '  • Загубите са приспаднати от печалбите в рамките на годината',
+    '',
+    'ВЪПРОСИ ЗА ОБСЪЖДАНЕ:',
+    s.futures_count > 0 ? '  ⚠️ Класификация на доходи от деривати (фючърси/перпетуали)' : '',
+    s.unresolved > 0 ? '  ⚠️ ' + s.unresolved + ' неразрешени транзакции — нужен преглед' : '',
+    s.total_disposals > 100 ? '  ⚠️ Голям брой сделки (' + s.total_disposals + ') — възможна класификация като стопанска дейност (15%)' : '',
+    '',
+    'Моля, прегледайте данните и ме уведомете ако имате въпроси.',
+    '',
+    'С уважение,',
+    'Борислав Йорданов',
+  ].filter(l => l !== '');
+  downloadText('Accountant_Letter_' + year + '.txt', lines.join('\n'));
 }
 
 function downloadText(filename, content) {
