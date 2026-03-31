@@ -647,11 +647,166 @@ tr:hover td{background:var(--bg2)}
 
     <!-- Sub-tabs -->
     <div class="sub-tabs" style="margin-top:20px">
+      <button class="sub-tab" onclick="switchTaxTab('help')">❓ Help</button>
       <button class="sub-tab active" onclick="switchTaxTab('todo')">📋 To-Do</button>
       <button class="sub-tab" onclick="switchTaxTab('ledger')">Transaction Ledger</button>
       <button class="sub-tab" onclick="switchTaxTab('unresolved')">⚠️ Needs Review <span id="taxUnresolvedCount"></span></button>
       <button class="sub-tab" onclick="switchTaxTab('summary')">Tax Summary</button>
       <button class="sub-tab" onclick="switchTaxTab('export')">Export</button>
+    </div>
+
+    <!-- Help -->
+    <div class="sub-panel" id="taxpanel-help">
+      <div style="margin-top:12px;max-width:800px">
+
+        <div class="insight-card" style="border-left-color:var(--blue)">
+          <h4>What This Tool Does</h4>
+          <p>Calculates your Bulgarian crypto tax automatically. Import CSVs from your exchanges, it computes FIFO cost basis, classifies every transaction, and generates the exact numbers you need for your annual tax return (Form 200, Appendix 5, Code 508).</p>
+        </div>
+
+        <h3 class="section-title" style="margin-top:20px">Step-by-Step Workflow</h3>
+
+        <div class="insight-card">
+          <h4>Step 1 — Export CSVs from your exchanges</h4>
+          <p>
+            <strong>Binance:</strong><br>
+            • Spot trades: Orders → Spot Order → Trade History → Export<br>
+            • Deposits: Wallet → Transaction History → Deposit → Export<br>
+            • Withdrawals: Wallet → Transaction History → Withdrawal → Export<br>
+            • Futures: Orders → Futures Order → Trade History → Export<br>
+            • Earn: Wallet → Transaction History → Distribution → Export<br><br>
+            <strong>Bybit:</strong><br>
+            • Spot trades: Assets → Spot → Order History → Export<br>
+            • Futures: Derivatives → Order History → Trade History → Export<br>
+            • Copy Trading: Assets → Copy Trading → Asset Change Details → Export<br>
+            • Wallet: Assets → Transaction Log → Export<br><br>
+            <strong>Kraken:</strong><br>
+            • Trades: History → Export → select "Trades" → Export CSV<br>
+            • Ledger: History → Export → select "Ledgers" → Export CSV<br><br>
+            <strong>Important:</strong> Export the FULL YEAR (Jan 1 – Dec 31) for each tax year.
+          </p>
+        </div>
+
+        <div class="insight-card">
+          <h4>Step 2 — Import into this tool</h4>
+          <p>
+            • Select your tax year from the dropdown at the top<br>
+            • Drag & drop ALL your CSVs onto the import zone (or click to browse)<br>
+            • The tool auto-detects which exchange and type each file is<br>
+            • You can import multiple files at once<br>
+            • Check the import badges to confirm all sources are loaded
+          </p>
+        </div>
+
+        <div class="insight-card">
+          <h4>Step 3 — Review & classify</h4>
+          <p>
+            • Go to <strong>"Needs Review"</strong> tab<br>
+            • The tool auto-matches transfers between exchanges (e.g. Binance withdrawal → Kraken deposit)<br>
+            • Unmatched items need your input: click "Transfer", "Taxable", or "Buy" to classify<br>
+            • Red-flagged items = missing cost basis (tool treats as €0 — worst case for you)
+          </p>
+        </div>
+
+        <div class="insight-card">
+          <h4>Step 4 — Verify the numbers</h4>
+          <p>
+            • Go to <strong>"Tax Summary"</strong> tab<br>
+            • Check: Spot gains/losses, Futures P&L, Combined net, Tax owed<br>
+            • Cross-check against your exchange account summaries<br>
+            • If futures classification is unclear, your accountant will advise
+          </p>
+        </div>
+
+        <div class="insight-card">
+          <h4>Step 5 — Export for your accountant</h4>
+          <p>
+            • Go to <strong>"Export"</strong> tab<br>
+            • Download <strong>Приложение 5</strong> — ready-to-fill values in BGN (Code 508)<br>
+            • Download <strong>Accountant Cover Letter</strong> — Bulgarian summary with your name<br>
+            • Download <strong>Full Ledger CSV</strong> — every transaction for audit trail<br>
+            • Send all files + original exchange CSVs to your accountant
+          </p>
+        </div>
+
+        <div class="insight-card">
+          <h4>Step 6 — File with NRA</h4>
+          <p>
+            • Go to <a href="https://nra.bg" target="_blank" style="color:var(--blue)">nra.bg</a><br>
+            • Годишна данъчна декларация по чл. 50 → Формуляр 200<br>
+            • Fill in <strong>Приложение 5, Част I, Таблица 2, Код 508</strong><br>
+            • Enter: Колона 3 = продажна цена, Колона 4 = цена на придобиване<br>
+            • The system auto-calculates Колона 5 (печалба) or Колона 6 (загуба)<br>
+            • 10% expense deduction is applied automatically<br>
+            • Pay the 10% tax owed<br>
+            • <strong>Deadline: April 30</strong> (file by March 31 electronically = 5% discount up to 500 лв)
+          </p>
+        </div>
+
+        <h3 class="section-title" style="margin-top:24px">Key Concepts</h3>
+
+        <div class="insight-card" style="border-left-color:var(--purple)">
+          <h4>Bulgarian Crypto Tax Rules</h4>
+          <p>
+            <strong>Tax rate:</strong> 10% flat on net realized gains (individual)<br>
+            <strong>10% expense deduction:</strong> Automatically reduces your taxable income by 10% — no proof needed (чл. 33, ал. 3 ЗДДФЛ)<br>
+            <strong>Effective rate:</strong> 9% (10% tax on 90% of gains)<br>
+            <strong>Taxable events:</strong> Selling crypto for fiat, swapping crypto-to-crypto, paying with crypto<br>
+            <strong>NOT taxable:</strong> Holding, self-transfers between own wallets/exchanges<br>
+            <strong>Losses:</strong> Offset gains within same year only — NO carry-forward to next year<br>
+            <strong>Professional trading (15%):</strong> If NRA classifies your activity as systematic (3+ trades) — discuss with accountant
+          </p>
+        </div>
+
+        <div class="insight-card" style="border-left-color:var(--green)">
+          <h4>FIFO Cost Basis</h4>
+          <p>
+            <strong>FIFO = First-In, First-Out.</strong> When you sell crypto, the tool matches it against your OLDEST purchase first.<br><br>
+            Example: You buy 1 BTC at €30,000, then buy 1 BTC at €40,000. You sell 1 BTC at €50,000.<br>
+            → Gain = €50,000 - €30,000 = <strong>€20,000</strong> (uses the oldest lot)<br><br>
+            The tool tracks all your acquisition "lots" and consumes them in order.
+          </p>
+        </div>
+
+        <div class="insight-card" style="border-left-color:var(--yellow)">
+          <h4>Transfer Detection</h4>
+          <p>
+            When you move crypto between your own exchanges (Binance → Kraken), it's NOT a taxable event.<br>
+            The tool auto-detects these by matching: same asset, similar amount (±2%), within 24h, different exchanges.<br>
+            If it can't match automatically, you'll see it in "Needs Review" — just click "Transfer" to classify it.
+          </p>
+        </div>
+
+        <div class="insight-card" style="border-left-color:var(--orange)">
+          <h4>Your Flow: Binance/Bybit → Kraken → Revolut</h4>
+          <p>
+            <strong>Trade</strong> on Binance & Bybit (taxable when you close positions)<br>
+            → <strong>Withdraw</strong> crypto to Kraken (self-transfer, NOT taxable)<br>
+            → <strong>Sell</strong> for EUR on Kraken (taxable disposal)<br>
+            → <strong>Withdraw</strong> EUR to Revolut (fiat movement, NOT taxable)<br><br>
+            The tool tracks each step and classifies correctly.
+          </p>
+        </div>
+
+        <h3 class="section-title" style="margin-top:24px">Supported CSV Formats</h3>
+
+        <div class="insight-card" style="border-left-color:var(--tx3)">
+          <h4>10 formats auto-detected</h4>
+          <p>
+            <strong>Binance:</strong> Spot trades, Deposits, Withdrawals, Futures, Earn/Distribution<br>
+            <strong>Bybit:</strong> Spot trades, Copy Trading, Futures/Derivatives, Transaction Log<br>
+            <strong>Kraken:</strong> Trades, Ledger (deposits/withdrawals/staking)<br><br>
+            Just drop any CSV — the tool figures out what it is. If it can't detect the format, you'll see an error message.
+          </p>
+        </div>
+
+        <div style="font-size:12px;color:var(--tx3);margin-top:20px;padding:12px;background:var(--bg2);border-radius:var(--radius)">
+          <strong>Disclaimer:</strong> This tool generates estimates for informational purposes. It is not tax advice.
+          Always consult a licensed Bulgarian accountant (счетоводител) before filing your tax return.
+          Keep all original exchange CSVs for at least 5 years — NRA can request them during an audit.
+        </div>
+
+      </div>
     </div>
 
     <!-- To-Do -->
