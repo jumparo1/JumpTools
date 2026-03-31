@@ -3539,17 +3539,46 @@ async function ensureEurUsdRate() {
   }
 }
 
+// ── Pre-processing ──
+function cleanCSV(text) {
+  // Strip BOM, normalize line endings
+  return text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+function parseDateFlex(s) {
+  if (!s) return null;
+  // Handle YY-MM-DD HH:MM:SS (Binance format)
+  const m = s.match(/^(\d{2})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (m) return new Date(2000 + parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5]), parseInt(m[6]));
+  // Handle YYYY-MM-DD HH:MM:SS
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (m2) return new Date(parseInt(m2[1]), parseInt(m2[2])-1, parseInt(m2[3]), parseInt(m2[4]), parseInt(m2[5]), parseInt(m2[6]));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+function stripUnits(v) {
+  // "0.126ZEC" → 0.126, "45.87156USDC" → 45.87156, "0.50125040 BNFCR" → 0.50125040
+  return parseFloat(String(v).replace(/[A-Za-z\s]+$/,'').replace(/[^0-9.\-]/g,'')) || 0;
+}
+function extractUnit(v) {
+  // "0.126ZEC" → "ZEC", "0.50125040 BNFCR" → "BNFCR"
+  const m = String(v).match(/[A-Za-z]+$/);
+  return m ? m[0].toUpperCase() : '';
+}
+
 // ── Exchange CSV Detection & Parsing ──
 function detectExchangeCSV(text) {
+  text = cleanCSV(text);
   const lower = text.slice(0, 1000).toLowerCase();
-  // Binance spot trades
-  if (lower.includes('date(utc)') && lower.includes('pair') && (lower.includes('executed') || lower.includes('filled'))) return 'binance_spot';
-  // Binance deposit/withdrawal (Transaction History)
-  if (lower.includes('coin') && lower.includes('network') && (lower.includes('txid') || lower.includes('address')) && (lower.includes('amount') || lower.includes('quantity'))) return 'binance_wallet';
-  // Binance futures
-  if (lower.includes('realized profit') || (lower.includes('symbol') && lower.includes('side') && lower.includes('position'))) return 'binance_futures';
-  // Binance earn/distribution
-  if (lower.includes('distribution') || (lower.includes('operation') && lower.includes('coin') && lower.includes('change'))) return 'binance_earn';
+  // Binance Transaction History / Statements (User ID, Time, Account, Operation, Coin, Change)
+  if ((lower.includes('user id') || lower.includes('user_id')) && lower.includes('operation') && lower.includes('coin') && lower.includes('change')) return 'binance_statements';
+  // Binance Futures Trade History (Uid, Time, Symbol, Side, Realized Profit)
+  if (lower.includes('realized profit') && lower.includes('symbol') && lower.includes('quantity')) return 'binance_futures';
+  // Binance Spot Trade History (Time, Pair, Side, Price, Executed, Amount, Fee)
+  if ((lower.includes('pair') || lower.includes('market')) && (lower.includes('executed') || lower.includes('filled')) && lower.includes('fee')) return 'binance_spot';
+  // Binance deposit/withdrawal (separate export with Network, TxID)
+  if (lower.includes('coin') && lower.includes('network') && (lower.includes('txid') || lower.includes('address'))) return 'binance_wallet';
+  // Binance earn/distribution (standalone)
+  if (lower.includes('distribution') && lower.includes('coin') && !lower.includes('operation')) return 'binance_earn';
   // Bybit copy trading (AssetChangeDetails)
   if (lower.includes('cash flow') && lower.includes('wallet balance') && lower.includes('filled price')) return 'bybit_copytrading';
   // Bybit spot
@@ -3568,25 +3597,28 @@ function detectExchangeCSV(text) {
 }
 
 function parseBinanceCSV(text) {
+  text = cleanCSV(text);
   const rows = parseCSVRows(text);
   if (rows.length < 2) return [];
-  const headers = rows[0].map(h => h.trim());
+  const headers = rows[0].map(h => h.trim().replace(/^\uFEFF/,''));
   const txs = [];
   for (let i = 1; i < rows.length; i++) {
     const vals = rows[i]; if (vals.length < 5) continue;
     const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
-    const dateStr = obj['Date(UTC)'] || obj['Date'] || '';
+    const dateStr = obj['Date(UTC)'] || obj['Date'] || obj['Time'] || '';
     if (!dateStr) continue;
+    const date = parseDateFlex(dateStr);
+    if (!date) continue;
     const [base, quote] = normPair(obj['Pair'] || obj['Market'] || '');
     const side = (obj['Side']||'').toUpperCase();
     const price = parseFloat(obj['Price']||0);
-    const qty = parseFloat((obj['Executed']||obj['Filled']||obj['Qty']||'0').replace(/[^0-9.]/g,''));
-    const total = parseFloat((obj['Amount']||obj['Total']||'0').replace(/[^0-9.]/g,'')) || qty * price;
-    const fee = parseFloat((obj['Fee']||'0').replace(/[^0-9.]/g,''));
-    const feeAsset = (obj['Fee Coin'] || obj['Fee Asset'] || quote).replace(/[^A-Za-z]/g,'');
+    const qty = stripUnits(obj['Executed']||obj['Filled']||obj['Qty']||'0');
+    const total = stripUnits(obj['Amount']||obj['Total']||'0') || qty * price;
+    const fee = stripUnits(obj['Fee']||'0');
+    const feeAsset = extractUnit(obj['Fee']||'') || obj['Fee Coin'] || obj['Fee Asset'] || quote;
     if (!qty || !base) continue;
     txs.push({
-      id: 'bnb_' + i + '_' + Date.now(), exchange: 'Binance', date: new Date(dateStr),
+      id: 'bnb_' + i + '_' + Date.now(), exchange: 'Binance', date,
       type: 'trade', asset: base, amount: qty, price_unit: price,
       quote, total_value: total, side: side === 'BUY' ? 'buy' : 'sell',
       fee_amount: fee, fee_asset: feeAsset, pair: base+'/'+quote,
@@ -3655,6 +3687,114 @@ function parseKrakenCSV(text) {
   return txs;
 }
 
+// ── Binance Transaction History / Statements Parser (multi-row grouping) ──
+function parseBinanceStatementsCSV(text) {
+  text = cleanCSV(text);
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim().replace(/"/g,'').replace(/^\uFEFF/,''));
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const vals = rows[i]; if (vals.length < 5) continue;
+    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim().replace(/"/g,''));
+    const timeVal = obj['UTC_Time'] || obj['Time'] || '';
+    if (!timeVal) continue;
+    entries.push({
+      date: parseDateFlex(timeVal),
+      account: obj['Account'] || 'Spot',
+      operation: obj['Operation'] || '',
+      coin: (obj['Coin']||'').toUpperCase(),
+      change: parseFloat(obj['Change'] || 0),
+      remark: obj['Remark'] || ''
+    });
+  }
+  // Group by timestamp to reconstruct trades
+  const byTime = {};
+  entries.forEach(e => {
+    const key = e.date.toISOString();
+    if (!byTime[key]) byTime[key] = [];
+    byTime[key].push(e);
+  });
+  const txs = [];
+  let idx = 0;
+  Object.entries(byTime).forEach(([timeKey, group]) => {
+    const date = new Date(timeKey);
+    const buys = group.filter(e => e.operation === 'Transaction Buy');
+    const spends = group.filter(e => e.operation === 'Transaction Spend');
+    const solds = group.filter(e => e.operation === 'Transaction Sold');
+    const revenues = group.filter(e => e.operation === 'Transaction Revenue');
+    const fees = group.filter(e => e.operation === 'Transaction Fee');
+    const deposits = group.filter(e => e.operation === 'Deposit');
+    const withdraws = group.filter(e => e.operation === 'Withdraw');
+    const recoveries = group.filter(e => e.operation === 'Asset Recovery');
+    const swaps = group.filter(e => e.operation.includes('Token Swap') || e.operation.includes('Distribution'));
+
+    // BUY trade: Transaction Buy + Transaction Spend (+ Fee)
+    if (buys.length > 0 && spends.length > 0) {
+      const buyAsset = buys[0].coin;
+      const buyQty = buys.reduce((s,e) => s + e.change, 0);
+      const spendAsset = spends[0].coin;
+      const spendTotal = Math.abs(spends.reduce((s,e) => s + e.change, 0));
+      const feeAmt = fees.reduce((s,e) => s + Math.abs(e.change), 0);
+      const feeAsset = fees.length > 0 ? fees[0].coin : spendAsset;
+      const price = buyQty > 0 ? spendTotal / buyQty : 0;
+      txs.push({
+        id: 'bnbs_' + (idx++) + '_' + Date.now(), exchange: 'Binance', date,
+        type: 'trade', asset: buyAsset, amount: buyQty, price_unit: price,
+        quote: spendAsset, total_value: spendTotal, side: 'buy',
+        fee_amount: feeAmt, fee_asset: feeAsset, pair: buyAsset + '/' + spendAsset,
+        order_id: '', status: '', notes: ''
+      });
+    }
+    // SELL trade: Transaction Sold + Transaction Revenue (+ Fee)
+    if (solds.length > 0 && revenues.length > 0) {
+      const soldAsset = solds[0].coin;
+      const soldQty = Math.abs(solds.reduce((s,e) => s + e.change, 0));
+      const revAsset = revenues[0].coin;
+      const revTotal = revenues.reduce((s,e) => s + e.change, 0);
+      const feeAmt = fees.reduce((s,e) => s + Math.abs(e.change), 0);
+      const feeAsset = fees.length > 0 ? fees[0].coin : revAsset;
+      const price = soldQty > 0 ? revTotal / soldQty : 0;
+      txs.push({
+        id: 'bnbs_' + (idx++) + '_' + Date.now(), exchange: 'Binance', date,
+        type: 'trade', asset: soldAsset, amount: soldQty, price_unit: price,
+        quote: revAsset, total_value: revTotal, side: 'sell',
+        fee_amount: feeAmt, fee_asset: feeAsset, pair: soldAsset + '/' + revAsset,
+        order_id: '', status: '', notes: ''
+      });
+    }
+    // Deposits
+    deposits.forEach(e => {
+      txs.push({
+        id: 'bnbs_' + (idx++) + '_' + Date.now(), exchange: 'Binance', date,
+        type: 'deposit', asset: e.coin, amount: Math.abs(e.change), price_unit: 0,
+        quote: '', total_value: 0, side: 'in', fee_amount: 0, fee_asset: '',
+        pair: '', order_id: '', status: '', notes: ''
+      });
+    });
+    // Withdrawals
+    withdraws.forEach(e => {
+      txs.push({
+        id: 'bnbs_' + (idx++) + '_' + Date.now(), exchange: 'Binance', date,
+        type: 'withdrawal', asset: e.coin, amount: Math.abs(e.change), price_unit: 0,
+        quote: '', total_value: 0, side: 'out', fee_amount: 0, fee_asset: '',
+        pair: '', order_id: '', status: '', notes: e.remark || ''
+      });
+    });
+    // Asset Recovery / Token Swaps / Distributions
+    [...recoveries, ...swaps].forEach(e => {
+      txs.push({
+        id: 'bnbs_' + (idx++) + '_' + Date.now(), exchange: 'Binance', date,
+        type: e.change > 0 ? 'earn' : 'dust', asset: e.coin, amount: Math.abs(e.change),
+        price_unit: 0, quote: '', total_value: 0, side: e.change > 0 ? 'in' : 'out',
+        fee_amount: 0, fee_asset: '', pair: '', order_id: '',
+        status: 'earn_income', notes: e.operation + (Math.abs(e.change) < 1 ? ' (dust)' : '')
+      });
+    });
+  });
+  return txs;
+}
+
 // ── Binance Deposit/Withdrawal Parser ──
 function parseBinanceWalletCSV(text) {
   const rows = parseCSVRows(text);
@@ -3685,30 +3825,42 @@ function parseBinanceWalletCSV(text) {
   return txs;
 }
 
-// ── Binance Futures Parser ──
+// ── Binance Futures Trade History Parser ──
+// Format: Uid,Time,Symbol,Side,Price,Quantity,Amount,Fee,Realized Profit,Buyer,Maker,Trade ID,Order ID
 function parseBinanceFuturesCSV(text) {
+  text = cleanCSV(text);
   const rows = parseCSVRows(text);
   if (rows.length < 2) return [];
-  const headers = rows[0].map(h => h.trim());
+  const headers = rows[0].map(h => h.trim().replace(/^\uFEFF/,''));
   const txs = [];
   for (let i = 1; i < rows.length; i++) {
-    const vals = rows[i]; if (vals.length < 4) continue;
+    const vals = rows[i]; if (vals.length < 6) continue;
     const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
-    const dateStr = obj['Date(UTC)'] || obj['Date'] || obj['Time'] || '';
+    const dateStr = obj['Time'] || obj['Date(UTC)'] || obj['Date'] || '';
     if (!dateStr) continue;
-    const symbol = (obj['Symbol'] || obj['Pair'] || '').replace('USDT','').replace('BUSD','');
-    const realizedPnl = parseFloat((obj['Realized Profit'] || obj['Realized PnL'] || obj['PnL'] || '0').replace(/[^0-9.-]/g,''));
+    const date = parseDateFlex(dateStr);
+    if (!date) continue;
+    const symbolRaw = obj['Symbol'] || obj['Pair'] || '';
+    const symbol = symbolRaw.replace(/USDT$|BUSD$|USD$/,'');
     const side = (obj['Side'] || '').toUpperCase();
-    const qty = Math.abs(parseFloat((obj['Qty'] || obj['Quantity'] || obj['Amount'] || '0').replace(/[^0-9.]/g,'')));
-    const price = parseFloat((obj['Price'] || obj['Avg Price'] || '0').replace(/[^0-9.]/g,''));
+    const price = parseFloat(obj['Price'] || 0);
+    const qty = parseFloat(obj['Quantity'] || obj['Qty'] || 0);
+    const amount = parseFloat(obj['Amount'] || 0) || qty * price;
+    const realizedPnl = parseFloat(obj['Realized Profit'] || obj['Realized PnL'] || '0');
+    // Fee format: "0.50125040 BNFCR" — amount + asset
+    const feeRaw = obj['Fee'] || obj['Commission'] || '0';
+    const feeAmount = stripUnits(feeRaw);
+    const feeAsset = extractUnit(feeRaw) || 'USDT';
+    const orderId = obj['Order ID'] || obj['Trade ID'] || '';
     txs.push({
-      id: 'bnbf_' + i + '_' + Date.now(), exchange: 'Binance Futures', date: new Date(dateStr),
+      id: 'bnbf_' + i + '_' + Date.now(), exchange: 'Binance Futures', date,
       type: 'futures', asset: symbol || 'UNKNOWN', amount: qty || 1, price_unit: price,
-      quote: 'USDT', total_value: Math.abs(realizedPnl), side: realizedPnl >= 0 ? 'sell' : 'buy',
-      fee_amount: parseFloat((obj['Fee'] || obj['Commission'] || '0').replace(/[^0-9.]/g,'')),
-      fee_asset: 'USDT', pair: symbol + '/USDT', order_id: obj['Order ID'] || '',
-      status: 'futures_pnl', realized_gain_eur: realizedPnl * (getEurUsdRate() || 0.92),
-      notes: 'Futures PnL: ' + (realizedPnl >= 0 ? '+' : '') + realizedPnl.toFixed(2) + ' USDT'
+      quote: 'USDT', total_value: amount, side: side === 'BUY' ? 'buy' : 'sell',
+      fee_amount: feeAmount, fee_asset: feeAsset, pair: symbolRaw,
+      order_id: orderId,
+      status: realizedPnl !== 0 ? 'futures_pnl' : 'futures_open',
+      realized_gain_eur: realizedPnl !== 0 ? realizedPnl * (getEurUsdRate() || 0.92) : undefined,
+      notes: realizedPnl !== 0 ? 'Futures PnL: ' + (realizedPnl >= 0 ? '+' : '') + realizedPnl.toFixed(4) + ' USDT' : ''
     });
   }
   return txs;
@@ -3923,9 +4075,11 @@ function parseKrakenLedgerCSV(text) {
 
 // ── Import handler ──
 function importTaxCSV(text) {
+  text = cleanCSV(text);
   const exchange = detectExchangeCSV(text);
   let txs = [];
-  if (exchange === 'binance_spot') txs = parseBinanceCSV(text);
+  if (exchange === 'binance_statements') txs = parseBinanceStatementsCSV(text);
+  else if (exchange === 'binance_spot') txs = parseBinanceCSV(text);
   else if (exchange === 'binance_wallet') txs = parseBinanceWalletCSV(text);
   else if (exchange === 'binance_futures') txs = parseBinanceFuturesCSV(text);
   else if (exchange === 'binance_earn') txs = parseBinanceEarnCSV(text);
