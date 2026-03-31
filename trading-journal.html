@@ -4314,9 +4314,10 @@ function saveTaxData() {
     console.warn('localStorage full save too large, using Firebase only. Rows:', TAX_TXS.length);
     try { localStorage.removeItem('tj_taxes_' + year); } catch(e2) {}
   }
-  // Always save to Firebase (no size limit)
+  // Always save to Firebase (no size limit) — strip undefined values
   if (tjDbRef) {
-    const fbData = { transactions: TAX_TXS, lots: TAX_LOTS, imports: TAX_IMPORTS };
+    const cleanForFB = obj => JSON.parse(JSON.stringify(obj, (k,v) => v === undefined ? null : v));
+    const fbData = cleanForFB({ transactions: TAX_TXS, lots: TAX_LOTS, imports: TAX_IMPORTS });
     tjDbRef.child('taxes/' + year).set(fbData).catch(e => console.warn('Firebase tax save failed:', e));
   }
 }
