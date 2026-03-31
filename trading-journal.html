@@ -4303,21 +4303,57 @@ function computeTaxSummary() {
 // ── Persistence ──
 function saveTaxData() {
   const year = document.getElementById('taxYear').value;
-  const data = { transactions: TAX_TXS, lots: TAX_LOTS, imports: TAX_IMPORTS };
-  localStorage.setItem('tj_taxes_' + year, JSON.stringify(data));
-  if (tjDbRef) tjDbRef.child('taxes/' + year).set(data);
+  // Save summary + imports to localStorage (small), full data to Firebase only
+  const summary = { imports: TAX_IMPORTS, txCount: TAX_TXS.length, lotsCount: TAX_LOTS.length, savedAt: Date.now() };
+  try { localStorage.setItem('tj_taxes_meta_' + year, JSON.stringify(summary)); } catch(e) { console.warn('localStorage meta save failed:', e); }
+  // Try saving full data to localStorage — if too big, just skip (Firebase is primary)
+  try {
+    const data = { transactions: TAX_TXS, lots: TAX_LOTS, imports: TAX_IMPORTS };
+    localStorage.setItem('tj_taxes_' + year, JSON.stringify(data));
+  } catch(e) {
+    console.warn('localStorage full save too large, using Firebase only. Rows:', TAX_TXS.length);
+    try { localStorage.removeItem('tj_taxes_' + year); } catch(e2) {}
+  }
+  // Always save to Firebase (no size limit)
+  if (tjDbRef) {
+    const fbData = { transactions: TAX_TXS, lots: TAX_LOTS, imports: TAX_IMPORTS };
+    tjDbRef.child('taxes/' + year).set(fbData).catch(e => console.warn('Firebase tax save failed:', e));
+  }
 }
 
 function loadTaxData() {
   const year = document.getElementById('taxYear').value;
+  // Try localStorage first
   const saved = localStorage.getItem('tj_taxes_' + year);
   if (saved) {
-    const data = JSON.parse(saved);
-    TAX_TXS = (data.transactions || []).map(t => ({ ...t, date: new Date(t.date) }));
-    TAX_LOTS = data.lots || [];
-    TAX_IMPORTS = data.imports || {};
+    try {
+      const data = JSON.parse(saved);
+      TAX_TXS = (data.transactions || []).map(t => ({ ...t, date: new Date(t.date) }));
+      TAX_LOTS = data.lots || [];
+      TAX_IMPORTS = data.imports || {};
+      return;
+    } catch(e) { console.warn('localStorage parse failed:', e); }
+  }
+  // Check meta to see if data exists in Firebase
+  const meta = localStorage.getItem('tj_taxes_meta_' + year);
+  if (meta) {
+    const m = JSON.parse(meta);
+    TAX_IMPORTS = m.imports || {};
+    // Data is in Firebase — will load async
   } else {
     TAX_TXS = []; TAX_LOTS = []; TAX_IMPORTS = {};
+  }
+  // Try Firebase
+  if (tjDbRef) {
+    tjDbRef.child('taxes/' + year).once('value', snap => {
+      const data = snap.val();
+      if (data && data.transactions) {
+        TAX_TXS = (Array.isArray(data.transactions) ? data.transactions : Object.values(data.transactions)).map(t => ({ ...t, date: new Date(t.date) }));
+        TAX_LOTS = data.lots ? (Array.isArray(data.lots) ? data.lots : Object.values(data.lots)) : [];
+        TAX_IMPORTS = data.imports || {};
+        renderTaxes();
+      }
+    });
   }
 }
 
