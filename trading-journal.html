@@ -640,6 +640,10 @@ tr:hover td{background:var(--bg2)}
       <div style="font-size:12px;color:var(--tx2)">Binance Spot · Bybit Spot · Kraken Trades — auto-detected</div>
     </div>
     <input type="file" id="taxFileInput" accept=".csv,.pdf" style="display:none" multiple>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="btn btn-danger" onclick="clearTaxData()" style="font-size:12px;padding:4px 12px">Clear All Tax Data</button>
+      <button class="btn" onclick="purgeTaxYear()" style="font-size:12px;padding:4px 12px">Purge non-selected year data</button>
+    </div>
     <div class="import-status" id="taxImportStatus"></div>
     <div class="tax-import-badges" id="taxImportBadges"></div>
 
@@ -4631,6 +4635,29 @@ function renderTaxTodo() {
     Keep all CSVs for 5 years — NRA can request them.</p>
   </div>`;
   document.getElementById('taxTodoList').innerHTML = html;
+}
+
+function clearTaxData() {
+  if (!confirm('Clear ALL tax data for ' + document.getElementById('taxYear').value + '?')) return;
+  const year = document.getElementById('taxYear').value;
+  TAX_TXS = []; TAX_LOTS = []; TAX_IMPORTS = {};
+  try { localStorage.removeItem('tj_taxes_' + year); localStorage.removeItem('tj_taxes_meta_' + year); } catch(e) {}
+  if (tjDbRef) tjDbRef.child('taxes/' + year).remove();
+  renderTaxes();
+  showTaxStatus('Tax data cleared for ' + year + '. Re-import your CSVs.', 'success');
+}
+
+function purgeTaxYear() {
+  const year = parseInt(document.getElementById('taxYear').value);
+  const before = TAX_TXS.length;
+  TAX_TXS = TAX_TXS.filter(t => t.date && t.date.getFullYear() === year);
+  const removed = before - TAX_TXS.length;
+  if (removed === 0) { showTaxStatus('No out-of-year data found. All ' + TAX_TXS.length + ' transactions are from ' + year + '.', 'success'); return; }
+  classifyAllTransactions();
+  runFIFO();
+  saveTaxData();
+  renderTaxes();
+  showTaxStatus('Purged ' + removed + ' transactions outside ' + year + '. Kept ' + TAX_TXS.length + '.', 'success');
 }
 
 function switchTaxTab(tab) {
