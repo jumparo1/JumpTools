@@ -1791,18 +1791,8 @@ tbody tr:hover { background: var(--bg3); }
       <div id="roadmap-list"></div>
     </div>
 
-    <!-- ===== PROGRESS ===== -->
-    <div id="page-progress" class="page hidden">
-      <div class="page-header">
-        <h1>Progress</h1>
-        <p>Daily log of features built and work completed</p>
-        <div class="header-actions">
-          <button class="btn btn-primary admin-only" onclick="openProgressModal()">+ Log Today</button>
-        </div>
-      </div>
-      <div id="progress-stats" style="margin-bottom:20px;"></div>
-      <div id="progress-timeline"></div>
-    </div>
+    <!-- Progress removed — use Docs > Changelog instead -->
+    <div id="page-progress" class="page hidden"></div>
 
     <!-- ===== MARKET DATA ===== -->
     <div id="page-marketdata" class="page hidden">
@@ -2735,9 +2725,6 @@ tbody tr:hover { background: var(--bg3); }
             <div class="docs-nav-item" onclick="docsNav('changelog')">
               <span class="docs-nav-icon">&#128220;</span> Changelog
             </div>
-            <div class="docs-nav-item" onclick="docsNav('progress')">
-              <span class="docs-nav-icon">&#128197;</span> Progress
-            </div>
           </div>
 
           <div class="docs-nav-group">
@@ -3591,6 +3578,19 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
             <div class="docs-body">
 
               <div class="docs-changelog-entry">
+                <div class="docs-changelog-date">April 3, 2026</div>
+                <ul>
+                  <li><strong>Trend Reversal Probability Engine</strong> &mdash; New card on Macro Intelligence: computes 0-100% reversal probability from 4 weighted factors (Liquidity 30%, Trend Structure 30%, Catalysts 20%, Historical 20%). Threshold-crossing alerts at 50% and 70%</li>
+                  <li><strong>Cross-Asset Weinstein Stages</strong> &mdash; Fetches 2Y weekly prices from Yahoo Finance for BTC, SPX, GOLD, BRENT, DXY, ETH. Runs Weinstein Stage 1/2/3/4 classification on each. Cross-asset confluence strengthens reversal signals. Stage chips displayed on card</li>
+                  <li><strong>Watchdog System</strong> &mdash; New launchd service (com.fundhq.watchdog) runs every 5min: checks daemon + server process health, HTTP health endpoint, Firebase heartbeat freshness. Auto-restarts + Firebase alerts on any failure</li>
+                  <li><strong>Morning Intelligence Scheduled</strong> &mdash; Daily 5 AM CET remote agent: reads all Firebase data (regime, reversal, stages, movers, signals, catalysts), writes structured briefing alert. Replaces sentinel daily spam</li>
+                  <li><strong>Alert Cleanup</strong> &mdash; Deleted 759 duplicate alerts (800 &rarr; 41). Removed push_alert from sentinel daily summary (was firing every cycle instead of once/day). Morning intelligence now sole daily alert source</li>
+                  <li><strong>Full QA Audit</strong> &mdash; 10 bugs fixed across daemon, workers, shared modules: stage transition falsy check, teach box IDs (analyst&rarr;researcher, sentinel&rarr;onchain), bare except blocks, unsafe dict merge, empty list access, hardcoded array range, division by zero, schema mismatch, retry timeout cap (90s), UNKNOWN regime conviction downgrade, write protection exception handling</li>
+                  <li><strong>Docs Cleanup</strong> &mdash; Merged Progress into Changelog. Single daily update log</li>
+                </ul>
+              </div>
+
+              <div class="docs-changelog-entry">
                 <div class="docs-changelog-date">April 2, 2026</div>
                 <ul>
                   <li><strong>Pamela Agent Updated</strong> &mdash; Removed ~200 lines of legacy dead code (old monolithic PAMELA_TOOLS, buildPamelaSystemPrompt, pamelaAgent). All routing now goes through AGENT_REGISTRY + runAgent()</li>
@@ -3805,7 +3805,6 @@ cd ~/deploy &amp;&amp; git add . &amp;&amp; git commit &amp;&amp; git push
           <section class="docs-section" id="docs-s-roadmap" style="display:none;"></section>
 
           <!-- PROGRESS (embedded from Operations) -->
-          <section class="docs-section" id="docs-s-progress" style="display:none;"></section>
 
         </div><!-- /docs-content -->
       </div><!-- /docs-layout -->
@@ -8085,7 +8084,7 @@ function showPage(pageName) {
     'about': function() { showPage('help'); setTimeout(function(){ docsNav('about'); }, 100); return true; },
     'tasks': function() { showPage('help'); setTimeout(function(){ docsNav('tasks'); }, 100); return true; },
     'roadmap': function() { showPage('help'); setTimeout(function(){ docsNav('roadmap'); }, 100); return true; },
-    'progress': function() { showPage('help'); setTimeout(function(){ docsNav('progress'); }, 100); return true; },
+    'progress': function() { showPage('help'); setTimeout(function(){ docsNav('changelog'); }, 100); return true; },
     'projects': function() { showPage('watchlist'); return true; },
     'templates': function() { showPage('reports'); setTimeout(function(){ switchReportTab('templates'); }, 100); return true; }
   };
