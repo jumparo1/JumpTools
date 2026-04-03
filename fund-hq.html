@@ -1163,6 +1163,33 @@ tbody tr:hover { background: var(--bg3); }
             <div id="macro-briefing-risk-text" style="font-size:12px;color:var(--text2);line-height:1.6;"></div>
           </div>
         </div>
+
+        <!-- Trend Reversal Probability Card -->
+        <div class="card" style="padding:0;margin-bottom:16px;overflow:hidden;" id="macro-reversal-card">
+          <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;">&#x21C5;</div>
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--text);">Trend Reversal Probability</div>
+                <div id="macro-reversal-updated" style="font-size:11px;color:var(--text3);">--</div>
+              </div>
+            </div>
+            <div id="macro-reversal-conviction" style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.5px;background:var(--bg3);color:var(--text3);">--</div>
+          </div>
+          <div style="padding:24px 20px;display:flex;align-items:center;gap:24px;">
+            <div style="text-align:center;min-width:100px;">
+              <div id="macro-reversal-pct" style="font-size:48px;font-weight:800;color:var(--text);">--</div>
+              <div id="macro-reversal-direction" style="font-size:13px;font-weight:600;margin-top:4px;">--</div>
+            </div>
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div id="macro-reversal-factor-liquidity"></div>
+              <div id="macro-reversal-factor-trend"></div>
+              <div id="macro-reversal-factor-catalysts"></div>
+              <div id="macro-reversal-factor-historical"></div>
+            </div>
+          </div>
+          <div id="macro-reversal-signals" style="padding:12px 20px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:6px;"></div>
+        </div>
       </div>
 
       <!-- FED & LIQUIDITY TAB -->
@@ -15424,6 +15451,7 @@ function macroLoadData() {
     {path: '/fundHQ/agentData/macro/latestNews', key: 'news'},
     {path: '/fundHQ/agentData/macro/regimeStats', key: 'regimeStats'},
     {path: '/fundHQ/agentMemory/macro', key: 'memories'},
+    {path: '/fundHQ/agentData/macro/reversalProbability', key: 'reversal'},
   ];
 
   var fbUrl = 'https://fundhq-8feae-default-rtdb.europe-west1.firebasedatabase.app';
@@ -15650,6 +15678,75 @@ function macroRenderOverview() {
 
   var briefTime = document.getElementById('macro-briefing-time');
   if (briefTime && briefing.updated) briefTime.textContent = new Date(briefing.updated).toLocaleString();
+
+  // Reversal Probability Card
+  var rev = macroPageData.reversal || {};
+  var revCard = document.getElementById('macro-reversal-card');
+  if (revCard && rev.probability != null) {
+    var prob = rev.probability;
+    var dir = rev.direction || '';
+    var isBullish = dir.indexOf('bullish') > dir.indexOf('bearish');
+    var probColor;
+    if (isBullish) {
+      probColor = prob >= 60 ? 'var(--green)' : prob >= 40 ? 'var(--yellow)' : 'var(--text3)';
+    } else {
+      probColor = prob >= 60 ? 'var(--red)' : prob >= 40 ? 'var(--orange)' : 'var(--text3)';
+    }
+    var pctEl = document.getElementById('macro-reversal-pct');
+    if (pctEl) { pctEl.textContent = prob + '%'; pctEl.style.color = probColor; }
+    var dirEl = document.getElementById('macro-reversal-direction');
+    if (dirEl) {
+      var arrow = isBullish ? '\u2197' : '\u2198';
+      var dirLabel = isBullish ? 'Bullish Reversal' : 'Bearish Reversal';
+      dirEl.innerHTML = '<span style="font-size:18px;">' + arrow + '</span> ' + dirLabel;
+      dirEl.style.color = probColor;
+    }
+    var convEl = document.getElementById('macro-reversal-conviction');
+    if (convEl && rev.conviction) {
+      convEl.textContent = rev.conviction.toUpperCase();
+      var convColors = {high: 'var(--green)', medium: 'var(--yellow)', low: 'var(--orange)', very_low: 'var(--text3)'};
+      var cc = convColors[rev.conviction] || 'var(--text3)';
+      convEl.style.color = cc;
+      convEl.style.background = 'color-mix(in srgb, ' + cc + ' 15%, transparent)';
+    }
+    var revUpdEl = document.getElementById('macro-reversal-updated');
+    if (revUpdEl && rev.updated) revUpdEl.textContent = 'Updated ' + new Date(rev.updated).toLocaleString();
+    var factors = rev.factors || {};
+    var factorNames = ['liquidity', 'trend', 'catalysts', 'historical'];
+    var factorLabels = {liquidity: 'Liquidity', trend: 'Trend Structure', catalysts: 'Catalysts', historical: 'Historical'};
+    var factorWeights = {liquidity: '30%', trend: '30%', catalysts: '20%', historical: '20%'};
+    factorNames.forEach(function(name) {
+      var el = document.getElementById('macro-reversal-factor-' + name);
+      if (!el) return;
+      var f = factors[name] || {};
+      var s = f.score || 0;
+      var barColor = s >= 60 ? 'var(--green)' : s >= 40 ? 'var(--yellow)' : 'var(--text3)';
+      el.innerHTML =
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">' + factorLabels[name] + ' <span style="opacity:0.5;">(' + factorWeights[name] + ')</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div style="flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;">' +
+            '<div style="width:' + s + '%;height:100%;background:' + barColor + ';border-radius:3px;transition:width 0.3s;"></div>' +
+          '</div>' +
+          '<span style="font-size:12px;font-weight:700;color:' + barColor + ';min-width:28px;text-align:right;">' + s + '</span>' +
+        '</div>';
+    });
+    var sigEl = document.getElementById('macro-reversal-signals');
+    if (sigEl) {
+      var allSigs = [];
+      factorNames.forEach(function(name) {
+        var f = factors[name] || {};
+        (f.signals || []).slice(0, 1).forEach(function(s) { allSigs.push(s); });
+      });
+      if (allSigs.length > 0) {
+        sigEl.innerHTML = allSigs.map(function(s) {
+          return '<span style="background:var(--bg4);padding:4px 10px;border-radius:12px;font-size:11px;color:var(--text2);">' + esc(s) + '</span>';
+        }).join('');
+        sigEl.style.display = '';
+      } else {
+        sigEl.style.display = 'none';
+      }
+    }
+  }
 }
 
 function formatBriefingText(text) {
