@@ -9912,7 +9912,7 @@ function openModal(type, id) {
             <button class="${startInView ? 'active' : ''}" onclick="toggleReportView('view')">View</button>
             <button class="${startInView ? '' : 'active'} admin-only" onclick="toggleReportView('edit')">Edit</button>
           </div>` : ''}
-          ${r ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copyReportLink('${r.id}')" title="Copy shareable link" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;">Share</button>` : ''}
+          ${r ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copyReportLink('${r.id}',event)" title="Copy shareable link" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;">Share</button>` : ''}
         </div>
       </div>
       ${r ? `<div class="rv-meta">
@@ -12638,16 +12638,22 @@ function openImageLightbox(url) {
 }
 
 // ===== SHARE REPORT LINK =====
-function copyReportLink(id) {
+function copyReportLink(id, evt) {
   var url = location.origin + location.pathname + '#report/' + id;
-  navigator.clipboard.writeText(url).then(function() {
-    var btn = event.target.closest('button');
-    var orig = btn.innerHTML;
-    btn.innerHTML = '&#10003; Copied!';
-    setTimeout(function() { btn.innerHTML = orig; }, 2000);
-  }).catch(function() {
-    prompt('Copy this link:', url);
-  });
+  var btn = evt ? (evt.target.closest ? evt.target.closest('button') : evt.target) : null;
+  function onCopied() {
+    if (btn) { var orig = btn.innerHTML; btn.innerHTML = '&#10003; Copied!'; btn.style.color = 'var(--green)'; setTimeout(function() { btn.innerHTML = orig; btn.style.color = ''; }, 2000); }
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(onCopied).catch(function() { prompt('Copy this link:', url); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    onCopied();
+  }
 }
 
 // ===== SAVE REPORT =====
