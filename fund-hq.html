@@ -786,6 +786,7 @@ tbody tr:hover { background: var(--bg3); }
 
     <div class="nav-section"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--blue, #60a5fa);color:#000;font-size:8px;font-weight:700;text-align:center;line-height:14px;margin-right:5px;">V</span> VC</div>
     <div class="nav-item" data-page="vcwatchlist">VC Dashboard <span class="badge" id="badge-vc">0</span></div>
+    <div class="nav-item" data-page="vclibrary">VC Library <span class="badge" id="badge-vclibrary">0</span></div>
     <div class="nav-item" data-page="catalysts">Catalysts <span class="badge" id="badge-catalysts">0</span></div>
 
     <div class="nav-section"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--purple, #a78bfa);color:#000;font-size:8px;font-weight:700;text-align:center;line-height:14px;margin-right:5px;">O</span> On-Chain</div>
@@ -1622,6 +1623,58 @@ tbody tr:hover { background: var(--bg3); }
         <div class="template-grid" id="templates-list-embedded"></div>
         <div id="tpl-workspace-embedded" style="display:none;"></div>
       </div>
+    </div>
+
+    <!-- ===== VC LIBRARY ===== -->
+    <div id="page-vclibrary" class="page hidden">
+      <div class="page-header">
+        <h1>VC Library</h1>
+        <p>Internal intelligence database of venture firms — portfolios, thesis areas, and success tracking</p>
+      </div>
+
+      <!-- Overview Stats -->
+      <div id="vclib-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+      <!-- Controls: Search + Filters + Add -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+        <input id="vclib-search" type="text" placeholder="Search VCs, projects, tags..." style="flex:1;min-width:200px;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;" oninput="vclibRender()">
+        <select id="vclib-filter-tier" onchange="vclibRender()" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;">
+          <option value="all">All Tiers</option><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option>
+        </select>
+        <select id="vclib-filter-sector" onchange="vclibRender()" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;">
+          <option value="all">All Sectors</option><option value="DeFi">DeFi</option><option value="Infrastructure">Infrastructure</option><option value="AI">AI</option><option value="L1/L2">L1/L2</option><option value="DePIN">DePIN</option><option value="Consumer">Consumer</option><option value="Stablecoins">Stablecoins</option><option value="Privacy">Privacy</option><option value="Gaming">Gaming</option><option value="RWA">RWA</option>
+        </select>
+        <select id="vclib-sort" onchange="vclibRender()" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;">
+          <option value="score">Score ↓</option><option value="name">Name</option><option value="hitrate">Hit Rate ↓</option><option value="winners">Winners ↓</option><option value="projects">Projects ↓</option>
+        </select>
+        <button onclick="vclibShowAddForm()" style="padding:8px 14px;border-radius:6px;border:none;background:var(--accent);color:#fff;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;">+ Add VC</button>
+      </div>
+
+      <!-- Add VC Form (hidden by default) -->
+      <div id="vclib-add-form" style="display:none;background:var(--bg2);border-radius:10px;padding:20px;margin-bottom:20px;border:1px solid var(--border);">
+        <h3 style="margin-bottom:12px;font-size:14px;">Add New VC Firm</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <input id="vclib-add-name" placeholder="Firm name *" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;">
+          <select id="vclib-add-tier" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;">
+            <option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option>
+          </select>
+          <input id="vclib-add-website" placeholder="Website" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;">
+          <input id="vclib-add-x" placeholder="X handle (@...)" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;">
+          <input id="vclib-add-sectors" placeholder="Sectors (comma-separated)" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;grid-column:span 2;">
+          <input id="vclib-add-thesis" placeholder="Thesis tags (comma-separated)" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;grid-column:span 2;">
+          <textarea id="vclib-add-desc" placeholder="Description / notes" rows="2" style="padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;grid-column:span 2;resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
+          <button onclick="document.getElementById('vclib-add-form').style.display='none'" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;">Cancel</button>
+          <button onclick="vclibSaveNew()" style="padding:6px 14px;border-radius:6px;border:none;background:var(--green);color:#000;font-size:12px;cursor:pointer;font-weight:600;">Save</button>
+        </div>
+      </div>
+
+      <!-- VC Table -->
+      <div id="vclib-table" style="margin-bottom:20px;"></div>
+
+      <!-- Detail Panel (shown when a VC is clicked) -->
+      <div id="vclib-detail" style="display:none;background:var(--bg2);border-radius:10px;padding:24px;margin-bottom:20px;border:1px solid var(--border);"></div>
     </div>
 
     <!-- ===== CATALYSTS ===== -->
@@ -8654,6 +8707,9 @@ function showPage(pageName) {
   if (pageName === 'vc-trash') {
     setTimeout(function() { if (typeof vcRenderTrash === 'function') vcRenderTrash(); }, 50);
   }
+  if (pageName === 'vclibrary') {
+    setTimeout(function() { if (typeof vclibInit === 'function') vclibInit(); }, 50);
+  }
   return true;
 }
 
@@ -8912,6 +8968,438 @@ document.addEventListener('DOMContentLoaded', function() {
   // Restore API keys from Firebase if localStorage was purged
   restoreApiKeysFromFirebase();
 });
+
+// ===== VC LIBRARY =====
+// Internal VC intelligence database — firms, portfolios, thesis areas, success tracking
+// Data stored at Firebase: /fundHQ/vcLibrary/{id}
+
+var _vclibData = []; // in-memory array of VC entities
+var _vclibInitialized = false;
+var _vclibDetailId = null; // currently viewed VC
+
+// ── SEED DATA (10 starter VCs) ──────────────────────────────────────────
+var VCLIB_SEED = [
+  { id:'vc_paradigm', name:'Paradigm', tier:1, category:'Crypto VC', website:'paradigm.xyz', x_url:'@paradigm',
+    description:'Research-driven crypto fund. Co-founded by Coinbase co-founder Fred Ehrsam and ex-Sequoia Matt Huang. Known for massive concentrated bets and deep technical research.',
+    geo_focus:'Global', stage_focus:'Seed to Growth', thesis_tags:['DeFi','MEV','Infrastructure','L1/L2','Novel Mechanisms'],
+    sector_focus:['DeFi','Infrastructure','L1/L2','MEV','Stablecoins'],
+    notable_portfolio:['Uniswap','Lido','Optimism','Blur','Blast','Flashbots','Cosmos','MakerDAO','Osmosis','dYdX','Synthetix','Eigen Layer'],
+    all_investments:['Uniswap','Lido','Optimism','Blur','Blast','Flashbots','Cosmos','MakerDAO','Osmosis','dYdX','Synthetix','Eigen Layer','Phantom','Sky Mavis','Chainalysis','Fireblocks','Starknet','Celestia','Monad'],
+    lead_rounds_count:35, total_projects_tracked:19, top_winners_count:8, avg_entry_stage:'Seed/A',
+    notes:'One of the most research-heavy crypto funds. Published the "Paradigm CTF" and multiple open-source tools. Extremely high conviction, concentrated portfolio.', source_links:['paradigm.xyz'] },
+  { id:'vc_a16z', name:'a16z crypto', tier:1, category:'Mega VC', website:'a16zcrypto.com', x_url:'@a16zcrypto',
+    description:'Andreessen Horowitz crypto arm. $7.6B in crypto funds. Largest crypto VC by AUM. Full-service: eng, legal, go-to-market support.',
+    geo_focus:'Global', stage_focus:'Seed to Late', thesis_tags:['Infrastructure','DeFi','Consumer','Gaming','L1/L2','Social','Stablecoins'],
+    sector_focus:['Infrastructure','DeFi','Consumer','L1/L2','Gaming','Social','Stablecoins'],
+    notable_portfolio:['Solana','Uniswap','Optimism','Coinbase','OpenSea','Compound','Celo','Worldcoin','Ondo','EigenLayer','Story Protocol','Farcaster'],
+    all_investments:['Solana','Uniswap','Optimism','Coinbase','OpenSea','Compound','Celo','Worldcoin','Ondo','EigenLayer','Story Protocol','Farcaster','Aptos','Sui','LayerZero','Goldfinch','Alchemy','Phantom','Lit Protocol','Aztec'],
+    lead_rounds_count:60, total_projects_tracked:20, top_winners_count:10, avg_entry_stage:'Seed/A',
+    notes:'Largest crypto VC. Political influence (crypto lobby). Known for entering at high valuations but providing enormous support. CSS (Crypto Startup School) pipeline.', source_links:['a16zcrypto.com'] },
+  { id:'vc_framework', name:'Framework Ventures', tier:1, category:'Crypto VC', website:'framework.ventures', x_url:'@FWVentures',
+    description:'DeFi-focused fund co-founded by Vance Spencer and Michael Anderson. Known for active governance participation and DeFi-native thesis.',
+    geo_focus:'Global', stage_focus:'Seed to Series A', thesis_tags:['DeFi','Derivatives','Stablecoins','Lending','DEX'],
+    sector_focus:['DeFi','Derivatives','Stablecoins','Infrastructure'],
+    notable_portfolio:['Chainlink','Aave','Synthetix','Yearn','The Graph','dYdX','Goldfinch','Kwenta'],
+    all_investments:['Chainlink','Aave','Synthetix','Yearn','The Graph','dYdX','Goldfinch','Kwenta','Tokemak','Rari Capital','Maple Finance','Fei Protocol','Reflexer','Liquity'],
+    lead_rounds_count:20, total_projects_tracked:14, top_winners_count:6, avg_entry_stage:'Seed',
+    notes:'Pure DeFi conviction. Known for being early to DeFi blue chips (Chainlink, Aave, Synthetix). Active governance voters. DeFi council participation.', source_links:['framework.ventures'] },
+  { id:'vc_pantera', name:'Pantera Capital', tier:1, category:'Crypto Fund', website:'panteracapital.com', x_url:'@PanteraCapital',
+    description:'One of the first crypto-focused funds (2013). Multi-strategy: venture, early-stage token, liquid token, Bitcoin fund. Led by Dan Morehead (ex-Tiger Management).',
+    geo_focus:'Global', stage_focus:'Seed to Liquid', thesis_tags:['Infrastructure','DeFi','L1/L2','Payments','Stablecoins','Cross-chain'],
+    sector_focus:['Infrastructure','DeFi','L1/L2','Payments','Stablecoins'],
+    notable_portfolio:['Polkadot','Filecoin','Matic/Polygon','1inch','Injective','Ethena','Arbitrum','Near','Stacks','Alchemy'],
+    all_investments:['Polkadot','Filecoin','Matic/Polygon','1inch','Injective','Ethena','Arbitrum','Near','Stacks','Alchemy','Blockfolio/FTX','Bakkt','Circle','Ripple','BitGo','Amber Group'],
+    lead_rounds_count:40, total_projects_tracked:16, top_winners_count:7, avg_entry_stage:'Seed/A',
+    notes:'OG crypto fund. Consistent performer across cycles. Known for large fund sizes and multi-strategy approach. Strong LP base (endowments, pensions).', source_links:['panteracapital.com'] },
+  { id:'vc_dragonfly', name:'Dragonfly', tier:1, category:'Crypto VC', website:'dragonfly.xyz', x_url:'@draborfly_xyz',
+    description:'Global crypto VC. $650M Fund IV (Feb 2026). Asia+West bridge. Known for community-first approach and deep crypto-native research.',
+    geo_focus:'Global (Asia+West)', stage_focus:'Seed to Series B', thesis_tags:['DeFi','Infrastructure','Stablecoins','Cross-chain','Asia'],
+    sector_focus:['DeFi','Infrastructure','Stablecoins','L1/L2'],
+    notable_portfolio:['Ethena','Aptos','Celo','Compound','dYdX','Hashflow','Mina','Matter Labs','Rain'],
+    all_investments:['Ethena','Aptos','Celo','Compound','dYdX','Hashflow','Mina','Matter Labs','Rain','Ribbon Finance','Bybit','1inch','Nansen','Zora','Cozy Finance'],
+    lead_rounds_count:30, total_projects_tracked:15, top_winners_count:6, avg_entry_stage:'Seed/A',
+    notes:'Strong Asia bridge. Tom Schmidt and Haseeb Qureshi are active public voices. $650M Fund IV signals LP confidence. Ethena is their marquee bet.', source_links:['dragonfly.xyz'] },
+  { id:'vc_polychain', name:'Polychain Capital', tier:1, category:'Crypto Fund', website:'polychain.capital', x_url:'@polyaborchain',
+    description:'Founded by Olaf Carlson-Wee (Coinbase employee #1). Multi-strategy: venture + liquid tokens. Known for early L1/L2 bets and DeFi infrastructure.',
+    geo_focus:'Global', stage_focus:'Seed to Liquid', thesis_tags:['L1/L2','DeFi','Infrastructure','Cosmos Ecosystem','Interoperability'],
+    sector_focus:['L1/L2','DeFi','Infrastructure','Interoperability'],
+    notable_portfolio:['Cosmos','Dfinity','Compound','Celo','dYdX','Acala','Mina','Ethena','Celestia','EigenLayer'],
+    all_investments:['Cosmos','Dfinity','Compound','Celo','dYdX','Acala','Mina','Ethena','Celestia','EigenLayer','Tezos','Nervos','Edgeware','Staked','Horizon','C3 Protocol'],
+    lead_rounds_count:25, total_projects_tracked:16, top_winners_count:7, avg_entry_stage:'Seed/A',
+    notes:'OG crypto-native fund. Early Cosmos/IBC thesis was prescient. Olaf is reclusive but highly respected. Strong track record on L1 bets.', source_links:['polychain.capital'] },
+  { id:'vc_variant', name:'Variant', tier:2, category:'Crypto VC', website:'variant.fund', x_url:'@variantfund',
+    description:'Founded by Jesse Walden (ex-a16z). Thesis: "ownership economy" — protocols that distribute ownership to users. Small, focused fund.',
+    geo_focus:'Global', stage_focus:'Seed', thesis_tags:['Ownership Economy','Consumer','DeFi','Creator Economy','Social','DAOs'],
+    sector_focus:['Consumer','DeFi','Social','DAOs','Creator Economy'],
+    notable_portfolio:['Uniswap','Mirror','Friends.tech','Farcaster','Zora','Highlight','Sound.xyz','Royal'],
+    all_investments:['Uniswap','Mirror','Friends.tech','Farcaster','Zora','Highlight','Sound.xyz','Royal','Syndicate','Rabbithole','PleasrDAO','Metalabel','Bonfire'],
+    lead_rounds_count:15, total_projects_tracked:13, top_winners_count:4, avg_entry_stage:'Pre-seed/Seed',
+    notes:'Thesis-driven fund with clear "ownership economy" conviction. Jesse Walden is a top crypto thinker. Small fund = concentrated bets. Early Farcaster/Zora backer.', source_links:['variant.fund'] },
+  { id:'vc_coinbase_v', name:'Coinbase Ventures', tier:1, category:'Corporate VC', website:'coinbase.com/ventures', x_url:'@CoinbaseVenture',
+    description:'Strategic VC arm of Coinbase. Prolific investor (400+ investments). Provides listing pipeline and exchange integration as strategic value.',
+    geo_focus:'Global', stage_focus:'Seed to Growth', thesis_tags:['Infrastructure','DeFi','L1/L2','Compliance','Exchange Ecosystem','Consumer'],
+    sector_focus:['Infrastructure','DeFi','L1/L2','Compliance','Consumer'],
+    notable_portfolio:['Ethena','Uniswap','Compound','Optimism','Near','Polygon','Arbitrum','The Graph','Dune','Alchemy'],
+    all_investments:['Ethena','Uniswap','Compound','Optimism','Near','Polygon','Arbitrum','The Graph','Dune','Alchemy','1inch','Aave','Celo','StarkWare','LayerZero','OpenSea','Phantom','Flashbots','Arweave','Goldfinch'],
+    lead_rounds_count:15, total_projects_tracked:20, top_winners_count:9, avg_entry_stage:'Seed/A',
+    notes:'Largest corporate VC by deal count. Strategic: listing on Coinbase is a major catalyst. Spray-and-pray but high hit rate due to deal flow. Compliance-friendly thesis.', source_links:['coinbase.com/ventures'] },
+  { id:'vc_delphi', name:'Delphi Ventures', tier:2, category:'Research VC', website:'delphidigital.io', x_url:'@Delphi_Digital',
+    description:'Research arm of Delphi Digital. Known for deep technical research reports before investing. Thesis-first approach. Incubation (Delphi Labs) builds protocols directly.',
+    geo_focus:'Global', stage_focus:'Seed', thesis_tags:['DeFi','Infrastructure','Cosmos','Incubation','Research-first'],
+    sector_focus:['DeFi','Infrastructure','L1/L2','Gaming'],
+    notable_portfolio:['Axie Infinity','Aave','Synthetix','Lido','Astroport','Mars Protocol','Injective','Ethena'],
+    all_investments:['Axie Infinity','Aave','Synthetix','Lido','Astroport','Mars Protocol','Injective','Ethena','Arbitrum','Radiant Capital','GMX','Pendle','Sommelier','Rage Trade'],
+    lead_rounds_count:10, total_projects_tracked:14, top_winners_count:6, avg_entry_stage:'Seed',
+    notes:'Research-to-invest pipeline is unique. Delphi Labs incubates protocols (Astroport, Mars). Public research builds narrative before token launch. Strong Cosmos thesis.', source_links:['delphidigital.io'] },
+  { id:'vc_multicoin', name:'Multicoin Capital', tier:1, category:'Crypto Fund', website:'multicoin.capital', x_url:'@multicaborin',
+    description:'Thesis-driven fund led by Kyle Samani and Tushar Jain. Famous for "Solana Thesis" (2018). Multi-strategy: venture + liquid. Known for bold, concentrated bets and public thesis writing.',
+    geo_focus:'Global', stage_focus:'Seed to Liquid', thesis_tags:['Solana','DePIN','Infrastructure','DeFi','Composability','State Machines'],
+    sector_focus:['Infrastructure','DePIN','DeFi','L1/L2','Solana Ecosystem'],
+    notable_portfolio:['Solana','Helium','Render','Pyth','Marinade','Drift','Hivemapper','Wormhole','Jito'],
+    all_investments:['Solana','Helium','Render','Pyth','Marinade','Drift','Hivemapper','Wormhole','Jito','Metaplex','Audius','The Graph','Arweave','DIMO','Teleport'],
+    lead_rounds_count:30, total_projects_tracked:15, top_winners_count:7, avg_entry_stage:'Seed/A',
+    notes:'Solana thesis was one of the best VC calls in crypto history. DePIN thesis equally strong (Helium, Render, Hivemapper). Kyle Samani is one of the most vocal and respected crypto investors.', source_links:['multicoin.capital'] }
+];
+
+// ── VC SUCCESS SCORE FORMULA ────────────────────────────────────────────
+// Transparent, explainable scoring. Refine weights as data improves.
+//
+// Formula (0–100):
+//   Hit Rate (30pts)           — winners / total tracked. Core metric.
+//   Winner Count (20pts)       — absolute number of outperformers.
+//   Lead Investor Bonus (15pts)— leading rounds = higher conviction signal.
+//   Narrative Strength (15pts) — concentration in strong/hot sectors.
+//   Portfolio Size (10pts)     — breadth of tracked investments.
+//   Recency (10pts)            — bonus for recent activity (proxy: tier).
+//
+// Hit Rate = top_winners_count / total_projects_tracked
+// Winner = project that did 5x+ from entry, or became top-100, or achieved product-market fit
+
+function vclibComputeScore(vc) {
+  var score = 0;
+  var total = vc.total_projects_tracked || 1;
+  var winners = vc.top_winners_count || 0;
+  var hitRate = winners / total;
+
+  // 1. Hit Rate (0–30)
+  score += Math.min(hitRate * 75, 30); // 40% hit rate = 30 pts
+
+  // 2. Winner Count (0–20)
+  score += Math.min(winners * 2.5, 20); // 8+ winners = 20 pts
+
+  // 3. Lead Rounds Bonus (0–15)
+  var leads = vc.lead_rounds_count || 0;
+  score += Math.min(leads * 0.5, 15); // 30+ leads = 15 pts
+
+  // 4. Narrative Strength (0–15) — bonus for hot sectors
+  var hotSectors = ['AI','DePIN','RWA','Stablecoins','Infrastructure','DeFi'];
+  var sectorHits = (vc.sector_focus || []).filter(function(s) { return hotSectors.indexOf(s) >= 0; }).length;
+  score += Math.min(sectorHits * 3, 15);
+
+  // 5. Portfolio Breadth (0–10)
+  score += Math.min(total * 0.6, 10); // 17+ projects = 10 pts
+
+  // 6. Recency / Tier Proxy (0–10)
+  score += vc.tier === 1 ? 10 : vc.tier === 2 ? 6 : 3;
+
+  return Math.round(Math.min(score, 100));
+}
+
+function vclibComputeHitRate(vc) {
+  if (!vc.total_projects_tracked) return 0;
+  return Math.round((vc.top_winners_count || 0) / vc.total_projects_tracked * 100);
+}
+
+// ── INIT & LOAD ─────────────────────────────────────────────────────────
+
+function vclibInit() {
+  if (_vclibInitialized) { vclibRender(); return; }
+  _vclibInitialized = true;
+
+  // Load from Firebase, fall back to seed data
+  if (typeof dbRef !== 'undefined' && dbRef) {
+    dbRef.child('vcLibrary').once('value').then(function(snap) {
+      var data = snap.val();
+      if (data) {
+        _vclibData = Object.values(data);
+      } else {
+        // First load: seed Firebase with starter data
+        _vclibData = VCLIB_SEED.map(function(vc) {
+          vc.success_score = vclibComputeScore(vc);
+          vc.hit_rate = vclibComputeHitRate(vc);
+          vc.created_at = new Date().toISOString();
+          vc.updated_at = new Date().toISOString();
+          return vc;
+        });
+        _vclibData.forEach(function(vc) { dbRef.child('vcLibrary').child(vc.id).set(vc); });
+      }
+      vclibRender();
+    }).catch(function() { _vclibData = VCLIB_SEED; vclibRender(); });
+  } else {
+    _vclibData = VCLIB_SEED;
+    _vclibData.forEach(function(vc) { vc.success_score = vclibComputeScore(vc); vc.hit_rate = vclibComputeHitRate(vc); });
+    vclibRender();
+  }
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────
+
+function vclibRender() {
+  var search = (document.getElementById('vclib-search').value || '').toLowerCase();
+  var tierF = document.getElementById('vclib-filter-tier').value;
+  var sectorF = document.getElementById('vclib-filter-sector').value;
+  var sortF = document.getElementById('vclib-sort').value;
+
+  // Recompute scores
+  _vclibData.forEach(function(vc) {
+    vc.success_score = vclibComputeScore(vc);
+    vc.hit_rate = vclibComputeHitRate(vc);
+  });
+
+  // Filter
+  var filtered = _vclibData.filter(function(vc) {
+    if (tierF !== 'all' && vc.tier !== parseInt(tierF)) return false;
+    if (sectorF !== 'all' && (vc.sector_focus || []).indexOf(sectorF) < 0) return false;
+    if (search) {
+      var hay = (vc.name + ' ' + (vc.thesis_tags||[]).join(' ') + ' ' + (vc.sector_focus||[]).join(' ') + ' ' + (vc.notable_portfolio||[]).join(' ') + ' ' + (vc.description||'')).toLowerCase();
+      if (hay.indexOf(search) < 0) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort(function(a, b) {
+    if (sortF === 'name') return a.name.localeCompare(b.name);
+    if (sortF === 'hitrate') return (b.hit_rate||0) - (a.hit_rate||0);
+    if (sortF === 'winners') return (b.top_winners_count||0) - (a.top_winners_count||0);
+    if (sortF === 'projects') return (b.total_projects_tracked||0) - (a.total_projects_tracked||0);
+    return (b.success_score||0) - (a.success_score||0); // default: score
+  });
+
+  // Update badge
+  var badge = document.getElementById('badge-vclibrary');
+  if (badge) badge.textContent = _vclibData.length;
+
+  // Stats
+  vclibRenderStats(filtered);
+
+  // Table
+  vclibRenderTable(filtered);
+}
+
+function vclibRenderStats(data) {
+  var totalVCs = _vclibData.length;
+  var totalInv = _vclibData.reduce(function(s,v){ return s + (v.all_investments||[]).length; }, 0);
+  var avgHit = totalVCs ? Math.round(_vclibData.reduce(function(s,v){ return s + (v.hit_rate||0); }, 0) / totalVCs) : 0;
+  var topVC = _vclibData.slice().sort(function(a,b){ return (b.success_score||0)-(a.success_score||0); })[0];
+  var topName = topVC ? topVC.name : '—';
+  var topScore = topVC ? topVC.success_score : 0;
+
+  document.getElementById('vclib-stats').innerHTML =
+    vclibStatCard('VCs Tracked', totalVCs, 'var(--accent)') +
+    vclibStatCard('Investments Linked', totalInv, 'var(--blue)') +
+    vclibStatCard('Avg Hit Rate', avgHit + '%', 'var(--green)') +
+    vclibStatCard('Top VC', topName + ' (' + topScore + ')', 'var(--purple)') +
+    vclibStatCard('Showing', data.length + ' / ' + totalVCs, 'var(--text3)');
+}
+
+function vclibStatCard(label, value, color) {
+  return '<div style="background:var(--bg2);border-radius:8px;padding:14px;border-left:3px solid ' + color + ';">' +
+    '<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">' + label + '</div>' +
+    '<div style="font-size:18px;font-weight:700;color:var(--text);">' + value + '</div></div>';
+}
+
+function vclibRenderTable(data) {
+  if (!data.length) {
+    document.getElementById('vclib-table').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">No VCs match your filters.</div>';
+    return;
+  }
+
+  var html = '<div style="display:grid;gap:8px;">';
+  data.forEach(function(vc) {
+    var tierColor = vc.tier === 1 ? 'var(--green)' : vc.tier === 2 ? 'var(--accent)' : 'var(--text3)';
+    var scoreColor = vc.success_score >= 80 ? 'var(--green)' : vc.success_score >= 60 ? 'var(--accent)' : vc.success_score >= 40 ? 'var(--orange)' : 'var(--red)';
+    var hitColor = vc.hit_rate >= 50 ? 'var(--green)' : vc.hit_rate >= 30 ? 'var(--accent)' : 'var(--orange)';
+
+    var tags = (vc.sector_focus || []).slice(0, 4).map(function(t) {
+      return '<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:var(--bg3);color:var(--text2);">' + t + '</span>';
+    }).join(' ');
+
+    var topProjects = (vc.notable_portfolio || []).slice(0, 5).join(', ');
+
+    html += '<div onclick="vclibShowDetail(\'' + vc.id + '\')" style="display:grid;grid-template-columns:2fr 60px 1fr 80px 60px 70px 70px 40px;align-items:center;gap:10px;padding:12px 16px;background:var(--bg2);border-radius:8px;cursor:pointer;transition:transform .1s,box-shadow .1s;border-left:3px solid ' + tierColor + ';" onmouseenter="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(0,0,0,.3)\'" onmouseleave="this.style.transform=\'none\';this.style.boxShadow=\'none\'">' +
+      '<div>' +
+        '<div style="font-weight:600;font-size:14px;color:var(--text);margin-bottom:2px;">' + vc.name + '</div>' +
+        '<div style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;">' + topProjects + '</div>' +
+      '</div>' +
+      '<div style="text-align:center;"><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:' + tierColor + '22;color:' + tierColor + ';font-weight:600;">T' + vc.tier + '</span></div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:3px;">' + tags + '</div>' +
+      '<div style="text-align:center;font-size:12px;color:var(--text2);">' + (vc.total_projects_tracked||0) + ' projects</div>' +
+      '<div style="text-align:center;font-size:12px;color:var(--green);font-weight:600;">' + (vc.top_winners_count||0) + ' W</div>' +
+      '<div style="text-align:center;font-size:12px;color:' + hitColor + ';font-weight:600;">' + vc.hit_rate + '%</div>' +
+      '<div style="text-align:center;"><span style="font-size:13px;font-weight:700;color:' + scoreColor + ';">' + vc.success_score + '</span><span style="font-size:9px;color:var(--text3);">/100</span></div>' +
+      '<div style="text-align:center;"><button onclick="event.stopPropagation();vclibDelete(\'' + vc.id + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px;" title="Delete">&times;</button></div>' +
+    '</div>';
+  });
+  html += '</div>';
+  document.getElementById('vclib-table').innerHTML = html;
+}
+
+// ── DETAIL PANEL ────────────────────────────────────────────────────────
+
+function vclibShowDetail(id) {
+  var vc = _vclibData.find(function(v) { return v.id === id; });
+  if (!vc) return;
+  _vclibDetailId = id;
+  var panel = document.getElementById('vclib-detail');
+  var tierColor = vc.tier === 1 ? 'var(--green)' : vc.tier === 2 ? 'var(--accent)' : 'var(--text3)';
+  var scoreColor = vc.success_score >= 80 ? 'var(--green)' : vc.success_score >= 60 ? 'var(--accent)' : vc.success_score >= 40 ? 'var(--orange)' : 'var(--red)';
+
+  var sectorTags = (vc.sector_focus || []).map(function(t) {
+    return '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--accent)22;color:var(--accent);">' + t + '</span>';
+  }).join(' ');
+
+  var thesisTags = (vc.thesis_tags || []).map(function(t) {
+    return '<span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--purple)22;color:var(--purple);">' + t + '</span>';
+  }).join(' ');
+
+  var portfolioHtml = (vc.all_investments || []).map(function(p) {
+    var isWinner = (vc.notable_portfolio || []).indexOf(p) >= 0;
+    return '<span style="font-size:11px;padding:3px 8px;border-radius:4px;background:' + (isWinner ? 'var(--green)22' : 'var(--bg3)') + ';color:' + (isWinner ? 'var(--green)' : 'var(--text2)') + ';font-weight:' + (isWinner ? '600' : '400') + ';">' + p + (isWinner ? ' ★' : '') + '</span>';
+  }).join(' ');
+
+  var links = '';
+  if (vc.website) links += '<a href="https://' + vc.website + '" target="_blank" style="color:var(--accent);font-size:11px;text-decoration:none;">' + vc.website + '</a> ';
+  if (vc.x_url) links += '<span style="color:var(--text3);font-size:11px;">' + vc.x_url + '</span>';
+
+  panel.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">' +
+      '<div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
+          '<h2 style="margin:0;font-size:20px;">' + vc.name + '</h2>' +
+          '<span style="font-size:10px;padding:2px 10px;border-radius:4px;background:' + tierColor + '22;color:' + tierColor + ';font-weight:600;">Tier ' + vc.tier + '</span>' +
+          '<span style="font-size:10px;padding:2px 10px;border-radius:4px;background:var(--bg3);color:var(--text3);">' + (vc.category||'') + '</span>' +
+        '</div>' +
+        '<div style="margin-bottom:6px;">' + links + '</div>' +
+        '<div style="font-size:12px;color:var(--text2);max-width:600px;line-height:1.6;">' + (vc.description||'') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        '<div style="font-size:32px;font-weight:800;color:' + scoreColor + ';">' + vc.success_score + '<span style="font-size:14px;color:var(--text3);font-weight:400;">/100</span></div>' +
+        '<div style="font-size:11px;color:var(--text3);">Success Score</div>' +
+        '<button onclick="vclibCloseDetail()" style="margin-top:10px;background:none;border:1px solid var(--border);color:var(--text2);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">Close</button>' +
+      '</div>' +
+    '</div>' +
+
+    // Metrics row
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;">' +
+      vclibMetric('Hit Rate', vc.hit_rate + '%') +
+      vclibMetric('Winners', vc.top_winners_count || 0) +
+      vclibMetric('Projects Tracked', vc.total_projects_tracked || 0) +
+      vclibMetric('Lead Rounds', vc.lead_rounds_count || 0) +
+      vclibMetric('Avg Entry', vc.avg_entry_stage || '—') +
+      vclibMetric('Geo Focus', vc.geo_focus || '—') +
+    '</div>' +
+
+    // Sector + Thesis tags
+    '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">SECTOR FOCUS</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;">' + sectorTags + '</div>' +
+    '</div>' +
+    '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">THESIS TAGS</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;">' + thesisTags + '</div>' +
+    '</div>' +
+
+    // Portfolio
+    '<div style="margin-bottom:16px;">' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">PORTFOLIO <span style="font-weight:400;">(★ = notable winner)</span></div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;">' + portfolioHtml + '</div>' +
+    '</div>' +
+
+    // Notes
+    (vc.notes ? '<div style="margin-bottom:16px;"><div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;">NOTES</div><div style="font-size:12px;color:var(--text2);line-height:1.6;background:var(--bg3);padding:12px;border-radius:6px;">' + vc.notes + '</div></div>' : '') +
+
+    // Score breakdown
+    '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;">SCORE BREAKDOWN</div>' +
+      vclibScoreBar('Hit Rate', Math.min(Math.round(vc.hit_rate / 40 * 30), 30), 30) +
+      vclibScoreBar('Winners', Math.min((vc.top_winners_count||0) * 2.5, 20), 20) +
+      vclibScoreBar('Lead Rounds', Math.min((vc.lead_rounds_count||0) * 0.5, 15), 15) +
+      vclibScoreBar('Narrative', Math.min((vc.sector_focus||[]).filter(function(s){return ["AI","DePIN","RWA","Stablecoins","Infrastructure","DeFi"].indexOf(s)>=0;}).length * 3, 15), 15) +
+      vclibScoreBar('Breadth', Math.min((vc.total_projects_tracked||0) * 0.6, 10), 10) +
+      vclibScoreBar('Recency', vc.tier===1?10:vc.tier===2?6:3, 10) +
+    '</div>';
+
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function vclibMetric(label, value) {
+  return '<div style="background:var(--bg3);border-radius:6px;padding:10px;text-align:center;">' +
+    '<div style="font-size:10px;color:var(--text3);margin-bottom:2px;">' + label + '</div>' +
+    '<div style="font-size:15px;font-weight:600;color:var(--text);">' + value + '</div></div>';
+}
+
+function vclibScoreBar(label, pts, max) {
+  var pct = Math.round(pts / max * 100);
+  var color = pct >= 80 ? 'var(--green)' : pct >= 50 ? 'var(--accent)' : 'var(--orange)';
+  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+    '<div style="width:80px;font-size:10px;color:var(--text3);">' + label + '</div>' +
+    '<div style="flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">' +
+      '<div style="width:' + pct + '%;height:100%;background:' + color + ';border-radius:3px;"></div>' +
+    '</div>' +
+    '<div style="width:40px;font-size:10px;color:var(--text2);text-align:right;">' + Math.round(pts) + '/' + max + '</div></div>';
+}
+
+function vclibCloseDetail() {
+  document.getElementById('vclib-detail').style.display = 'none';
+  _vclibDetailId = null;
+}
+
+// ── ADD / DELETE / SAVE ─────────────────────────────────────────────────
+
+function vclibShowAddForm() {
+  var form = document.getElementById('vclib-add-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function vclibSaveNew() {
+  var name = document.getElementById('vclib-add-name').value.trim();
+  if (!name) return;
+  var tier = parseInt(document.getElementById('vclib-add-tier').value) || 2;
+  var website = document.getElementById('vclib-add-website').value.trim();
+  var xUrl = document.getElementById('vclib-add-x').value.trim();
+  var sectors = document.getElementById('vclib-add-sectors').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var thesis = document.getElementById('vclib-add-thesis').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  var desc = document.getElementById('vclib-add-desc').value.trim();
+
+  var vc = {
+    id: 'vc_' + Date.now(),
+    name: name, tier: tier, category: 'Crypto VC', website: website, x_url: xUrl,
+    description: desc, geo_focus: '', stage_focus: '', thesis_tags: thesis,
+    sector_focus: sectors, notable_portfolio: [], all_investments: [],
+    lead_rounds_count: 0, total_projects_tracked: 0, top_winners_count: 0,
+    avg_entry_stage: '', notes: '', source_links: [],
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  };
+  vc.success_score = vclibComputeScore(vc);
+  vc.hit_rate = vclibComputeHitRate(vc);
+
+  _vclibData.push(vc);
+  if (typeof dbRef !== 'undefined' && dbRef) dbRef.child('vcLibrary').child(vc.id).set(vc);
+
+  // Clear form
+  ['vclib-add-name','vclib-add-website','vclib-add-x','vclib-add-sectors','vclib-add-thesis','vclib-add-desc'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('vclib-add-form').style.display = 'none';
+  vclibRender();
+}
+
+function vclibDelete(id) {
+  _vclibData = _vclibData.filter(function(v) { return v.id !== id; });
+  if (typeof dbRef !== 'undefined' && dbRef) dbRef.child('vcLibrary').child(id).remove();
+  if (_vclibDetailId === id) vclibCloseDetail();
+  vclibRender();
+}
 
 // Hash routing — back button + bookmarkable URLs
 window.addEventListener('hashchange', () => {
