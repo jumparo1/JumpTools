@@ -408,8 +408,10 @@ tbody tr:hover { background: var(--bg3); }
 .rv-section-title { font-size: 13px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.3px; flex: 1; }
 .rv-section-arrow { color: var(--text3); font-size: 10px; transition: transform 0.2s; }
 .rv-section.open .rv-section-arrow { transform: rotate(90deg); }
-.rv-section-body { padding: 14px 16px; font-size: 13px; line-height: 1.7; color: var(--text2); display: none; border-top: 1px solid var(--border); }
-.rv-section.open .rv-section-body { display: block; }
+.rv-section-body { padding: 14px 16px; font-size: 13px; line-height: 1.7; color: var(--text2); display: block; border-top: 1px solid var(--border); }
+.rv-section.collapsed .rv-section-body { display: none; }
+.rv-section .rv-section-arrow { transform: rotate(90deg); }
+.rv-section.collapsed .rv-section-arrow { transform: rotate(0deg); }
 .rv-img-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
 .rv-img-wrap { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
 .rv-img-wrap img { display: block; max-width: 100%; max-height: 300px; object-fit: contain; background: var(--bg1); }
@@ -7652,23 +7654,35 @@ Total Fees: [$] | Protocol Revenue: [$] | Token Incentives: [$] | Earnings: [$]
 Protocol Margin: [%] | Revenue Multiple: [x]
 
 ═══════════════════════════════════════════════════════
-9. SOCIAL SENTIMENT
+9. COMMUNITY & SENTIMENT
 ═══════════════════════════════════════════════════════
-[Twitter/X following, community activity, Discord/Telegram size, sentiment analysis, influencer coverage.]
+SENTIMENT SCORE: [X/10] (Protocol: [X/10] | Token: [X/10])
+Tone: [One-line summary]
+
+BULL CASE: [Top 3 bullish narratives with evidence]
+BEAR CASE: [Top 3 bearish concerns — structural, not FUD]
+CT Quality: [Data-driven or hype? Organic or farmed? Key voices?]
+Protocol vs Token: [Are they diverging?]
+TAKEAWAY: [One-line investor-grade conclusion]
 
 ═══════════════════════════════════════════════════════
-10. TOP HOLDERS & WHALE ACTIVITY
+10. ON-CHAIN & SMART MONEY
 ═══════════════════════════════════════════════════════
-ON-CHAIN:
-* Top holder concentration: [top 10 holders %]
-* Whale movements: [recent large txs, exchange inflows/outflows]
-* Smart money: [any known funds accumulating/dumping?]
+HOLDER STRUCTURE:
+* Top 10 concentration: [%] | CEX float: [%] | Staked: [%]
 
-PERP POSITIONING (if futures exist):
-* OI: [$] | Funding Rate: [%] | Long/Short Ratio: [x]
-* Whale vs retail: [are whales positioned opposite to retail?]
-* Liquidation clusters: [key levels above/below price]
-Source: Hyperdash, Arkham
+WHALE POSITIONING (7-14d):
+* Bullish evidence: [exchange outflows, new accumulators, smart money buying]
+* Bearish evidence: [exchange inflows, VC unlocks, distribution]
+* Neutral/noise: [rebalancing, MM rotation — not directional]
+* Net Flow: [Accumulating / Distributing / Neutral]
+
+PERP & DERIVATIVES:
+* OI: [$] | Funding: [%] | L/S Ratio: [x]
+* Liquidation clusters: [squeeze risk above/below]
+
+SMART MONEY VERDICT: [Constructive / Cautious / Bearish]
+Sources: Arkham, Nansen, CoinGlass, Hyperliquid
 
 ═══════════════════════════════════════════════════════
 11. CHART & TECHNICAL ANALYSIS
@@ -9893,12 +9907,12 @@ function openModal(type, id) {
     html = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <h2 style="margin:0;">${r ? esc(r.title) : 'New Report'}</h2>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${r ? `<button class="btn btn-ghost btn-sm" onclick="copyReportLink('${r.id}')" title="Copy shareable link" style="font-size:12px;">Share</button>` : ''}
+        <div style="display:flex;align-items:center;gap:6px;">
           ${hasContent ? `<div class="rv-toggle">
             <button class="${startInView ? 'active' : ''}" onclick="toggleReportView('view')">View</button>
             <button class="${startInView ? '' : 'active'} admin-only" onclick="toggleReportView('edit')">Edit</button>
           </div>` : ''}
+          ${r ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copyReportLink('${r.id}')" title="Copy shareable link" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:4px;">Share</button>` : ''}
         </div>
       </div>
       ${r ? `<div class="rv-meta">
@@ -10537,57 +10551,73 @@ KEY RATIOS:
 Protocol Margin: [%] | Net Income Margin: [%] | Revenue Multiple: [x]
 
 ═══════════════════════════════════════════════════
-9. SOCIAL SENTIMENT
+9. COMMUNITY & SENTIMENT
 ═══════════════════════════════════════════════════
-* Community vibe: [positive / hyped / skeptical / quiet]
-* Influencer engagement: [who is talking? bullish or bearish?]
-* Public alpha: [any leaks, insider threads, stealth updates?]
-* FUD / warnings: [recurring concerns on CT?]
-Signal Rating: [Strong / Moderate / Weak]
+SENTIMENT SCORE: [X/10] (Protocol: [X/10] | Token: [X/10])
+Tone: [One-line summary — e.g. "Cautiously bullish. Protocol admired, token fatigued."]
+
+── BULL CASE (CT Consensus) ───────────────────────
+- [Top bullish narrative #1 — with evidence, not hype]
+- [Top bullish narrative #2 — data-driven]
+- [Top bullish narrative #3 — catalyst-linked]
+
+── BEAR CASE (CT Concerns) ────────────────────────
+- [Top bearish concern #1 — specific, not generic]
+- [Top bearish concern #2 — structural, not FUD]
+- [Top bearish concern #3 — with risk quantification]
+
+── QUALITY & RISKS ────────────────────────────────
+CT Quality:   [Above/below average — data-driven or hype-driven? organic or farmed?]
+              [Key voices: research KOLs, yield farmers, speculators, builders?]
+              [Organic engagement ratio — likes/replies vs farmed comments]
+Separation:   [Protocol sentiment vs token sentiment — are they diverging?]
+Durability:   [Is conviction structural or event-driven? Will it survive a -20% day?]
+Risk Triggers:[Specific events that would flip sentiment negative]
+
+TAKEAWAY: [One-line investor-grade conclusion for portfolio action]
 
 ═══════════════════════════════════════════════════
-10. TOP HOLDERS & WHALE ACTIVITY
+10. ON-CHAIN & SMART MONEY
 ═══════════════════════════════════════════════════
-CONTRACT: [Contract address] ([ERC-20 / SPL / Native])
-Total Holders: [#] ([trend: growing / declining / flat])
-24h Transfers: [#]
+── HOLDER STRUCTURE ───────────────────────────────
+Total Holders:  [#] ([trend: growing / declining / flat])
+Top 10 Conc.:   [%] of supply — [low <20% / moderate / high >40%]
+CEX Float:      [%] — [high = sell pressure risk]
+Staked/Locked:  [%] — [conviction indicator]
+Team/Foundation:[%] — [insider concentration]
 
-TOP HOLDER BREAKDOWN (Etherscan / Solscan / Explorer):
-| Rank | Entity | Address | Balance | % Supply | Type |
-|------|--------|---------|---------|----------|------|
-| 1 | [Label] | [0x...] | [#] | [%] | [CEX / Protocol / Team / Fund / Bridge] |
-| 2 | [Label] | [0x...] | [#] | [%] | [Type] |
-| 3 | [Label] | [0x...] | [#] | [%] | [Type] |
-| 4 | [Label] | [0x...] | [#] | [%] | [Type] |
-| 5 | [Label] | [0x...] | [#] | [%] | [Type] |
-Sources: Etherscan, Arkham Intel, Bubblemaps, Nansen
+── WHALE POSITIONING (7-14d) ──────────────────────
+BULLISH EVIDENCE:
+- [Exchange outflows to cold storage — $ amount, trend]
+- [New large wallets accumulating — count, avg size]
+- [Smart money buying — named entities from Arkham/Nansen]
+- [Staking inflows increasing]
 
-CONCENTRATION ANALYSIS:
-* Top 10 wallets: [%] of supply — [low <20% / moderate 20-40% / high >40%]
-* CEX wallets combined: [%] — [exchange float — high = sell pressure risk]
-* Staking/Locked: [%] — [conviction indicator]
-* Team/Foundation: [%] — [insider concentration]
-* FDV/MCap ratio: [Xx] — [>3x = heavy future dilution from unlocks]
+BEARISH EVIDENCE:
+- [Exchange inflows from known wallets — $ amount]
+- [VC/team wallets moving to CEX — lockup expiry?]
+- [Whale wallet concentration declining — distribution?]
+- [OTC block trades spotted]
 
-WHALE BEHAVIOR (last 7-14 days):
-* Accumulation signals: [exchange outflows, new wallets, Arkham alerts]
-* Distribution signals: [exchange inflows, large transfers to CEX, OTC deals]
-* Net flow: [accumulating / distributing / neutral]
-* Notable moves: [specific large txns, whale wallet actions, foundation activity]
-* Source: Arkham (intel.arkm.com), Nansen, SpotOnChain
+NEUTRAL / NOISE:
+- [Internal protocol rebalancing — not a signal]
+- [Market maker inventory rotation — not directional]
 
-SMART MONEY TRACKING:
-* Arkham labels: [which known entities hold? funds, VCs, market makers]
-* Bubblemaps clusters: [are top wallets interconnected? insider rings?]
-* Exchange flow: [net inflow or outflow from CEXs last 7d]
-* Stablecoin pairing depth: [DEX liquidity on Uniswap/major pools]
+Net Flow Verdict: [Accumulating / Distributing / Neutral]
 
-RED FLAGS:
-* [High centralization? >50% in top 10 wallets]
-* [Unknown multisigs with large holdings?]
-* [Active sell-offs from labeled team/VC wallets?]
-* [Declining holder count?]
-* [Low staking ratio for PoS chain?]
+── PERP & DERIVATIVES ─────────────────────────────
+OI:            [$] | 24h Change: [+/-%]
+Funding Rate:  [%] — [positive = longs paying, negative = shorts paying]
+L/S Ratio:     [X:1] — [crowded long? crowded short?]
+Liquidation Clusters: [above/below current price — squeeze risk?]
+Futures/Spot:  [Xx] — [>2x = derivatives leading spot]
+
+── SMART MONEY VERDICT ────────────────────────────
+Overall:       [Constructive / Cautious / Bearish / Insufficient Data]
+Confidence:    [High / Medium / Low — based on data quality and coverage]
+Key Risk:      [Single biggest on-chain risk for this position]
+
+Sources: Arkham, Nansen, Etherscan, CoinGlass, Hyperliquid, Dune
 
 ═══════════════════════════════════════════════════
 10b. PERP POSITIONING (CoinGlass / Coinalyze / Hyperdash)
@@ -12270,9 +12300,8 @@ function renderReportContent(content, images) {
     const numMatch = sec.title.match(/^(\d+)\.\s*(.+)$/);
     const num = numMatch ? numMatch[1] : i;
     const title = numMatch ? numMatch[2] : sec.title;
-    const isOpen = i < 3 ? ' open' : ''; // First 3 sections open by default
-
-    out += '<div class="rv-section' + isOpen + '" onclick="this.classList.toggle(\'open\')">';
+    // All sections open by default. Click to collapse.
+    out += '<div class="rv-section" onclick="this.classList.toggle(\'collapsed\')">';
     out += '<div class="rv-section-head">';
     out += '<div class="rv-section-num">' + esc(String(num)) + '</div>';
     out += '<div class="rv-section-title">' + esc(title) + '</div>';
@@ -12312,7 +12341,10 @@ function renderReportContent(content, images) {
 }
 
 function formatSectionBody(text) {
-  if (!text) return '<p style="color:var(--text3);font-style:italic;">Empty</p>';
+  if (!text || text.trim().length === 0) return '<div style="color:var(--text3);font-style:italic;font-size:12px;padding:8px 0;">Section data not available — will be populated when research is updated.</div>';
+  // Check for placeholder/template text that was never filled in
+  var trimmed = text.trim();
+  if (trimmed.length < 20 && /^\[.*\]$|^TBD$|^N\/A$|^—$/i.test(trimmed)) return '<div style="color:var(--text3);font-style:italic;font-size:12px;padding:8px 0;">Pending — no data collected for this section yet.</div>';
   const lines = text.split('\n');
   let html = '';
   let inList = false;
