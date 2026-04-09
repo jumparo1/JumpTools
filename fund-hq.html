@@ -8753,7 +8753,7 @@ function renderPromptCard(p, isCustom) {
       '<div style="display:flex;align-items:center;gap:6px;">' +
         (p.freq ? '<span style="font-size:10px;color:var(--text3);">' + p.freq + '</span>' : '') +
         '<button onclick="event.stopPropagation();toggleEditPrompt(\'' + p.id + '\',' + isCustom + ')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 4px;display:flex;align-items:center;gap:3px;" title="Edit"><span style="font-size:12px;">&#9998;</span> Edit</button>' +
-        (isCustom ? '<button onclick="event.stopPropagation();deleteCustomPrompt(\'' + p.id + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px;" title="Delete">&times;</button>' : '') +
+        '<button onclick="event.stopPropagation();' + (isCustom ? 'deleteCustomPrompt' : 'deleteBuiltInPrompt') + '(\'' + p.id + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px;" title="Delete">&times;</button>' +
         (isEdited ? '<button onclick="event.stopPropagation();resetPrompt(\'' + p.id + '\')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;padding:2px 4px;" title="Reset to original">&#8634;</button>' : '') +
       '</div>' +
     '</div>' +
@@ -8824,7 +8824,9 @@ function resetPrompt(id) {
 
 function renderPrompts() {
   var grid = document.getElementById('prompts-grid');
-  var filtered = _promptFilter === 'all' ? BUILT_IN_PROMPTS : BUILT_IN_PROMPTS.filter(function(p) { return p.agent === _promptFilter; });
+  var hidden = JSON.parse(localStorage.getItem('fundhq_hidden_prompts') || '[]');
+  var visible = BUILT_IN_PROMPTS.filter(function(p) { return hidden.indexOf(p.id) === -1; });
+  var filtered = _promptFilter === 'all' ? visible : visible.filter(function(p) { return p.agent === _promptFilter; });
   grid.innerHTML = filtered.map(function(p) { return renderPromptCard(p, false); }).join('');
   // Custom prompts
   var customs = JSON.parse(localStorage.getItem('fundhq_custom_prompts') || '[]');
@@ -8874,6 +8876,13 @@ function saveCustomPrompt() {
   document.getElementById('prompt-custom-name').value = '';
   document.getElementById('prompt-custom-agent').value = '';
   document.getElementById('prompt-custom-text').value = '';
+  renderPrompts();
+}
+
+function deleteBuiltInPrompt(id) {
+  var hidden = JSON.parse(localStorage.getItem('fundhq_hidden_prompts') || '[]');
+  if (hidden.indexOf(id) === -1) hidden.push(id);
+  localStorage.setItem('fundhq_hidden_prompts', JSON.stringify(hidden));
   renderPrompts();
 }
 
