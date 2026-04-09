@@ -8848,6 +8848,8 @@ function copyPrompt(el) {
   function onCopied() {
     var hint = el.querySelector('.prompt-copy-hint');
     if (hint) { hint.textContent = 'Copied!'; hint.style.color = 'var(--green)'; setTimeout(function() { hint.textContent = 'Click to copy'; hint.style.color = 'var(--text3)'; }, 1500); }
+    el.style.borderLeftColor = 'var(--green)'; el.style.boxShadow = '0 0 8px rgba(16,185,129,.25)';
+    setTimeout(function() { el.style.borderLeftColor = ''; el.style.boxShadow = ''; }, 1500);
   }
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(onCopied);
