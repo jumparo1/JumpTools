@@ -8844,10 +8844,21 @@ function renderPrompts() {
 function copyPrompt(el) {
   var display = el.querySelector('.prompt-display code');
   if (!display) return;
-  navigator.clipboard.writeText(display.textContent).then(function() {
+  var text = display.textContent;
+  function onCopied() {
     var hint = el.querySelector('.prompt-copy-hint');
     if (hint) { hint.textContent = 'Copied!'; hint.style.color = 'var(--green)'; setTimeout(function() { hint.textContent = 'Click to copy'; hint.style.color = 'var(--text3)'; }, 1500); }
-  });
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(onCopied);
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    onCopied();
+  }
 }
 
 function sendPromptToChat(btn) {
