@@ -349,9 +349,15 @@ tr:hover td{background:var(--bg2)}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <input type="text" id="sheetUrl" placeholder="Paste Google Sheet URL (any tab — we read the gid)"
           style="flex:1;min-width:280px;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx,#e6edf3);font-size:12px;font-family:monospace;">
-        <button class="btn btn-primary" onclick="loadFromSheetUrl()">📥 Fetch Sheet</button>
+        <button class="btn btn-primary" onclick="loadFromSheetUrl()">📥 Fetch Trade Log</button>
       </div>
-      <div style="font-size:11px;color:var(--tx2,#8b949e);margin-top:6px;line-height:1.5;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+        <div style="font-size:11px;color:var(--tx2,#8b949e);flex:1;min-width:180px;">
+          Reads the gid tab in the URL (main Trading Log). Additional tabs below read by tab name.
+        </div>
+        <button class="btn" onclick="fetchMissedTradesFromSheet()" title="Reads the 'Missed Trades' tab by name. Merge policy: sheet wins on first import, in-app edits win after.">📥 Fetch Missed Trades</button>
+      </div>
+      <div style="font-size:11px;color:var(--tx2,#8b949e);margin-top:8px;line-height:1.5;">
         Sheet must be shared as <strong>Anyone with the link — Viewer</strong> (no login required). Reads the live tab each call. URL remembered for next session.
       </div>
     </div>
@@ -1406,6 +1412,16 @@ function sheetUrlToCsvUrl(url) {
   if (!sid) return null;
   const gid = (url.match(/[?&#]gid=(\d+)/) || [])[1] || '0';
   return 'https://docs.google.com/spreadsheets/d/' + sid + '/gviz/tq?tqx=out:csv&gid=' + gid;
+}
+
+// Multi-tab helper: given any shared sheet URL (with or without gid) + a tab
+// name, return the gviz CSV endpoint for THAT tab. Works because gviz accepts
+// both gid AND sheet= (tab name) — the latter is stable across tab reorders.
+function sheetUrlToTabCsvUrl(url, tabName) {
+  if (!url || !tabName) return null;
+  const sid = (url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/) || [])[1];
+  if (!sid) return null;
+  return 'https://docs.google.com/spreadsheets/d/' + sid + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(tabName);
 }
 
 // Fetch a live Google Sheet tab as CSV and feed it through detectAndImport
@@ -3293,6 +3309,158 @@ function saveMissedTrades() {
   if (tjDbRef) tjDbRef.child('missedTrades').set(MISSED_TRADES);
 }
 
+// ── Multi-tab migration: Missed Trades from Google Sheet tab "Missed Trades"
+// Contract (locked):
+//   - Key: TradingView link (stable unique id). Falls back to date|market|strategy|side.
+//   - First import: sheet record is authoritative.
+//   - After an in-app edit (edited:true) or delete (tombstoned): app wins, sheet no longer overwrites.
+// Record shape preserved:  { id, date, strategy, market, side, link, result, ... }
+// Imported rows get `source:'sheet'` so we can tell them apart from app-native entries.
+// ─────────────────────────────────────────────────────────────────────────────
+function tjMissedKey(t) {
+  // Normalize link: strip https://www.tradingview.com/x/ prefix so old short-
+  // code records and new full-URL records match when they represent the same chart.
+  const lk = String(t.link || '').replace(/^https?:\/\/(www\.)?tradingview\.com\/x\//i, '').replace(/\/$/, '').trim();
+  if (lk) return 'lk:' + lk;
+  return 'dk:' + [
+    String(t.date || '').trim(),
+    String(t.market || '').trim().toUpperCase(),
+    String(t.strategy || '').trim().toLowerCase(),
+    String(t.side || '').trim().toLowerCase()
+  ].join('|');
+}
+
+// Parse Missed Trades tab CSV — reuses parseCSVRows for quote-safe splitting.
+// Tab schema: Entry Date & Time | TradingView Link | Strategy | Market (Coin) |
+//             Long/Short | 2R? | Count | (blank) | Breakdown stats...
+// The breakdown columns (8+) are summary stats; we ignore them.
+function parseMissedTradesCsv(text) {
+  const rows = parseCSVRows(text);
+  if (!rows.length) return [];
+
+  // Find header row by looking for core tokens
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(8, rows.length); i++) {
+    const rl = rows[i].join(' ').toLowerCase();
+    if (rl.includes('entry date') && rl.includes('tradingview') && (rl.includes('2r') || rl.includes('market'))) { hIdx = i; break; }
+  }
+  if (hIdx === -1) return [];
+
+  const headers = rows[hIdx].map(h => String(h||'').replace(/\n/g,' ').trim());
+  const findCol = (needle) => headers.findIndex(h => h.toLowerCase().includes(needle.toLowerCase()));
+  const iDate = findCol('entry date');
+  const iLink = findCol('tradingview');
+  const iStrat = findCol('strategy');
+  const iMarket = findCol('market') >= 0 ? findCol('market') : findCol('coin');
+  const iSide = findCol('long/short') >= 0 ? findCol('long/short') : findCol('side');
+  const i2R = findCol('2r');
+  const iCount = findCol('count');
+
+  // Normalize dd/mm/yyyy → yyyy-mm-dd (matches the HTML date input format)
+  const normDate = (s) => {
+    if (!s) return '';
+    const m = String(s).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+    // Try ISO already
+    const m2 = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m2) return m2[0];
+    return String(s).trim();
+  };
+  const normResult = (raw2R) => {
+    const v = String(raw2R||'').trim();
+    if (!v) return 'Unknown';
+    if (/^2r$/i.test(v)) return '2R';
+    if (/back\s*to\s*entry/i.test(v)) return 'Back to Entry';
+    return v; // preserve any other user label
+  };
+
+  const out = [];
+  for (let i = hIdx + 1; i < rows.length; i++) {
+    const r = rows[i];
+    const date = normDate(iDate >= 0 ? r[iDate] : '');
+    const link = String((iLink >= 0 ? r[iLink] : '') || '').trim();
+    const market = String((iMarket >= 0 ? r[iMarket] : '') || '').trim().toUpperCase();
+    // A row is a real missed trade if it has either a date+market or a link
+    if (!link && !(date && market)) continue;
+    // Skip breakdown/summary rows that lack a strategy AND lack a link — helps avoid the
+    // trailing "Total Trades Missed | 9" rows that share the same width.
+    const strategy = String((iStrat >= 0 ? r[iStrat] : '') || '').trim();
+    if (!link && !strategy) continue;
+    // Respect the Count=FALSE flag — user is explicitly excluding this row from the log
+    const countFlag = iCount >= 0 ? String(r[iCount]||'').trim().toUpperCase() : 'TRUE';
+    if (countFlag === 'FALSE') continue;
+
+    out.push({
+      date,
+      strategy,
+      market,
+      side: String((iSide >= 0 ? r[iSide] : '') || '').trim(),
+      link,
+      result: normResult(i2R >= 0 ? r[i2R] : ''),
+      source: 'sheet',
+    });
+  }
+  return out;
+}
+
+// Apply the locked merge policy. Mutates MISSED_TRADES.
+// Returns { added, updated, preserved, skipped }.
+function mergeMissedFromSheet(incoming) {
+  const existingByKey = new Map();
+  MISSED_TRADES.forEach(t => existingByKey.set(tjMissedKey(t), t));
+
+  let added = 0, updated = 0, preserved = 0, skipped = 0;
+  for (const s of incoming) {
+    const k = tjMissedKey(s);
+    const cur = existingByKey.get(k);
+    if (!cur) {
+      MISSED_TRADES.push({
+        id: Date.now() + Math.floor(Math.random() * 1e6),
+        date: s.date, strategy: s.strategy, market: s.market, side: s.side,
+        link: s.link, result: s.result, source: 'sheet'
+      });
+      added++;
+    } else if (cur.edited) {
+      preserved++;                                  // in-app edit wins
+    } else if (cur.source === 'sheet' || !cur.source) {
+      // Sheet-sourced (or legacy) record → refresh from sheet
+      const before = JSON.stringify([cur.date, cur.strategy, cur.market, cur.side, cur.link, cur.result]);
+      Object.assign(cur, {
+        date: s.date, strategy: s.strategy, market: s.market, side: s.side,
+        link: s.link, result: s.result, source: 'sheet'
+      });
+      const after = JSON.stringify([cur.date, cur.strategy, cur.market, cur.side, cur.link, cur.result]);
+      if (before !== after) updated++; else skipped++;
+    } else {
+      preserved++;                                  // app-native entry → keep
+    }
+  }
+  return { added, updated, preserved, skipped };
+}
+
+async function fetchMissedTradesFromSheet() {
+  const urlEl = document.getElementById('sheetUrl');
+  const raw = (urlEl && urlEl.value || localStorage.getItem('tj_sheet_url') || '').trim();
+  if (!raw) { showImportStatus('Paste a Google Sheet URL first (main fetch widget above).', 'error'); return; }
+  const csvUrl = sheetUrlToTabCsvUrl(raw, 'Missed Trades');
+  if (!csvUrl) { showImportStatus('Could not build tab URL — is the sheet URL shape right?', 'error'); return; }
+  showImportStatus('Fetching Missed Trades tab…', 'info');
+  try {
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if (!text || text.length < 20) throw new Error('empty response');
+    const parsed = parseMissedTradesCsv(text);
+    if (!parsed.length) { showImportStatus('No missed-trade rows found on the Missed Trades tab.', 'error'); return; }
+    const r = mergeMissedFromSheet(parsed);
+    saveMissedTrades();
+    if (typeof renderMissedTrades === 'function') renderMissedTrades();
+    showImportStatus(`Missed Trades: +${r.added} new / ${r.updated} updated / ${r.preserved} preserved (in-app edits) / ${r.skipped} unchanged`, 'success');
+  } catch (e) {
+    showImportStatus('Fetch Missed Trades failed: ' + e.message, 'error');
+  }
+}
+
 function addMissedTrade() {
   const date = document.getElementById('missedDate').value;
   const strategy = document.getElementById('missedStrategy').value;
@@ -3333,13 +3501,22 @@ function renderMissedTrades() {
     document.getElementById('missedTable').innerHTML = '<p style="color:var(--tx2);padding:20px;text-align:center">No missed trades logged yet.</p>';
     return;
   }
-  let html = '<table><thead><tr><th>Date</th><th>Market</th><th>Strategy</th><th>Side</th><th>Result</th><th>Link</th><th></th></tr></thead><tbody>';
+  let html = '<table><thead><tr><th>Date</th><th>Market</th><th>Strategy</th><th>Side</th><th>Result</th><th>Link</th><th>Src</th><th></th></tr></thead><tbody>';
   MISSED_TRADES.slice().reverse().forEach(t => {
     const resultCls = t.result === '2R' ? 'win' : '';
+    // Accept either full URL or short code for the TV link (legacy entries
+    // stored just the short code; sheet import brings full URLs).
+    const linkHref = t.link
+      ? (/^https?:\/\//i.test(t.link) ? t.link : 'https://www.tradingview.com/x/' + t.link)
+      : '';
+    const srcBadge = t.source === 'sheet'
+      ? '<span title="imported from Google Sheet" style="font-size:10px;padding:1px 6px;border-radius:3px;background:color-mix(in srgb,var(--tx2) 18%,transparent);color:var(--tx2);">sheet</span>'
+      : (t.edited ? '<span title="edited in app" style="font-size:10px;padding:1px 6px;border-radius:3px;background:color-mix(in srgb,var(--accent2,#58a6ff) 18%,transparent);color:var(--accent2,#58a6ff);">app</span>' : '');
     html += `<tr>
       <td>${t.date||'-'}</td><td>${t.market}</td><td>${t.strategy||'-'}</td><td>${t.side}</td>
       <td class="${resultCls}">${t.result||'-'}</td>
-      <td>${t.link ? `<a href="https://www.tradingview.com/x/${t.link}" target="_blank">Chart</a>` : '-'}</td>
+      <td>${linkHref ? `<a href="${linkHref}" target="_blank" rel="noopener">Chart</a>` : '-'}</td>
+      <td>${srcBadge}</td>
       <td><button class="btn btn-danger" onclick="removeMissedTrade(${t.id})" style="font-size:10px;padding:2px 6px">✕</button></td>
     </tr>`;
   });
