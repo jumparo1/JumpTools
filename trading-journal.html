@@ -306,7 +306,7 @@ tr:hover td{background:var(--bg2)}
   </div>
   <div class="nav-item" onclick="showPage('benchmark')" data-page="benchmark">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    Benchmark
+    Strategy Lab
   </div>
   <div class="nav-item" onclick="showPage('coach')" data-page="coach">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -508,9 +508,37 @@ tr:hover td{background:var(--bg2)}
     </div>
   </div>
 
-  <!-- ═══ BENCHMARK PAGE ═══ -->
+  <!-- ═══ STRATEGY LAB PAGE (was "Benchmark") ═══ -->
   <div class="page" id="page-benchmark">
-    <div class="page-title">⚡ Strategy Benchmark</div>
+    <div class="page-title">⚡ Strategy Lab</div>
+
+    <!-- Subtab bar: Compare (auto scan across strategies) | Benchmark (manual power-user) -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--br,#30363d);margin-bottom:16px;">
+      <button id="labTab-compare"   class="lab-tab lab-tab-active" onclick="tjLabShowTab('compare')"   style="padding:10px 16px;background:none;border:none;border-bottom:2px solid var(--accent2,#58a6ff);color:var(--tx);font-size:13px;font-weight:600;cursor:pointer;">Compare</button>
+      <button id="labTab-benchmark" class="lab-tab"                onclick="tjLabShowTab('benchmark')" style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;color:var(--tx2);font-size:13px;font-weight:500;cursor:pointer;">Benchmark</button>
+    </div>
+
+    <!-- ── COMPARE subtab ── -->
+    <div id="labPanel-compare">
+      <div id="compareNoData" class="no-data" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <h3>No data loaded</h3><p>Import your trades to compare actual vs backtested performance</p>
+      </div>
+      <div id="compareContent" style="display:none;">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="font-size:13px;color:var(--tx2);flex:1;min-width:280px;">
+            Auto-scans every journaled strategy with ≥ 10 trades. For each, simulates the mapped backtest strategy on the <strong>most-traded coin</strong> in your journal for that tag (fallback BTC), over the journal's date range.
+          </div>
+          <button class="btn btn-primary" onclick="tjCompareRunAll(false)" id="compareRunBtn">▶ Run Compare</button>
+          <button class="btn" onclick="tjCompareRunAll(true)" style="font-size:12px">Force Refresh</button>
+        </div>
+        <div id="compareStatus" style="font-size:12px;color:var(--tx2);margin-bottom:12px;"></div>
+        <div id="compareCards"></div>
+      </div>
+    </div>
+
+    <!-- ── BENCHMARK subtab (existing, unchanged) ── -->
+    <div id="labPanel-benchmark" style="display:none;">
     <div id="benchNoData" class="no-data">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       <h3>No data loaded</h3><p>Import your trades to benchmark against backtested strategies</p>
@@ -556,6 +584,7 @@ tr:hover td{background:var(--bg2)}
         </div>
       </div>
     </div>
+    </div><!-- /labPanel-benchmark -->
   </div>
 
   <!-- ═══ COACH PAGE ═══ -->
@@ -1521,7 +1550,7 @@ function renderPage(id) {
   else if (id === 'analysis') renderAnalysis();
   else if (id === 'checklist') renderChecklist();
   else if (id === 'patterns') renderPatterns();
-  else if (id === 'benchmark') renderBenchmark();
+  else if (id === 'benchmark') { renderBenchmark(); tjCompareRender(); }
   else if (id === 'coach') renderCoach();
   else if (id === 'tradelog') renderTradeLog();
   else if (id === 'taxes') renderTaxes();
@@ -3610,6 +3639,289 @@ function aggregateBacktestResults(results) {
     avg_win: totalAvgWin / n,
     avg_loss: totalAvgLoss / n
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//   STRATEGY LAB — Compare subtab  (Phase 1 integration)
+//   Auto-scans journaled strategies with ≥10 trades. For each: computes
+//   actual metrics from TRADES[], picks the most-traded coin for that
+//   strategy (fallback BTC), calls /api/backtest via existing STRATEGY_MAP,
+//   renders Actual | Simulated | Delta cards + 1-line insight. Caches under
+//   /tradingJournal/compares/{slug} in Firebase + localStorage.
+//   Backend untouched. Schema untouched. Benchmark subtab untouched.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const COMPARE_MIN_TRADES = 10;           // minimum journal trades per strategy to be eligible
+const COMPARE_LEADER_MIN = 5;            // minimum trades on leader coin to use it (else fallback BTC)
+const COMPARE_CACHE_TTL = 24 * 60 * 60 * 1000;  // 24h
+const COMPARE_FALLBACK_COIN = 'BTC';
+
+function tjLabShowTab(which) {
+  const isCompare = which === 'compare';
+  document.getElementById('labPanel-compare').style.display   = isCompare ? '' : 'none';
+  document.getElementById('labPanel-benchmark').style.display = isCompare ? 'none' : '';
+  const t1 = document.getElementById('labTab-compare');
+  const t2 = document.getElementById('labTab-benchmark');
+  if (t1) { t1.style.borderBottom = isCompare ? '2px solid var(--accent2,#58a6ff)' : '2px solid transparent'; t1.style.color = isCompare ? 'var(--tx)' : 'var(--tx2)'; t1.style.fontWeight = isCompare ? 600 : 500; }
+  if (t2) { t2.style.borderBottom = !isCompare ? '2px solid var(--accent2,#58a6ff)' : '2px solid transparent'; t2.style.color = !isCompare ? 'var(--tx)' : 'var(--tx2)'; t2.style.fontWeight = !isCompare ? 600 : 500; }
+  if (isCompare) tjCompareRender();
+}
+
+// Actual metrics from TRADES[] for a single strategy tag.
+// WR, Net PL, Avg R, Avg PnL, Trade Count, Max DD (simple running equity).
+function tjCompareActualMetrics(strategyName) {
+  const rows = TRADES.filter(t => t.strategy === strategyName);
+  const n = rows.length;
+  if (n === 0) return null;
+  const wins = rows.filter(t => t.winLoss === 'W').length;
+  const losses = rows.filter(t => t.winLoss === 'L').length;
+  const evaluated = wins + losses;
+  const totalPL = rows.reduce((s,t) => s + (t.netPL||0), 0);
+  const avgPL = n ? totalPL / n : 0;
+  const avgR = n ? rows.reduce((s,t) => s + (t.rRatio||0), 0) / n : 0;
+  const winRate = evaluated ? wins / evaluated : 0;
+  // Max drawdown across equity curve in PnL terms
+  let peak = 0, equity = 0, maxDD = 0;
+  rows.slice().sort((a,b) => (a.entryDate||0) - (b.entryDate||0)).forEach(t => {
+    equity += (t.netPL||0);
+    if (equity > peak) peak = equity;
+    const dd = peak - equity;
+    if (dd > maxDD) maxDD = dd;
+  });
+  const dates = rows.map(t => t.entryDate).filter(Boolean).sort((a,b) => a - b);
+  return {
+    trades: n, wins, losses, winRate,
+    totalPL, avgPL, avgR, maxDD,
+    fromDate: dates[0] || null,
+    toDate: dates[dates.length-1] || null
+  };
+}
+
+// Pick the most-traded coin in TRADES[] for this strategy.
+// Fallback to BTC when (a) no clear leader OR (b) leader has <COMPARE_LEADER_MIN trades
+// OR (c) the distribution is too flat (leader < 30% of total).
+function tjComparePickCoin(strategyName) {
+  const rows = TRADES.filter(t => t.strategy === strategyName);
+  const counts = {};
+  rows.forEach(t => {
+    const m = (t.market || '').toUpperCase();
+    if (!m) return;
+    counts[m] = (counts[m] || 0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  if (!sorted.length) return { coin: COMPARE_FALLBACK_COIN, reason: 'no journaled coin — fallback BTC' };
+  const [leader, leaderN] = sorted[0];
+  const total = rows.length;
+  if (leaderN < COMPARE_LEADER_MIN) return { coin: COMPARE_FALLBACK_COIN, reason: `top coin ${leader} only ${leaderN} trades (< ${COMPARE_LEADER_MIN}) — fallback BTC` };
+  const share = leaderN / total;
+  if (share < 0.30) return { coin: COMPARE_FALLBACK_COIN, reason: `top coin ${leader} only ${Math.round(share*100)}% of sample — too mixed, fallback BTC` };
+  return { coin: leader, reason: `${leaderN}/${total} trades (${Math.round(share*100)}%)` };
+}
+
+// Clamp period to a supported value (1Y / 5Y etc.) based on journal span.
+function tjComparePeriodDays(fromDate, toDate) {
+  if (!fromDate || !toDate) return 365;
+  const daysSpan = Math.ceil((toDate - fromDate) / 86400000);
+  if (daysSpan <= 30) return 30;
+  if (daysSpan <= 90) return 90;
+  if (daysSpan <= 180) return 180;
+  if (daysSpan <= 400) return 365;
+  return 1825; // 5Y
+}
+
+// Cache helpers — mirror the Benchmark subtab pattern.
+function tjCompareCacheKey(slug) { return 'tjcompare_' + slug; }
+function tjCompareCacheLoad(slug) {
+  try {
+    const raw = localStorage.getItem(tjCompareCacheKey(slug));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.timestamp > COMPARE_CACHE_TTL) return null;
+    return parsed;
+  } catch(e) { return null; }
+}
+function tjCompareCacheSave(slug, data) {
+  try { localStorage.setItem(tjCompareCacheKey(slug), JSON.stringify(data)); } catch(e) {}
+  if (typeof tjDbRef !== 'undefined' && tjDbRef) {
+    try { tjDbRef.child('compares/'+slug.replace(/[.#$/[\]]/g,'_')).set(data); } catch(e) {}
+  }
+}
+
+// One-line insight from actual-vs-simulated delta.
+function tjCompareInsight(strat, a, s) {
+  if (!a || !s) return '';
+  const aPl = a.totalPL, sPl = s.total_return || 0;   // NB: simulated total_return is % — see note below
+  const aWR = a.winRate, sWR = (s.win_rate || 0);
+  const wrDelta = aWR - sWR;
+  const absWR = Math.abs(wrDelta);
+  if (aPl >= 0 && sPl < 0 && aWR > 0.45) return `You profit on ${strat} where the backtest loses — your discretion is outperforming the systematic version.`;
+  if (aPl < 0 && sPl > 0) return `Backtest profits on ${strat} but your journal loses — likely execution or timing gap.`;
+  if (absWR >= 0.10 && wrDelta > 0) return `Your win rate on ${strat} is +${Math.round(wrDelta*100)}pp above the backtest — out-executing the systematic baseline.`;
+  if (absWR >= 0.10 && wrDelta < 0) return `Your win rate on ${strat} is ${Math.round(wrDelta*100)}pp below backtest — possibly entering on lower-quality setups.`;
+  if (absWR < 0.05) return `Your execution on ${strat} closely tracks the systematic baseline.`;
+  return '';
+}
+
+// Run Compare for all eligible strategies (≥ COMPARE_MIN_TRADES).
+async function tjCompareRunAll(forceRefresh) {
+  if (typeof TRADES === 'undefined' || !TRADES.length) return;
+  const strategies = [...new Set(TRADES.map(t => t.strategy).filter(Boolean))];
+  const eligible = strategies.filter(s => TRADES.filter(t => t.strategy === s).length >= COMPARE_MIN_TRADES);
+  if (!eligible.length) {
+    document.getElementById('compareStatus').textContent = `No strategies with ≥ ${COMPARE_MIN_TRADES} trades yet.`;
+    document.getElementById('compareCards').innerHTML = '';
+    return;
+  }
+
+  const btn = document.getElementById('compareRunBtn');
+  if (btn) btn.disabled = true;
+  const statusEl = document.getElementById('compareStatus');
+  const cardsEl = document.getElementById('compareCards');
+  cardsEl.innerHTML = '';
+
+  let done = 0, failed = 0;
+  for (const strat of eligible) {
+    statusEl.textContent = `Running ${strat}… (${done + failed + 1}/${eligible.length})`;
+    try {
+      const result = await tjCompareRunOne(strat, forceRefresh);
+      cardsEl.insertAdjacentHTML('beforeend', tjCompareCardHtml(strat, result));
+      done++;
+    } catch(e) {
+      failed++;
+      cardsEl.insertAdjacentHTML('beforeend', tjCompareCardHtml(strat, { error: e.message }));
+    }
+  }
+  statusEl.textContent = `Done — ${done} compared, ${failed} failed (${eligible.length} strategies with ≥${COMPARE_MIN_TRADES} trades).`;
+  if (btn) btn.disabled = false;
+}
+
+async function tjCompareRunOne(strat, forceRefresh) {
+  const slug = strat.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g,'');
+  const mapping = (typeof mapStrategyToIdea === 'function') ? mapStrategyToIdea(strat) : null;
+  if (!mapping) throw new Error('no STRATEGY_MAP entry — skipped');
+
+  const actual = tjCompareActualMetrics(strat);
+  if (!actual) throw new Error('no journal trades');
+  const coinPick = tjComparePickCoin(strat);
+  const periodDays = tjComparePeriodDays(actual.fromDate, actual.toDate);
+
+  // Cache hit
+  if (!forceRefresh) {
+    const cached = tjCompareCacheLoad(slug);
+    if (cached && cached.coin === coinPick.coin && cached.periodDays === periodDays) {
+      return Object.assign({}, cached, { fromCache: true });
+    }
+  }
+
+  // Live call
+  const resp = await fetch(BT_API + '/api/backtest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      idea: mapping.idea,
+      symbols: [coinPick.coin],
+      capital: STARTING_CAPITAL || 10000,
+      fee_pct: 0.001,
+      slippage_pct: 0.001,
+      period_days: periodDays
+    })
+  });
+  if (!resp.ok) throw new Error('backtest HTTP ' + resp.status);
+  const data = await resp.json();
+  const first = (data.results || []).find(r => !r.error && r.metrics);
+  if (!first) throw new Error((data.results && data.results[0] && data.results[0].error) || 'no valid backtest result');
+
+  const payload = {
+    timestamp: Date.now(),
+    strategy: strat,
+    mapping: mapping.label || mapping.idea,
+    coin: coinPick.coin,
+    coinReason: coinPick.reason,
+    periodDays,
+    fromDate: actual.fromDate ? actual.fromDate.toISOString() : null,
+    toDate: actual.toDate ? actual.toDate.toISOString() : null,
+    actual,
+    simulated: first.metrics,
+    insight: tjCompareInsight(strat, actual, first.metrics)
+  };
+  tjCompareCacheSave(slug, payload);
+  return payload;
+}
+
+// Three-column card per strategy: Actual | Simulated | Delta.
+function tjCompareCardHtml(strat, r) {
+  if (r.error) {
+    return '<div style="border:1px solid var(--br,#30363d);border-radius:8px;padding:14px;margin-bottom:14px;background:var(--bg2,#161b22);">' +
+      '<div style="font-weight:600;font-size:14px;color:var(--tx);margin-bottom:6px;">' + escapeHtml(strat) + '</div>' +
+      '<div style="color:var(--yellow,#d29922);font-size:12px;">Not compared: ' + escapeHtml(r.error) + '</div></div>';
+  }
+  const a = r.actual, s = r.simulated;
+  const pct = (v) => (v == null || isNaN(v)) ? '—' : ((v*100).toFixed(1) + '%');
+  const dollar = (v) => (v == null || isNaN(v)) ? '—' : ((v >= 0 ? '+$' : '-$') + Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:0}));
+  const num = (v, d=1) => (v == null || isNaN(v)) ? '—' : v.toFixed(d);
+  const wrDelta = a.winRate - (s.win_rate || 0);
+  const dCls = (v) => v >= 0 ? 'color:var(--win,#3fb950);' : 'color:var(--loss,#f85149);';
+  const dAbs = Math.round(wrDelta*100);
+  const rangeStr = (a.fromDate && a.toDate)
+    ? (a.fromDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}) + ' → ' + a.toDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}))
+    : '';
+  return '<div style="border:1px solid var(--br,#30363d);border-radius:8px;padding:14px;margin-bottom:14px;background:var(--bg2,#161b22);">' +
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;flex-wrap:wrap;gap:8px;">' +
+      '<div><strong style="font-size:14px;color:var(--tx);">' + escapeHtml(strat) + '</strong>' +
+      ' <span style="color:var(--tx2);font-size:12px;">· vs ' + escapeHtml(r.mapping) + ' on ' + escapeHtml(r.coin) + '</span></div>' +
+      '<div style="font-size:11px;color:var(--tx3);">' + escapeHtml(r.coinReason) + (r.fromCache ? ' · cached' : '') + '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">' +
+      '<div style="padding:10px;background:var(--bg,#0d1117);border-radius:6px;">' +
+        '<div style="font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Actual (journal)</div>' +
+        '<div style="font-size:13px;line-height:1.8;">' +
+          'Trades <strong>' + a.trades + '</strong><br>' +
+          'Win Rate <strong>' + pct(a.winRate) + '</strong><br>' +
+          'Net P/L <strong>' + dollar(a.totalPL) + '</strong><br>' +
+          'Avg R <strong>' + num(a.avgR, 2) + '</strong><br>' +
+          'Max DD <strong>' + dollar(-a.maxDD) + '</strong>' +
+        '</div></div>' +
+      '<div style="padding:10px;background:var(--bg,#0d1117);border-radius:6px;">' +
+        '<div style="font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Simulated (backtest)</div>' +
+        '<div style="font-size:13px;line-height:1.8;">' +
+          'Trades <strong>' + (s.total_trades||0) + '</strong><br>' +
+          'Win Rate <strong>' + pct(s.win_rate) + '</strong><br>' +
+          'Total Return <strong>' + pct(s.total_return) + '</strong><br>' +
+          'Profit Factor <strong>' + num(s.profit_factor,2) + '</strong><br>' +
+          'Max DD <strong>' + pct(-(s.max_drawdown||0)) + '</strong>' +
+        '</div></div>' +
+      '<div style="padding:10px;background:var(--bg,#0d1117);border-radius:6px;">' +
+        '<div style="font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Delta (actual − sim)</div>' +
+        '<div style="font-size:13px;line-height:1.8;">' +
+          'Win Rate <strong style="' + dCls(wrDelta) + '">' + (dAbs >= 0 ? '+' : '') + dAbs + 'pp</strong><br>' +
+          'Trades <strong>' + (a.trades - (s.total_trades||0) >= 0 ? '+' : '') + (a.trades - (s.total_trades||0)) + '</strong><br>' +
+          'Period <span style="color:var(--tx2);font-size:12px;">' + r.periodDays + 'd</span><br>' +
+          'Range <span style="color:var(--tx2);font-size:11px;">' + rangeStr + '</span>' +
+        '</div></div>' +
+    '</div>' +
+    (r.insight ? '<div style="margin-top:10px;padding:8px 10px;background:var(--bg,#0d1117);border-left:3px solid var(--accent2,#58a6ff);border-radius:4px;font-size:12px;color:var(--tx);line-height:1.5;">' + escapeHtml(r.insight) + '</div>' : '') +
+  '</div>';
+}
+
+function escapeHtml(s) {
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function tjCompareRender() {
+  if (typeof TRADES === 'undefined' || TRADES.length === 0) {
+    const n = document.getElementById('compareNoData'); if (n) n.style.display = '';
+    const c = document.getElementById('compareContent'); if (c) c.style.display = 'none';
+    return;
+  }
+  const n = document.getElementById('compareNoData'); if (n) n.style.display = 'none';
+  const c = document.getElementById('compareContent'); if (c) c.style.display = '';
+  // Summary line — eligible strategies + top-level guidance
+  const strategies = [...new Set(TRADES.map(t => t.strategy).filter(Boolean))];
+  const eligible = strategies.filter(s => TRADES.filter(t => t.strategy === s).length >= COMPARE_MIN_TRADES);
+  const cardsEl = document.getElementById('compareCards');
+  if (!cardsEl.hasChildNodes()) {
+    document.getElementById('compareStatus').textContent = `${eligible.length} strategy tag${eligible.length===1?'':'s'} eligible (≥ ${COMPARE_MIN_TRADES} trades). Click "Run Compare" to backtest each against its most-traded coin.`;
+  }
 }
 
 function renderBenchmark() {
