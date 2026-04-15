@@ -340,8 +340,24 @@ tr:hover td{background:var(--bg2)}
   <div class="page active" id="page-import">
     <div class="page-title">📂 Import Trade Data</div>
     <p style="color:var(--tx2);margin-bottom:20px;font-size:14px">
-      Drop any trading CSV — Trade Log, Daily Checklist, or other data. Auto-detected.
+      Load directly from your Google Sheet (recommended) — or drop/paste a CSV export. Trade Log / Checklist auto-detected.
     </p>
+
+    <!-- Google Sheet URL fetch -->
+    <div style="margin-bottom:20px;padding:14px;background:var(--bg2,#161b22);border:1px solid var(--br,#30363d);border-radius:8px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx,#e6edf3)">📊 Load from Google Sheet</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="sheetUrl" placeholder="Paste Google Sheet URL (any tab — we read the gid)"
+          style="flex:1;min-width:280px;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx,#e6edf3);font-size:12px;font-family:monospace;">
+        <button class="btn btn-primary" onclick="loadFromSheetUrl()">📥 Fetch Sheet</button>
+      </div>
+      <div style="font-size:11px;color:var(--tx2,#8b949e);margin-top:6px;line-height:1.5;">
+        Sheet must be shared as <strong>Anyone with the link — Viewer</strong> (no login required). Reads the live tab each call. URL remembered for next session.
+      </div>
+    </div>
+
+    <div class="import-or">— or CSV file / paste —</div>
+
     <div class="import-zone" id="dropZone">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
@@ -1123,18 +1139,39 @@ function parseCSV(text) {
   const rows = parseCSVRows(text);
   if (rows.length < 2) return [];
 
-  // Step 2: Find header row — must have actual column names
+  // Step 2: Find header row. Accept either:
+  //   - dense header (sample-data.csv): contains "entry date" AND market/strategy
+  //   - sparse header (live Google Sheet): only the named columns present
+  //     (TradingView, Strategy, Market, Long/Short) — unlabeled positional
+  //     columns get canonical names synthesized below.
   let headerIdx = -1;
   for (let i = 0; i < Math.min(15, rows.length); i++) {
     const rowText = rows[i].join(' ').toLowerCase();
-    if ((rowText.includes('entry date') || rowText.includes('entry price')) &&
-        (rowText.includes('market') || rowText.includes('strategy') || rowText.includes('long/short'))) {
-      headerIdx = i; break;
-    }
+    const hasEntryToken = rowText.includes('entry date') || rowText.includes('entry price');
+    const hasCoreGroup = rowText.includes('market') && rowText.includes('strategy') && rowText.includes('long/short');
+    if (hasEntryToken && (rowText.includes('market') || rowText.includes('strategy'))) { headerIdx = i; break; }
+    if (hasCoreGroup && rowText.includes('tradingview')) { headerIdx = i; break; }
   }
   if (headerIdx === -1) return [];
 
-  const headers = rows[headerIdx].map(h => h.replace(/\n/g, ' ').trim());
+  const rawHeaders = rows[headerIdx].map(h => h.replace(/\n/g, ' ').trim());
+  // Live Google Sheet (gid=1812632407) exports many empty header cells due
+  // to formula-only columns. Fill blank slots by canonical position so
+  // mapTrade() finds them. Explicit headers always win over synthesized.
+  const CANONICAL_POSITIONS = {
+    1:  'Entry Date & Time',      2:  'Entry Date',             3:  'UID',
+    8:  'Entry Price ($)',        9:  'Position Size ($)',     10: 'Position Size (Units)',
+    11: 'Account Risk',           12: 'Stop Loss Price ($)',   13: 'Take Profit Price ($)',
+    14: 'R',                      15: 'Fees ($)',              16: 'Exit Price ($)',
+    17: 'Exit date and time',     18: 'Gross P/L',             19: 'Net P/L',
+    21: 'Cumulative P/L',         22: 'Account Balance ($)',   23: 'Trade Duration (hours)',
+    24: 'Emotional Log (1/10)',
+    27: 'Wins Tally',             28: 'Losses Tally',          29: 'Win Amount',
+    30: 'Loss Amount',
+    32: 'Month',                  33: 'Consecutive Wins',      34: 'Consecutive Losses',
+    35: 'Streak Index'
+  };
+  const headers = rawHeaders.map((h, j) => h || CANONICAL_POSITIONS[j] || `__col${j}`);
   const trades = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const vals = rows[i];
@@ -1172,16 +1209,32 @@ function parseCSVRows(text) {
   return rows;
 }
 
-/* ── Column Mapper ── */
+/* ── Column Mapper ──
+   Canonical schema mirrors the live Google Sheet (gid=1812632407).
+   g() does EXACT-match first, then substring-fallback — prevents short
+   tokens (e.g. single-letter "R") from accidentally matching longer
+   columns ("Ent[r]y Date"). `exclude` disambiguates look-alikes
+   ("Reasons for Entering" vs "Reason for Cutting"). */
 function mapTrade(raw) {
-  const g = (patterns) => {
+  const g = (patterns, opts) => {
+    const exclude = (opts && opts.exclude) || [];
+    const notExcluded = (kl) => !exclude.some(x => kl.includes(x.toLowerCase()));
     for (const p of patterns) {
-      const key = Object.keys(raw).find(k => k.toLowerCase().includes(p.toLowerCase()));
+      const pl = p.toLowerCase();
+      const key = Object.keys(raw).find(k => k.toLowerCase() === pl && notExcluded(k.toLowerCase()));
+      if (key && raw[key] !== '') return raw[key];
+    }
+    for (const p of patterns) {
+      const pl = p.toLowerCase();
+      const key = Object.keys(raw).find(k => {
+        const kl = k.toLowerCase();
+        return kl.includes(pl) && notExcluded(kl);
+      });
       if (key && raw[key] !== '') return raw[key];
     }
     return '';
   };
-  const num = (v) => { const n = parseFloat(String(v).replace(/[$,]/g, '')); return isNaN(n) ? 0 : n; };
+  const num = (v) => { const n = parseFloat(String(v).replace(/[$,%]/g, '')); return isNaN(n) ? 0 : n; };
   const parseDate = (s) => {
     if (!s) return null;
     // Try dd/mm/yyyy hh:mm:ss format first
@@ -1198,12 +1251,16 @@ function mapTrade(raw) {
   const exitDate = parseDate(exitDateStr);
 
   return {
+    // Identity / timing
+    uid: g(['UID', '#']),
     entryDate, exitDate,
     entryDateStr, exitDateStr,
+    // Links / classification
     tvLink: g(['TradingView']),
     strategy: g(['Strategy']),
     market: g(['Market', 'Coin', 'Symbol']),
     side: g(['Long/Short', 'Side', 'Direction']),
+    // Execution
     entryPrice: num(g(['Entry Price'])),
     positionSize: num(g(['Position Size ($)', 'Position Size'])),
     positionUnits: num(g(['Position Size (Units)', 'Units'])),
@@ -1213,6 +1270,7 @@ function mapTrade(raw) {
     rRatio: num(g(['R:R', 'R/R', 'RR', 'Risk/Reward', 'R'])),
     fees: num(g(['Fees'])),
     exitPrice: num(g(['Exit Price'])),
+    // Outcome
     grossPL: num(g(['Gross P/L', 'Gross PL'])),
     netPL: num(g(['Trade P/L', 'Net P/L', 'Net PL', 'P/L', 'PnL', 'Closed P/L'])),
     winLoss: g(['Win / Loss', 'Win/Loss', 'W/L', 'Result']),
@@ -1220,7 +1278,18 @@ function mapTrade(raw) {
     balance: num(g(['Account Balance', 'Balance'])),
     duration: num(g(['Trade Duration', 'Duration'])),
     emotional: num(g(['Setup Quality', 'Quality', 'Emotional', 'Emotion'])),
-    reason: g(['Reason', 'Comment', 'Notes']),
+    // Journaling — disambiguate "Reasons for Entering" vs "Reason for Cutting"
+    reason: g(['Reasons for Entering', 'Reason for Entering', 'Reasons'], { exclude: ['cut'] }),
+    additionalComment: g(['Additional Comment', 'Comment', 'Notes']),
+    // Tracking flags / streaks
+    inUse: g(['In Use']),
+    month: g(['Month']),
+    consecutiveWins: num(g(['Consecutive Wins', 'Consecutive W'])),
+    consecutiveLosses: num(g(['Consecutive Losses', 'Consecutive L'])),
+    streakIndex: num(g(['Streak Index', 'Streak'])),
+    // Trade cuts
+    cutReason: g(['Reason for Cutting', 'Cut Reason']),
+    cutResult: g(['Cut Result']),
   };
 }
 
@@ -1303,7 +1372,13 @@ function parseChecklistDate(s) {
 function importData(csvText) {
   const raw = parseCSV(csvText);
   if (raw.length === 0) { showImportStatus('No valid trade data found. Make sure this is a Trading Log CSV.', 'error'); return; }
-  TRADES = raw.map(mapTrade).filter(t => t.entryDate && (t.winLoss === 'W' || t.winLoss === 'L' || t.netPL !== 0));
+  // A row is a real trade if it has an entry date AND (win/loss flag OR
+  // non-zero net P/L OR entry price > 0). The entry-price fallback covers
+  // live-journal rows that are filled in but not yet closed.
+  TRADES = raw.map(mapTrade).filter(t => t.entryDate && (
+    t.winLoss === 'W' || t.winLoss === 'L' ||
+    t.netPL !== 0 || t.entryPrice > 0
+  ));
   TRADES.sort((a, b) => a.entryDate - b.entryDate);
   // Detect starting capital from first balance
   if (TRADES.length > 0 && TRADES[0].balance > 0) {
@@ -1321,6 +1396,53 @@ function importFromPaste() {
   if (!text) { showImportStatus('Please paste CSV data first.', 'error'); return; }
   detectAndImport(text);
 }
+
+// Convert any Google Sheet URL shape to the gviz CSV export endpoint.
+// Accepts /edit?gid=N#gid=N, /edit#gid=N, and an already-gviz URL.
+function sheetUrlToCsvUrl(url) {
+  if (!url) return null;
+  if (/\/gviz\/tq\?.*tqx=out:csv/i.test(url)) return url;
+  const sid = (url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/) || [])[1];
+  if (!sid) return null;
+  const gid = (url.match(/[?&#]gid=(\d+)/) || [])[1] || '0';
+  return 'https://docs.google.com/spreadsheets/d/' + sid + '/gviz/tq?tqx=out:csv&gid=' + gid;
+}
+
+// Fetch a live Google Sheet tab as CSV and feed it through detectAndImport
+// (so Trade Log / Checklist dispatch still works).
+async function loadFromSheetUrl() {
+  const el = document.getElementById('sheetUrl');
+  const raw = (el && el.value || '').trim();
+  if (!raw) { showImportStatus('Paste a Google Sheet URL first.', 'error'); return; }
+  const csvUrl = sheetUrlToCsvUrl(raw);
+  if (!csvUrl) { showImportStatus('Could not parse Sheet URL (expect docs.google.com/spreadsheets/d/...).', 'error'); return; }
+  showImportStatus('Fetching Google Sheet…', 'info');
+  try {
+    const res = await fetch(csvUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if (!text || text.length < 50) throw new Error('empty / too-short response');
+    try { localStorage.setItem('tj_sheet_url', raw); } catch(e) {}
+    detectAndImport(text);
+  } catch (e) {
+    showImportStatus('Fetch failed: ' + e.message + ' — if the sheet is private, set "Anyone with the link → Viewer".', 'error');
+  }
+}
+
+// Restore last Sheet URL on first paint of the import page.
+(function initSheetUrl(){
+  try {
+    const saved = localStorage.getItem('tj_sheet_url');
+    if (saved) {
+      const tryFill = () => {
+        const el = document.getElementById('sheetUrl');
+        if (el) { el.value = saved; return true; }
+        return false;
+      };
+      if (!tryFill()) document.addEventListener('DOMContentLoaded', tryFill);
+    }
+  } catch(e) {}
+})();
 
 function loadFromStorage() {
   const saved = localStorage.getItem('tj_trades');
@@ -2206,18 +2328,26 @@ function renderTradeLog() {
     P/L: <span class="${fStats.totalPL>=0?'win':'loss'}">${fmt$(fStats.totalPL)}</span> |
     Exp: <span class="${fStats.expectancy>=0?'win':'loss'}">${fmt$(fStats.expectancy)}/trade</span>
   </div>`;
-  html += '<table><thead><tr><th>Date</th><th>Market</th><th>Side</th><th>Strategy</th><th>Entry</th><th>Exit</th><th>Size</th><th>Net P/L</th><th>R</th><th>Result</th><th>Quality</th><th>Duration</th><th>Tag</th></tr></thead><tbody>';
-  filtered.slice(0, 200).forEach(t => {
+  html += '<table><thead><tr><th></th><th>Date</th><th>TV</th><th>Market</th><th>Side</th><th>Strategy</th><th>Entry</th><th>Exit</th><th>Size</th><th>Net P/L</th><th>R</th><th>Result</th><th>Quality</th><th>Duration</th><th>Tag</th></tr></thead><tbody>';
+  const tjEsc = (s) => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  filtered.slice(0, 200).forEach((t, idx) => {
     const cls = t.winLoss === 'W' ? 'win' : 'loss';
+    const tvCell = t.tvLink
+      ? `<a href="${tjEsc(t.tvLink)}" target="_blank" rel="noopener" title="Open TradingView chart" style="color:var(--accent2,#58a6ff);text-decoration:none;">📈</a>`
+      : '-';
+    const hasDetails = !!(t.reason || t.additionalComment || t.cutReason || t.cutResult || t.fees || t.cumulativePL || t.balance || t.month || t.uid);
+    const chevron = hasDetails ? `<span style="cursor:pointer;color:var(--tx2);user-select:none;padding:0 6px;" onclick="tjToggleTradeRow(${idx})">▸</span>` : '';
     html += `<tr>
+      <td>${chevron}</td>
       <td>${fmtDate(t.entryDate)}</td>
-      <td>${t.tvLink ? `<a href="${t.tvLink}" target="_blank">${t.market}</a>` : t.market}</td>
-      <td>${t.side}</td><td>${t.strategy}</td>
+      <td style="text-align:center;">${tvCell}</td>
+      <td>${tjEsc(t.market)}</td>
+      <td>${tjEsc(t.side)}</td><td>${tjEsc(t.strategy)}</td>
       <td>${fmtPrice(t.entryPrice,4)}</td><td>${fmtPrice(t.exitPrice,4)}</td>
       <td>${fmt$(t.positionSize)}</td>
       <td class="${cls}">${fmt$(t.netPL)}</td>
-      <td>${t.rRatio.toFixed(1)}</td>
-      <td class="${cls}">${t.winLoss}</td>
+      <td>${t.rRatio ? t.rRatio.toFixed(1) : '-'}</td>
+      <td class="${cls}">${t.winLoss || '-'}</td>
       <td>${t.emotional || '-'}</td>
       <td>${t.duration ? t.duration.toFixed(1)+'h' : '-'}</td>
       <td>
@@ -2225,10 +2355,54 @@ function renderTradeLog() {
         <button class="tag-btn ${TRADE_TAGS[tradeKey(t)]?.type==='worst'?'tagged':''}" onclick="tagTrade(${TRADES.indexOf(t)},'worst')" title="Tag Worst">💀</button>
       </td>
     </tr>`;
+    if (hasDetails) {
+      const kv = (k, v, color) => (v === '' || v == null || v === 0) ? '' :
+        `<div><span style="color:var(--tx2);font-size:11px;">${k}</span> <span style="color:${color||'var(--tx)'};font-size:12px;">${tjEsc(v)}</span></div>`;
+      const pnlColor = (t.netPL||0) >= 0 ? 'var(--win,#3fb950)' : 'var(--loss,#f85149)';
+      const detailsGrid = [
+        kv('UID', t.uid),
+        kv('Month', t.month),
+        kv('Fees', t.fees ? fmt$(t.fees) : ''),
+        kv('Gross P/L', t.grossPL ? fmt$(t.grossPL) : '', pnlColor),
+        kv('Cumulative P/L', t.cumulativePL ? fmt$(t.cumulativePL) : ''),
+        kv('Balance', t.balance ? fmt$(t.balance) : ''),
+        kv('Account Risk', t.accountRisk),
+        kv('Stop Loss', t.stopLoss ? fmtPrice(t.stopLoss,4) : ''),
+        kv('Take Profit', t.takeProfit ? fmtPrice(t.takeProfit,4) : ''),
+        kv('Position Units', t.positionUnits),
+        kv('In Use', t.inUse),
+        kv('Streak Index', t.streakIndex),
+        kv('Consecutive Wins', t.consecutiveWins),
+        kv('Consecutive Losses', t.consecutiveLosses),
+      ].filter(Boolean).join('');
+      const narratives = [
+        t.reason ? `<div style="margin-top:10px;"><div style="color:var(--tx2);font-size:11px;margin-bottom:2px;">💡 Reason for Entering</div><div style="color:var(--tx);font-size:13px;line-height:1.5;">${tjEsc(t.reason)}</div></div>` : '',
+        t.additionalComment ? `<div style="margin-top:10px;"><div style="color:var(--tx2);font-size:11px;margin-bottom:2px;">📝 Additional Comment</div><div style="color:var(--tx);font-size:13px;line-height:1.5;">${tjEsc(t.additionalComment)}</div></div>` : '',
+        t.cutReason ? `<div style="margin-top:10px;"><div style="color:var(--tx2);font-size:11px;margin-bottom:2px;">✂️ Reason for Cutting The Trade</div><div style="color:var(--tx);font-size:13px;line-height:1.5;">${tjEsc(t.cutReason)}</div></div>` : '',
+        t.cutResult ? `<div style="margin-top:4px;"><span style="color:var(--tx2);font-size:11px;">Cut Result:</span> <span style="color:var(--tx);font-size:12px;">${tjEsc(t.cutResult)}</span></div>` : '',
+      ].filter(Boolean).join('');
+      html += `<tr id="tj-row-details-${idx}" style="display:none;background:var(--bg2,#161b22);">
+        <td colspan="15" style="padding:14px 18px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 20px;">${detailsGrid}</div>
+          ${narratives}
+        </td>
+      </tr>`;
+    }
   });
-  if (filtered.length > 200) html += `<tr><td colspan="12" style="text-align:center;color:var(--tx2);padding:12px">Showing first 200 of ${filtered.length} trades</td></tr>`;
+  if (filtered.length > 200) html += `<tr><td colspan="15" style="text-align:center;color:var(--tx2);padding:12px">Showing first 200 of ${filtered.length} trades</td></tr>`;
   html += '</tbody></table>';
   document.getElementById('tradeLogTable').innerHTML = html;
+}
+
+// Toggle inline details row for a trade in the log.
+function tjToggleTradeRow(idx) {
+  const row = document.getElementById('tj-row-details-' + idx);
+  if (!row) return;
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : '';
+  const prev = row.previousElementSibling;
+  const chevron = prev && prev.querySelector('td:first-child span');
+  if (chevron) chevron.textContent = isOpen ? '▸' : '▾';
 }
 
 let filtersPopulated = false;
