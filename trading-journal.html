@@ -4268,7 +4268,9 @@ function tjTopCoinsGridHtml(payload) {
   // Sort rows by total_return desc
   const sorted = ok.slice().sort((a, b) => (b.metrics.total_return || 0) - (a.metrics.total_return || 0));
   sorted.forEach(r => {
-    html += '<tr style="border-bottom:1px solid color-mix(in srgb, var(--br,#30363d) 40%, transparent);">';
+    // data-tj-coin lets consumers (Backtesting drill-down) wire click handlers.
+    // Attribute is harmless for Strategy Lab / Top Coins which don't wire any.
+    html += '<tr data-tj-coin="' + escapeHtml(r.coin) + '" style="border-bottom:1px solid color-mix(in srgb, var(--br,#30363d) 40%, transparent);">';
     html += '<td style="padding:8px;font-weight:600;">' + escapeHtml(r.coin) + '</td>';
     cols.forEach(c => {
       const v = r.metrics[c.key];
@@ -4489,7 +4491,13 @@ async function tjBtRun(forceRefresh) {
 function tjBtRenderSingle(p) {
   document.getElementById('btResultGrid').style.display = 'none';
   document.getElementById('btResultSingle').style.display = '';
+  // When the user drilled in from a multi-coin run, surface a "back" affordance
+  // so they can return to the grid without losing the multi result.
+  const backBtn = (p.fromDrillIn && window.tjBtLastMultiPayload)
+    ? '<button class="btn" onclick="tjBtBackToGrid()" style="font-size:11px;padding:4px 10px;margin-right:10px;">← Back to grid</button>'
+    : '';
   document.getElementById('btSingleHeader').innerHTML =
+    backBtn +
     '<strong>' + escapeHtml(p.coin) + '</strong> · ' + p.periodDays + 'd · ' +
     'side: ' + escapeHtml(p.side) + ' · ' +
     escapeHtml(p.strategy_name || '(custom)') +
@@ -4622,7 +4630,95 @@ function tjBtRenderGrid(p) {
     periodDays: p.periodDays,
     results: p.results
   };
-  document.getElementById('btGrid').innerHTML = tjTopCoinsGridHtml(gridPayload);
+  const gridEl = document.getElementById('btGrid');
+  gridEl.innerHTML =
+    '<div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Click a coin row to drill into the single-coin backtest with equity curve + trade log.</div>' +
+    tjTopCoinsGridHtml(gridPayload);
+
+  // Store the full multi payload so drill-in has the complete parameter set
+  // (idea / side / period / fees / slippage / capital) and can come back.
+  window.tjBtLastMultiPayload = p;
+
+  // Wire click handlers on each coin row. Uses the `data-tj-coin` attribute
+  // added to tjTopCoinsGridHtml. Strategy Lab doesn't wire any — harmless there.
+  gridEl.querySelectorAll('tr[data-tj-coin]').forEach(row => {
+    row.style.cursor = 'pointer';
+    row.title = 'Click to drill into single-coin view';
+    row.addEventListener('mouseenter', () => row.style.backgroundColor = 'color-mix(in srgb, var(--accent2,#58a6ff) 8%, transparent)');
+    row.addEventListener('mouseleave', () => row.style.backgroundColor = '');
+    row.addEventListener('click', () => {
+      const coin = row.getAttribute('data-tj-coin');
+      if (coin) tjBtDrillInto(coin);
+    });
+  });
+}
+
+// Drill from a multi-coin grid row into the single-coin view for that coin,
+// using the exact same idea / period / side / fees / slippage / capital as the
+// parent multi run. Cache-first (single-coin cache key); on miss, fires one
+// fresh /api/backtest call and caches. Called by the row click handlers.
+async function tjBtDrillInto(coin) {
+  const multi = window.tjBtLastMultiPayload;
+  if (!multi) {
+    // Shouldn't happen (handlers are only wired after render), but guard anyway.
+    document.getElementById('btStatus').textContent = 'No active multi-coin run to drill into — run Top 10 first.';
+    return;
+  }
+  const statusEl = document.getElementById('btStatus');
+  const btn = document.getElementById('btRunBtn');
+
+  const effectiveIdea = multi.effectiveIdea || multi.idea;
+  const period = multi.periodDays;
+  const side = multi.side;
+  const fees = multi.feesPct;
+  const slip = multi.slipPct;
+  const capital = multi.capital;
+
+  const key = tjBtCacheKey(effectiveIdea, [coin], period, side, fees, slip, capital);
+
+  // Cache hit — single-coin runs cached under their own key, including any
+  // earlier drill-ins during this session.
+  const cached = tjBtCacheLoad(key);
+  if (cached) {
+    statusEl.textContent = 'Loaded ' + coin + ' from cache (' + new Date(cached.timestamp).toLocaleString() + ').';
+    cached.fromDrillIn = true;                    // surface "Back to grid"
+    tjBtRenderSingle(cached);
+    return;
+  }
+
+  // Miss — fetch fresh single-coin call. Same endpoint, same params.
+  btn && (btn.disabled = true);
+  statusEl.textContent = 'Drilling into ' + coin + '… (single-coin backtest)';
+  try {
+    const r = await tjBtFetchOne(effectiveIdea, coin, period, fees, slip, capital);
+    const payload = {
+      timestamp: Date.now(),
+      mode: 'single',
+      idea: multi.idea, effectiveIdea, side, periodDays: period,
+      capital, feesPct: fees, slipPct: slip,
+      coin, universeLabel: coin,
+      strategy_name: r.strategy_name, strategy_description: r.strategy_description,
+      metrics: r.metrics, trades: r.trades || [], equity_curve: r.equity_curve || r.equity || [],
+      fromDrillIn: true
+    };
+    tjBtCacheSave(key, payload);
+    statusEl.textContent = 'Done — ' + coin + ': ' + (r.metrics.total_trades || 0) + ' trades, ' +
+      ((r.metrics.total_return || 0) * 100).toFixed(1) + '% return.';
+    tjBtRenderSingle(payload);
+  } catch (e) {
+    statusEl.textContent = 'Drill into ' + coin + ' failed: ' + (e.message || String(e));
+  } finally {
+    btn && (btn.disabled = false);
+  }
+}
+
+// Return to the multi-coin grid after drilling in. The multi payload is still
+// in window.tjBtLastMultiPayload; just re-render it.
+function tjBtBackToGrid() {
+  if (window.tjBtLastMultiPayload) {
+    tjBtRenderGrid(window.tjBtLastMultiPayload);
+    document.getElementById('btStatus').textContent = 'Back to ' + window.tjBtLastMultiPayload.universeLabel + '.';
+  }
 }
 
 function tjBtRender() {
