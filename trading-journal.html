@@ -308,6 +308,10 @@ tr:hover td{background:var(--bg2)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     Strategy Lab
   </div>
+  <div class="nav-item" onclick="showPage('backtest')" data-page="backtest">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6l-5 9a2 2 0 002 3h12a2 2 0 002-3l-5-9V2"/><line x1="9" y1="2" x2="15" y2="2"/><line x1="7" y1="14" x2="17" y2="14"/></svg>
+    Backtesting
+  </div>
   <div class="nav-item" onclick="showPage('coach')" data-page="coach">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     Coach
@@ -619,6 +623,89 @@ tr:hover td{background:var(--bg2)}
       </div>
     </div>
     </div><!-- /labPanel-benchmark -->
+  </div>
+
+  <!-- ═══ BACKTESTING PAGE (freeform sandbox — separate from Strategy Lab) ═══ -->
+  <div class="page" id="page-backtest">
+    <div class="page-title">🧪 Backtesting</div>
+    <p style="color:var(--tx2);margin-bottom:16px;font-size:13px;line-height:1.5;max-width:780px;">
+      Freeform strategy sandbox. Describe any idea in plain English, pick a universe, run. No journal data required. Uses the same engine as Strategy Lab (BT_API / <code>POST /api/backtest</code>).
+    </p>
+
+    <div style="background:var(--bg2,#161b22);border:1px solid var(--br,#30363d);border-radius:8px;padding:16px;margin-bottom:20px;">
+      <label style="display:block;font-size:12px;color:var(--tx2);margin-bottom:6px;">Strategy (plain English, or parser syntax)</label>
+      <textarea id="btIdea" rows="3" placeholder="e.g. buy when RSI below 30 and price within 2% of lower bollinger band; exit at 2R or stop at -1R"
+        style="width:100%;padding:10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;font-family:inherit;resize:vertical;min-height:72px;"></textarea>
+
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;">
+        <div style="flex:1;min-width:220px;">
+          <label style="display:block;font-size:12px;color:var(--tx2);margin-bottom:6px;">Universe</label>
+          <select id="btUniverse" onchange="tjBtOnUniverseChange()"
+            style="width:100%;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;">
+            <option value="btc" selected>BTC only</option>
+            <option value="top10">Top 10 coins</option>
+            <option value="custom">Custom coin(s)…</option>
+          </select>
+          <input id="btCustomCoins" type="text" placeholder="e.g. ETH, SOL, LINK" style="display:none;margin-top:8px;width:100%;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;font-family:monospace;">
+        </div>
+        <div style="min-width:120px;">
+          <label style="display:block;font-size:12px;color:var(--tx2);margin-bottom:6px;">Period</label>
+          <select id="btPeriod" style="width:100%;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;">
+            <option value="365">1 Year</option>
+            <option value="1095">3 Years</option>
+            <option value="1825" selected>5 Years</option>
+          </select>
+        </div>
+        <div style="min-width:110px;">
+          <label style="display:block;font-size:12px;color:var(--tx2);margin-bottom:6px;">Side</label>
+          <select id="btSide" style="width:100%;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;">
+            <option value="long" selected>Long</option>
+            <option value="short">Short</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+        <div style="min-width:110px;">
+          <label style="display:block;font-size:12px;color:var(--tx2);margin-bottom:6px;">Capital ($)</label>
+          <input id="btCapital" type="number" value="10000" min="100" step="100"
+            style="width:100%;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;">
+        </div>
+        <div style="min-width:100px;">
+          <label style="display:block;font-size:12px;color:var(--tx2);margin-bottom:6px;">Fees (%)</label>
+          <input id="btFees" type="number" value="0.1" min="0" step="0.01"
+            style="width:100%;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;">
+        </div>
+        <div style="min-width:110px;">
+          <label style="display:block;font-size:12px;color:var(--tx2);margin-bottom:6px;">Slippage (%)</label>
+          <input id="btSlippage" type="number" value="0.1" min="0" step="0.01"
+            style="width:100%;padding:8px 10px;background:var(--bg,#0d1117);border:1px solid var(--br,#30363d);border-radius:6px;color:var(--tx);font-size:13px;">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="tjBtRun(false)" id="btRunBtn">▶ Run Backtest</button>
+        <button class="btn" onclick="tjBtRun(true)" style="font-size:12px;">Force Refresh</button>
+        <div id="btStatus" style="font-size:12px;color:var(--tx2);flex:1;min-width:200px;"></div>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:10px;line-height:1.5;">
+        Side is passed as a hint; engine is primarily long-only — short/both rely on how the NL parser compiles the idea. Render free-tier cold start may add ~30-60s on the first call of the day.
+      </div>
+    </div>
+
+    <!-- Results containers — toggled per mode -->
+    <div id="btResultSingle" style="display:none;">
+      <h3 class="section-title" style="margin-bottom:10px;">Single-Coin Result</h3>
+      <div id="btSingleHeader" style="font-size:12px;color:var(--tx2);margin-bottom:10px;"></div>
+      <div id="btSingleMetrics" class="metric-grid" style="margin-bottom:14px;"></div>
+      <div class="chart-container" style="margin-bottom:14px;"><h3>Equity Curve</h3><canvas id="btEquityChart" height="240"></canvas></div>
+      <h3 class="section-title" style="margin-bottom:8px;">Trade Log</h3>
+      <div class="tbl-wrap" id="btTradeLog"></div>
+    </div>
+
+    <div id="btResultGrid" style="display:none;">
+      <h3 class="section-title" style="margin-bottom:10px;">Multi-Coin Result</h3>
+      <div id="btSummary" style="margin-bottom:14px;"></div>
+      <div id="btGrid"></div>
+    </div>
   </div>
 
   <!-- ═══ COACH PAGE ═══ -->
@@ -1585,6 +1672,7 @@ function renderPage(id) {
   else if (id === 'checklist') renderChecklist();
   else if (id === 'patterns') renderPatterns();
   else if (id === 'benchmark') { renderBenchmark(); tjCompareRender(); }
+  else if (id === 'backtest') { tjBtRender(); }
   else if (id === 'coach') renderCoach();
   else if (id === 'tradelog') renderTradeLog();
   else if (id === 'taxes') renderTaxes();
@@ -4219,6 +4307,338 @@ function tjTopCoinsRender() {
       document.getElementById('tcGrid').innerHTML = tjTopCoinsGridHtml(cached);
     }
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//   BACKTESTING (freeform sandbox — separate page, not a Strategy Lab subtab)
+//   Reuses: BT_API, COIN_UNIVERSES.top10, tjTopCoinsRunWithCap, tjTopCoinsGridHtml,
+//           escapeHtml. Own cache namespace /tradingJournal/backtest/<key>.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const BT_CACHE_PREFIX = 'tjbt_';
+const BT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function tjBtOnUniverseChange() {
+  const u = document.getElementById('btUniverse').value;
+  document.getElementById('btCustomCoins').style.display = (u === 'custom') ? '' : 'none';
+}
+
+function tjBtParseCustomCoins() {
+  const raw = (document.getElementById('btCustomCoins').value || '').trim();
+  if (!raw) return [];
+  return raw.split(/[,\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+}
+
+function tjBtResolveCoins() {
+  const u = document.getElementById('btUniverse').value;
+  if (u === 'btc') return { coins: ['BTC'], label: 'BTC only' };
+  if (u === 'top10') return { coins: COIN_UNIVERSES.top10.coins.slice(), label: COIN_UNIVERSES.top10.label };
+  if (u === 'custom') {
+    const coins = tjBtParseCustomCoins();
+    return { coins, label: 'Custom (' + coins.join(', ') + ')' };
+  }
+  return { coins: ['BTC'], label: 'BTC only' };
+}
+
+function tjBtCacheKey(idea, coins, periodDays, side, feesPct, slipPct, capital) {
+  // Stable-ish hash across the full parameter set so every distinct run gets its own slot.
+  const s = [
+    (idea || '').toLowerCase().trim().replace(/\s+/g, ' '),
+    coins.slice().sort().join(','),
+    String(periodDays),
+    side || 'long',
+    String(feesPct),
+    String(slipPct),
+    String(capital)
+  ].join('|');
+  // djb2-ish rolling hash — collision-safe enough for per-browser cache keys
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) & 0x7fffffff;
+  return BT_CACHE_PREFIX + h.toString(36);
+}
+function tjBtCacheLoad(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - parsed.timestamp > BT_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch(e) { return null; }
+}
+function tjBtCacheSave(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+  if (typeof tjDbRef !== 'undefined' && tjDbRef) {
+    try { tjDbRef.child('backtest/' + key.replace(/[.#$/[\]]/g, '_')).set(data); } catch(e) {}
+  }
+}
+
+async function tjBtFetchOne(idea, coin, periodDays, fees, slippage, capital) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 70000);
+  try {
+    const resp = await fetch(BT_API + '/api/backtest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idea, symbols: [coin],
+        capital, fee_pct: fees, slippage_pct: slippage,
+        period_days: periodDays
+      }),
+      signal: ctrl.signal
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const first = (data.results || []).find(r => !r.error && r.metrics);
+    if (!first) throw new Error((data.results && data.results[0] && data.results[0].error) || 'no result');
+    // Return the whole result (keeps trades + equity if present for single-coin mode)
+    return Object.assign({ strategy_name: data.strategy_name, strategy_description: data.strategy_description }, first);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function tjBtRun(forceRefresh) {
+  const idea = (document.getElementById('btIdea').value || '').trim();
+  if (!idea) { document.getElementById('btStatus').textContent = 'Enter a strategy idea first.'; return; }
+  const resolved = tjBtResolveCoins();
+  if (!resolved.coins.length) { document.getElementById('btStatus').textContent = 'Universe is empty — add at least one coin.'; return; }
+  const period = parseInt(document.getElementById('btPeriod').value) || 1825;
+  const side = document.getElementById('btSide').value;
+  const capital = parseFloat(document.getElementById('btCapital').value) || 10000;
+  const feesPct = (parseFloat(document.getElementById('btFees').value) || 0) / 100;      // UI is %; API wants fraction
+  const slipPct = (parseFloat(document.getElementById('btSlippage').value) || 0) / 100;
+  // Pass side as a hint by prefixing the idea — engine may or may not honor.
+  const effectiveIdea = (side === 'short') ? ('short: ' + idea) : (side === 'both') ? ('both sides: ' + idea) : idea;
+
+  const btn = document.getElementById('btRunBtn');
+  const statusEl = document.getElementById('btStatus');
+  btn.disabled = true;
+
+  // Hide both result panes until we know the mode
+  document.getElementById('btResultSingle').style.display = 'none';
+  document.getElementById('btResultGrid').style.display   = 'none';
+
+  const isSingle = resolved.coins.length === 1;
+  const key = tjBtCacheKey(effectiveIdea, resolved.coins, period, side, feesPct, slipPct, capital);
+
+  // Cache hit
+  if (!forceRefresh) {
+    const cached = tjBtCacheLoad(key);
+    if (cached) {
+      statusEl.textContent = 'Loaded from cache (' + new Date(cached.timestamp).toLocaleString() + ').';
+      if (isSingle) tjBtRenderSingle(cached);
+      else tjBtRenderGrid(cached);
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  try {
+    if (isSingle) {
+      statusEl.textContent = 'Running backtest on ' + resolved.coins[0] + '…';
+      const r = await tjBtFetchOne(effectiveIdea, resolved.coins[0], period, feesPct, slipPct, capital);
+      const payload = {
+        timestamp: Date.now(),
+        mode: 'single',
+        idea, effectiveIdea, side, periodDays: period,
+        capital, feesPct, slipPct,
+        coin: resolved.coins[0], universeLabel: resolved.label,
+        strategy_name: r.strategy_name, strategy_description: r.strategy_description,
+        metrics: r.metrics, trades: r.trades || [], equity_curve: r.equity_curve || r.equity || []
+      };
+      tjBtCacheSave(key, payload);
+      statusEl.textContent = 'Done — ' + (r.metrics.total_trades || 0) + ' trades, ' +
+        ((r.metrics.total_return || 0) * 100).toFixed(1) + '% return.';
+      tjBtRenderSingle(payload);
+    } else {
+      statusEl.textContent = 'Running ' + resolved.coins.length + ' backtests (cap ' + TOPCOINS_CONCURRENCY + ' parallel)…';
+      let done = 0;
+      const tasks = resolved.coins.map(coin => async () => {
+        const r = await tjBtFetchOne(effectiveIdea, coin, period, feesPct, slipPct, capital);
+        done++;
+        statusEl.textContent = 'Progress: ' + done + '/' + resolved.coins.length + ' coins…';
+        return { coin, metrics: r.metrics };
+      });
+      const outcomes = await tjTopCoinsRunWithCap(tasks, TOPCOINS_CONCURRENCY);
+      const results = outcomes.map((o, i) => o.ok
+        ? { coin: resolved.coins[i], ok: true, metrics: o.value.metrics }
+        : { coin: resolved.coins[i], ok: false, error: o.error });
+      const payload = {
+        timestamp: Date.now(),
+        mode: 'grid',
+        idea, effectiveIdea, side, periodDays: period,
+        capital, feesPct, slipPct,
+        coins: resolved.coins, universeLabel: resolved.label,
+        strategy: idea.length > 60 ? idea.slice(0,60) + '…' : idea,
+        mapping: '(freeform)',
+        universe: 'custom', periodDaysLabel: period,
+        results
+      };
+      tjBtCacheSave(key, payload);
+      const ok = results.filter(r => r.ok).length;
+      statusEl.textContent = 'Done — ' + ok + '/' + resolved.coins.length + ' coins succeeded.';
+      tjBtRenderGrid(payload);
+    }
+  } catch (e) {
+    statusEl.textContent = 'Backtest failed: ' + (e.message || String(e));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function tjBtRenderSingle(p) {
+  document.getElementById('btResultGrid').style.display = 'none';
+  document.getElementById('btResultSingle').style.display = '';
+  document.getElementById('btSingleHeader').innerHTML =
+    '<strong>' + escapeHtml(p.coin) + '</strong> · ' + p.periodDays + 'd · ' +
+    'side: ' + escapeHtml(p.side) + ' · ' +
+    escapeHtml(p.strategy_name || '(custom)') +
+    (p.strategy_description ? ' — <span style="color:var(--tx2);">' + escapeHtml(p.strategy_description) + '</span>' : '');
+
+  const m = p.metrics || {};
+  const pct = v => (v == null || isNaN(v)) ? '—' : (v*100).toFixed(1) + '%';
+  const num = (v, d=2) => (v == null || isNaN(v)) ? '—' : v.toFixed(d);
+  const cardHtml = (label, value, cls) =>
+    '<div class="metric-card"><div class="label">' + label + '</div><div class="value ' + (cls||'') + '">' + value + '</div></div>';
+  const retCls = (m.total_return||0) >= 0 ? 'win' : 'loss';
+  document.getElementById('btSingleMetrics').innerHTML =
+    cardHtml('Total Return', pct(m.total_return), retCls) +
+    cardHtml('Win Rate', pct(m.win_rate)) +
+    cardHtml('Profit Factor', num(m.profit_factor)) +
+    cardHtml('Sharpe', num(m.sharpe_ratio)) +
+    cardHtml('Max DD', pct(-(m.max_drawdown||0)), 'loss') +
+    cardHtml('Trades', String(m.total_trades||0));
+
+  // Equity curve — draw only if we have a series
+  tjBtDrawEquity(p.equity_curve || [], p.capital || 10000);
+
+  // Trade log — optional, may be absent depending on API response shape
+  const trades = p.trades || [];
+  const el = document.getElementById('btTradeLog');
+  if (!trades.length) {
+    el.innerHTML = '<div style="padding:14px;color:var(--tx2);font-size:12px;text-align:center;">No per-trade log returned by the engine for this run.</div>';
+    return;
+  }
+  const fmt$ = v => (v == null || isNaN(v)) ? '—' : ((v >= 0 ? '+$' : '-$') + Math.abs(v).toLocaleString(undefined,{maximumFractionDigits:2}));
+  const dt = v => { if (!v) return '—'; const d = new Date(v); return isNaN(d) ? String(v) : d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}); };
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="border-bottom:1px solid var(--br,#30363d);">' +
+    '<th style="text-align:left;padding:6px 8px;color:var(--tx2);">Entry</th>' +
+    '<th style="text-align:left;padding:6px 8px;color:var(--tx2);">Exit</th>' +
+    '<th style="text-align:right;padding:6px 8px;color:var(--tx2);">Entry $</th>' +
+    '<th style="text-align:right;padding:6px 8px;color:var(--tx2);">Exit $</th>' +
+    '<th style="text-align:right;padding:6px 8px;color:var(--tx2);">P/L</th>' +
+    '<th style="text-align:right;padding:6px 8px;color:var(--tx2);">%</th>' +
+    '</tr></thead><tbody>';
+  trades.slice(0, 400).forEach(t => {
+    const pnl = t.pnl != null ? t.pnl : t.profit;
+    const pnlPct = t.pnl_pct != null ? t.pnl_pct : t.return;
+    const cls = (pnl||0) >= 0 ? 'win' : 'loss';
+    html += '<tr style="border-bottom:1px solid color-mix(in srgb, var(--br,#30363d) 40%, transparent);">' +
+      '<td style="padding:6px 8px;">' + escapeHtml(dt(t.entry_time || t.entry_date || t.entry)) + '</td>' +
+      '<td style="padding:6px 8px;">' + escapeHtml(dt(t.exit_time  || t.exit_date  || t.exit )) + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;">' + (t.entry_price != null ? '$' + Number(t.entry_price).toLocaleString(undefined,{maximumFractionDigits:4}) : '—') + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;">' + (t.exit_price  != null ? '$' + Number(t.exit_price ).toLocaleString(undefined,{maximumFractionDigits:4}) : '—') + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;" class="' + cls + '">' + fmt$(pnl) + '</td>' +
+      '<td style="padding:6px 8px;text-align:right;" class="' + cls + '">' + (pnlPct == null || isNaN(pnlPct) ? '—' : (pnlPct*100).toFixed(1)+'%') + '</td>' +
+      '</tr>';
+  });
+  if (trades.length > 400) html += '<tr><td colspan="6" style="padding:8px;color:var(--tx2);text-align:center;font-size:11px;">Showing first 400 of ' + trades.length + ' trades</td></tr>';
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function tjBtDrawEquity(series, capital) {
+  const canvas = document.getElementById('btEquityChart');
+  if (!canvas || !series || !series.length) {
+    if (canvas) { const c = canvas.getContext('2d'); c.clearRect(0,0,canvas.width,canvas.height); }
+    return;
+  }
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W; canvas.height = 240;
+  ctx.clearRect(0, 0, W, 240);
+  // Normalize series — accept either [{t,equity}] or [number]
+  const vals = series.map(p => typeof p === 'number' ? p : (p.equity != null ? p.equity : (p.value != null ? p.value : p.v)));
+  const min = Math.min.apply(null, vals) * 0.98;
+  const max = Math.max.apply(null, vals) * 1.02;
+  const range = (max - min) || 1;
+  const pad = { l: 60, r: 20, t: 20, b: 30 };
+  const cw = W - pad.l - pad.r, ch = 240 - pad.t - pad.b;
+  // Grid + capital baseline
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (ch / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#8b949e'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText('$' + Math.round(max - (range/4)*i).toLocaleString(), pad.l - 8, y + 4);
+  }
+  if (capital >= min && capital <= max) {
+    const yC = pad.t + ch - ((capital - min) / range) * ch;
+    ctx.setLineDash([5,5]); ctx.strokeStyle = '#484f58';
+    ctx.beginPath(); ctx.moveTo(pad.l, yC); ctx.lineTo(W - pad.r, yC); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // Equity line
+  ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 1.5; ctx.beginPath();
+  vals.forEach((v, i) => {
+    const x = pad.l + (i / (vals.length - 1 || 1)) * cw;
+    const y = pad.t + ch - ((v - min) / range) * ch;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+function tjBtRenderGrid(p) {
+  document.getElementById('btResultSingle').style.display = 'none';
+  document.getElementById('btResultGrid').style.display = '';
+  // Summary: best / worst / average across ok results
+  const ok = p.results.filter(r => r.ok);
+  const summaryEl = document.getElementById('btSummary');
+  if (!ok.length) {
+    summaryEl.innerHTML = '<div style="padding:10px;background:var(--bg2,#161b22);border:1px solid var(--br,#30363d);border-radius:8px;color:var(--yellow,#d29922);font-size:13px;">No coins returned a valid backtest.</div>';
+  } else {
+    const byRet = ok.slice().sort((a,b) => (b.metrics.total_return||0) - (a.metrics.total_return||0));
+    const best = byRet[0], worst = byRet[byRet.length - 1];
+    const avg = ok.reduce((s,r) => s + (r.metrics.total_return||0), 0) / ok.length;
+    const pct = v => (v == null || isNaN(v)) ? '—' : (v*100).toFixed(1) + '%';
+    const cell = (label, val, sub) =>
+      '<div style="flex:1;min-width:140px;padding:10px 14px;background:var(--bg2,#161b22);border:1px solid var(--br,#30363d);border-radius:8px;">' +
+        '<div style="font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:0.5px;">' + label + '</div>' +
+        '<div style="font-size:18px;font-weight:700;margin-top:4px;">' + val + '</div>' +
+        (sub ? '<div style="font-size:11px;color:var(--tx2);margin-top:2px;">' + sub + '</div>' : '') +
+      '</div>';
+    summaryEl.innerHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+      cell('Best',  pct(best.metrics.total_return),  best.coin) +
+      cell('Worst', pct(worst.metrics.total_return), worst.coin) +
+      cell('Avg',   pct(avg),                        ok.length + '/' + p.results.length + ' ok') +
+    '</div>';
+  }
+  // Reuse the Phase 2 grid renderer — its payload contract is compatible.
+  const gridPayload = {
+    timestamp: p.timestamp,
+    strategy: p.strategy || p.idea,
+    mapping: p.mapping || '(freeform)',
+    universeLabel: p.universeLabel,
+    periodDays: p.periodDays,
+    results: p.results
+  };
+  document.getElementById('btGrid').innerHTML = tjTopCoinsGridHtml(gridPayload);
+}
+
+function tjBtRender() {
+  // Seed last-saved sheet URL is irrelevant here. Just restore last idea if any.
+  try {
+    const last = localStorage.getItem('tj_bt_last_idea');
+    const el = document.getElementById('btIdea');
+    if (el && last && !el.value) el.value = last;
+  } catch(e) {}
+  // Persist idea on type
+  const ideaEl = document.getElementById('btIdea');
+  if (ideaEl && !ideaEl.__persistHook) {
+    ideaEl.addEventListener('input', () => { try { localStorage.setItem('tj_bt_last_idea', ideaEl.value); } catch(e) {} });
+    ideaEl.__persistHook = true;
+  }
+  tjBtOnUniverseChange();
 }
 
 function renderBenchmark() {
