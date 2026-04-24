@@ -1,0 +1,6 @@
+.DS_Store
+backups/
+.claude/*
+!.claude/rules/
+!.claude/hooks/
+!.claude/settings.json

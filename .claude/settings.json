@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Project-shared settings for the JumpTools deploy/aggregator repo. Every push to main is a live deploy. Hooks: preflight-gate (block push without fresh preflight token), no-bulk-stage (forbid git add -A/-u/. and commit -a), no-deploy-html-edit (forbid hand-edits to trading-journal.html / fund-hq.html). See .claude/rules/local-first-release.md and source-deploy-sync.md.",
+  "permissions": {
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git add -A*)",
+      "Bash(git add -u*)",
+      "Bash(git add .*)",
+      "Bash(git commit -a*)",
+      "Bash(git commit --all*)",
+      "Bash(git tag -d v1.3.0-trading-journal*)",
+      "Bash(git tag -f v1.3.0-trading-journal*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/preflight-gate.sh"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/no-bulk-stage.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/no-deploy-html-edit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/no-deploy-html-edit.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
