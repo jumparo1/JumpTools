@@ -273,450 +273,6 @@ tr:hover td{background:var(--bg2)}
 .chat-send{background:var(--green2);border:none;color:#fff;border-radius:8px;padding:8px 14px;
   cursor:pointer;font-size:14px;transition:background .15s}
 .chat-send:hover{background:var(--green)}
-
-/* ═══════════ SHEET-SYNC STRIP (daemon-driven tilt banner) ═══════════
-   Scoped with tj-sync- prefix. Does not modify global tokens.          */
-.tj-sync-strip{
-  margin:0 0 14px 0;padding:10px 14px;border-radius:10px;
-  background:color-mix(in srgb, var(--bg2,#0f1419) 92%, black);
-  border:1px solid color-mix(in srgb, var(--tx3,#6b7280) 22%, transparent);
-  font-size:12px;color:var(--tx2,#9ca3af);
-  transition:border-color .2s,background .2s;
-}
-.tj-sync-strip[data-sev="warn"]{
-  border-color:color-mix(in srgb, #f59e0b 45%, transparent);
-  background:color-mix(in srgb, #f59e0b 6%, var(--bg2,#0f1419));
-}
-.tj-sync-strip[data-sev="high"]{
-  border-color:color-mix(in srgb, #ef4444 55%, transparent);
-  background:color-mix(in srgb, #ef4444 8%, var(--bg2,#0f1419));
-}
-.tj-sync-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.tj-sync-dot{
-  width:8px;height:8px;border-radius:50%;background:#22c55e;
-  box-shadow:0 0 6px color-mix(in srgb, #22c55e 60%, transparent);
-  flex-shrink:0;
-}
-.tj-sync-strip[data-sev="warn"] .tj-sync-dot{background:#f59e0b;box-shadow:0 0 6px color-mix(in srgb,#f59e0b 70%,transparent);}
-.tj-sync-strip[data-sev="high"] .tj-sync-dot{background:#ef4444;box-shadow:0 0 8px color-mix(in srgb,#ef4444 70%,transparent);}
-.tj-sync-label{font-weight:600;color:var(--tx,#e5e7eb);letter-spacing:.3px;text-transform:uppercase;font-size:10px;}
-.tj-sync-time{color:var(--tx3,#6b7280);font-size:11px;}
-.tj-sync-sep{color:var(--tx3,#6b7280);opacity:.4;}
-.tj-sync-kv{display:inline-flex;gap:6px;align-items:baseline;}
-.tj-sync-k{color:var(--tx3,#6b7280);font-size:10px;text-transform:uppercase;letter-spacing:.3px;}
-.tj-sync-v{color:var(--tx,#e5e7eb);font-weight:600;font-size:12px;font-variant-numeric:tabular-nums;}
-.tj-sync-v[data-good="true"]{color:#22c55e;}
-.tj-sync-v[data-bad="true"]{color:#ef4444;}
-.tj-sync-flags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-.tj-sync-flags:empty{display:none;}
-.tj-sync-flag{
-  display:inline-flex;align-items:center;gap:4px;
-  font-size:11px;padding:3px 10px;border-radius:999px;
-  border:1px solid color-mix(in srgb,#f59e0b 40%,transparent);
-  background:color-mix(in srgb,#f59e0b 14%,transparent);
-  color:#fbbf24;font-weight:500;
-}
-.tj-sync-flag[data-level="high"]{
-  border-color:color-mix(in srgb,#ef4444 55%,transparent);
-  background:color-mix(in srgb,#ef4444 14%,transparent);
-  color:#fca5a5;
-}
-.tj-sync-flag::before{content:"⚠ ";opacity:.8;}
-
-/* ═══════════ ALPHA PAGE ═══════════  */
-#page-alpha .alpha-card{
-  background:color-mix(in srgb, var(--bg2,#0f1419) 94%, black);
-  border:1px solid color-mix(in srgb, var(--tx3,#6b7280) 18%, transparent);
-  border-radius:12px;padding:18px 20px;margin-bottom:16px;
-}
-#page-alpha .alpha-card-head{
-  display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;
-}
-#page-alpha .alpha-card-head h3{margin:0;font-size:14px;font-weight:600;color:var(--tx,#e5e7eb);letter-spacing:.15px;}
-#page-alpha .alpha-subtle{color:var(--tx3);font-size:11px;}
-#page-alpha .alpha-chip{
-  display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;
-  background:color-mix(in srgb,#22c55e 12%,transparent);color:#22c55e;
-  border:1px solid color-mix(in srgb,#22c55e 30%,transparent);
-}
-#page-alpha .alpha-chip-bad{background:color-mix(in srgb,#ef4444 12%,transparent);color:#fca5a5;border-color:color-mix(in srgb,#ef4444 40%,transparent);}
-#page-alpha .alpha-note{color:var(--tx3);font-size:11px;margin-top:10px;line-height:1.5;}
-#page-alpha .alpha-note code{background:color-mix(in srgb,var(--tx3) 18%,transparent);padding:1px 5px;border-radius:3px;font-size:10px;color:var(--tx2);}
-#page-alpha .alpha-headline{
-  background:linear-gradient(135deg, color-mix(in srgb,#6366f1 12%, var(--bg2,#0f1419)), color-mix(in srgb,#22c55e 6%, var(--bg2,#0f1419)));
-  border-color:color-mix(in srgb,#6366f1 35%,transparent);
-}
-#page-alpha .alpha-cf-grid{display:grid;gap:8px;}
-#page-alpha .alpha-cf-row{
-  display:grid;grid-template-columns:minmax(220px,1fr) 110px 130px;gap:10px;align-items:center;
-  padding:10px 12px;border-radius:8px;background:color-mix(in srgb,var(--bg2,#0f1419) 80%,black);
-  border:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);
-}
-#page-alpha .alpha-cf-rule{color:var(--tx,#e5e7eb);font-size:13px;font-weight:500;}
-#page-alpha .alpha-cf-basis{color:var(--tx3);font-size:10px;margin-top:3px;}
-#page-alpha .alpha-cf-delta{
-  text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;color:#22c55e;
-}
-#page-alpha .alpha-cf-applied{
-  text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:var(--tx2);
-}
-#page-alpha .alpha-cf-applied small{color:var(--tx3);font-weight:400;}
-#page-alpha .alpha-table-wrap{overflow-x:auto;}
-#page-alpha .alpha-table{width:100%;border-collapse:collapse;font-size:12px;}
-#page-alpha .alpha-table th{
-  text-align:left;padding:6px 10px;color:var(--tx3);font-weight:600;font-size:10px;
-  text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid color-mix(in srgb,var(--tx3) 20%,transparent);
-}
-#page-alpha .alpha-table td{
-  padding:7px 10px;color:var(--tx2);border-bottom:1px solid color-mix(in srgb,var(--tx3) 8%,transparent);
-  font-variant-numeric:tabular-nums;
-}
-#page-alpha .alpha-table tr:last-child td{border-bottom:none;}
-#page-alpha .alpha-table th.r, #page-alpha .alpha-table td.r{text-align:right;}
-#page-alpha .alpha-table td.pos{color:#22c55e;}
-#page-alpha .alpha-table td.neg{color:#ef4444;}
-#page-alpha .alpha-table td.coin{color:var(--tx);font-weight:600;}
-#page-alpha .alpha-table td.strat{color:var(--tx3);}
-#page-alpha .alpha-table a.tv{color:#60a5fa;text-decoration:none;font-size:11px;}
-#page-alpha .alpha-table a.tv:hover{text-decoration:underline;}
-#page-alpha .alpha-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
-@media (max-width:900px){#page-alpha .alpha-grid{grid-template-columns:1fr;}}
-#page-alpha .alpha-kv-stack{display:grid;gap:6px;font-size:13px;}
-#page-alpha .alpha-kv-stack .kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--tx3) 10%,transparent);}
-#page-alpha .alpha-kv-stack .kv:last-child{border-bottom:none;}
-#page-alpha .alpha-kv-stack .k{color:var(--tx3);font-size:11px;}
-#page-alpha .alpha-kv-stack .v{color:var(--tx);font-weight:600;font-variant-numeric:tabular-nums;}
-#page-alpha .alpha-kv-stack .v.bad{color:#ef4444;}
-#page-alpha .alpha-kv-stack .v.good{color:#22c55e;}
-#page-alpha .alpha-rules .alpha-rule-list{margin:0;padding-left:20px;color:var(--tx2);font-size:13px;line-height:1.8;}
-#page-alpha .alpha-rules .alpha-rule-list li b{color:var(--tx);}
-
-/* === Risk Guardrails — live behavior control === */
-#alpha-guardrails{padding:0;overflow:hidden;border:1px solid color-mix(in srgb,var(--tx3) 25%,transparent);}
-#alpha-guardrails .ag-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:18px 20px 14px 20px;}
-#alpha-guardrails .ag-eyebrow{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);margin-bottom:6px;}
-#alpha-guardrails .ag-status{font-size:28px;font-weight:800;letter-spacing:.4px;line-height:1;}
-#alpha-guardrails .ag-sub{font-size:12px;color:var(--tx2);margin-top:6px;}
-#alpha-guardrails .ag-right{text-align:right;flex-shrink:0;}
-#alpha-guardrails .ag-mult-label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tx3);margin-bottom:4px;}
-#alpha-guardrails .ag-mult{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
-#alpha-guardrails .ag-kv-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;background:color-mix(in srgb,var(--bg2,#0f1419) 75%,black);border-top:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);border-bottom:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);}
-#alpha-guardrails .ag-kv{padding:10px 14px;display:flex;flex-direction:column;gap:3px;border-right:1px solid color-mix(in srgb,var(--tx3) 12%,transparent);}
-#alpha-guardrails .ag-kv:last-child{border-right:none;}
-#alpha-guardrails .ag-k{font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--tx3);}
-#alpha-guardrails .ag-v{font-size:14px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums;}
-#alpha-guardrails .ag-v.bad{color:#ef4444;}
-#alpha-guardrails .ag-v.warn{color:#f59e0b;}
-#alpha-guardrails .ag-v.good{color:#22c55e;}
-#alpha-guardrails .ag-reasons{padding:12px 20px 18px 20px;display:flex;flex-direction:column;gap:6px;}
-#alpha-guardrails .ag-reasons:empty{display:none;}
-#alpha-guardrails .ag-reason{font-size:12px;color:var(--tx2);display:flex;align-items:flex-start;gap:8px;line-height:1.5;}
-#alpha-guardrails .ag-reason::before{content:"•";color:var(--ag-accent,#f59e0b);font-weight:700;flex-shrink:0;}
-/* status-specific accents, all scoped inside #alpha-guardrails only */
-#alpha-guardrails[data-status="NORMAL"]{--ag-accent:#22c55e;background:linear-gradient(135deg, color-mix(in srgb,#22c55e 10%,var(--bg2,#0f1419)), color-mix(in srgb,#22c55e 2%,var(--bg2,#0f1419)));border-color:color-mix(in srgb,#22c55e 35%,transparent);}
-#alpha-guardrails[data-status="NORMAL"] .ag-status,#alpha-guardrails[data-status="NORMAL"] .ag-mult{color:#22c55e;}
-#alpha-guardrails[data-status="CAUTION"]{--ag-accent:#f59e0b;background:linear-gradient(135deg, color-mix(in srgb,#f59e0b 14%,var(--bg2,#0f1419)), color-mix(in srgb,#f59e0b 3%,var(--bg2,#0f1419)));border-color:color-mix(in srgb,#f59e0b 45%,transparent);}
-#alpha-guardrails[data-status="CAUTION"] .ag-status,#alpha-guardrails[data-status="CAUTION"] .ag-mult{color:#f59e0b;}
-#alpha-guardrails[data-status="RESTRICTED"]{--ag-accent:#fb923c;background:linear-gradient(135deg, color-mix(in srgb,#fb923c 16%,var(--bg2,#0f1419)), color-mix(in srgb,#fb923c 4%,var(--bg2,#0f1419)));border-color:color-mix(in srgb,#fb923c 55%,transparent);}
-#alpha-guardrails[data-status="RESTRICTED"] .ag-status,#alpha-guardrails[data-status="RESTRICTED"] .ag-mult{color:#fb923c;}
-#alpha-guardrails[data-status="STOP"]{--ag-accent:#ef4444;background:linear-gradient(135deg, color-mix(in srgb,#ef4444 18%,var(--bg2,#0f1419)), color-mix(in srgb,#ef4444 5%,var(--bg2,#0f1419)));border-color:color-mix(in srgb,#ef4444 65%,transparent);animation:ag-pulse 2.4s ease-in-out infinite;}
-#alpha-guardrails[data-status="STOP"] .ag-status,#alpha-guardrails[data-status="STOP"] .ag-mult{color:#ef4444;}
-@keyframes ag-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,#ef4444 35%,transparent);}50%{box-shadow:0 0 0 6px color-mix(in srgb,#ef4444 0%,transparent);}}
-@media (max-width:900px){#alpha-guardrails .ag-kv-row{grid-template-columns:repeat(2,1fr);}#alpha-guardrails .ag-kv{border-right:none;border-bottom:1px solid color-mix(in srgb,var(--tx3) 12%,transparent);}}
-
-/* ═══════════ COACH PAGE (V1) — memory + enforcement ═══════════ */
-#page-coach .coach-strip{
-  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
-  gap:0;margin:0 0 16px 0;
-  background:color-mix(in srgb,var(--bg2,#0f1419) 82%,black);
-  border:1px solid color-mix(in srgb,var(--tx3,#6b7280) 22%,transparent);border-radius:10px;overflow:hidden;
-}
-#page-coach .cs-cell{
-  padding:12px 14px;display:flex;flex-direction:column;gap:4px;
-  border-right:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);
-}
-#page-coach .cs-cell:last-child{border-right:none;}
-#page-coach .cs-k{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;font-weight:600;}
-#page-coach .cs-v{font-size:15px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums;line-height:1.25;}
-#page-coach .cs-v.warn{color:#f59e0b;}
-#page-coach .cs-v.bad{color:#ef4444;}
-
-#page-coach .coach-tabs{display:flex;gap:6px;margin:0 0 14px 0;flex-wrap:wrap;}
-#page-coach .ct-btn{
-  background:transparent;border:1px solid color-mix(in srgb,var(--tx3) 22%,transparent);
-  color:var(--tx2);padding:7px 14px;border-radius:7px;cursor:pointer;
-  font-size:12px;font-weight:600;letter-spacing:.2px;
-  transition:background .15s,border-color .15s,color .15s;
-}
-#page-coach .ct-btn:hover{background:color-mix(in srgb,var(--tx3) 8%,transparent);color:var(--tx);}
-#page-coach .ct-btn.active{
-  background:color-mix(in srgb,var(--blue,#60a5fa) 12%,transparent);
-  border-color:color-mix(in srgb,var(--blue,#60a5fa) 45%,transparent);
-  color:var(--blue,#60a5fa);
-}
-
-#page-coach .coach-card{
-  background:color-mix(in srgb,var(--bg2,#0f1419) 92%,black);
-  border:1px solid color-mix(in srgb,var(--tx3,#6b7280) 18%,transparent);
-  border-radius:10px;padding:16px 18px;margin-bottom:12px;
-}
-#page-coach .cc-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px;}
-#page-coach .cc-head h3{margin:0;font-size:13px;font-weight:600;color:var(--tx);letter-spacing:.15px;}
-#page-coach .cc-chip{
-  font-size:10px;font-weight:600;color:var(--tx3);padding:2px 8px;border-radius:999px;
-  background:color-mix(in srgb,var(--tx3) 10%,transparent);
-  border:1px solid color-mix(in srgb,var(--tx3) 20%,transparent);text-transform:uppercase;letter-spacing:.3px;
-}
-#page-coach .cc-body{font-size:12px;color:var(--tx2);line-height:1.55;}
-#page-coach .cc-note{color:var(--tx3);font-size:11px;margin:10px 0 0 0;font-style:italic;}
-#page-coach .cc-metric{display:grid;gap:4px;margin-bottom:4px;}
-#page-coach .cc-metric-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid color-mix(in srgb,var(--tx3) 10%,transparent);}
-#page-coach .cc-metric-row:last-child{border-bottom:none;font-weight:700;color:var(--tx);}
-#page-coach .cc-k{color:var(--tx3);font-size:11px;}
-#page-coach .cc-v{font-variant-numeric:tabular-nums;color:var(--tx);font-weight:600;}
-#page-coach .cc-v.good{color:#22c55e;}
-#page-coach .cc-v.bad{color:#ef4444;}
-
-#page-coach .coach-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px;}
-@media (max-width:900px){#page-coach .coach-strip{grid-template-columns:repeat(2,1fr);}#page-coach .coach-strip .cs-cell{border-right:none;border-bottom:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);}#page-coach .coach-grid-2{grid-template-columns:1fr;}}
-
-#page-coach .coach-ul{margin:0;padding-left:18px;color:var(--tx2);font-size:12px;line-height:1.8;}
-#page-coach .coach-ul li b{color:var(--tx);}
-
-#page-coach .coach-table{width:100%;border-collapse:collapse;font-size:12px;}
-#page-coach .coach-table th{text-align:left;color:var(--tx3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.3px;padding:5px 8px;border-bottom:1px solid color-mix(in srgb,var(--tx3) 20%,transparent);}
-#page-coach .coach-table td{padding:6px 8px;color:var(--tx2);font-variant-numeric:tabular-nums;border-bottom:1px solid color-mix(in srgb,var(--tx3) 8%,transparent);}
-#page-coach .coach-table th.r,#page-coach .coach-table td.r{text-align:right;}
-#page-coach .coach-table td.pos{color:#22c55e;}
-#page-coach .coach-table td.neg{color:#ef4444;}
-
-#page-coach .coach-list{display:grid;gap:10px;}
-
-/* Item: lesson/mistake/rule/intervention card */
-#page-coach .coach-item{
-  background:color-mix(in srgb,var(--bg2,#0f1419) 94%,black);
-  border:1px solid color-mix(in srgb,var(--tx3,#6b7280) 18%,transparent);
-  border-radius:10px;padding:14px 16px;
-}
-#page-coach .coach-item .ci-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;}
-#page-coach .coach-item .ci-title{font-size:13px;font-weight:700;color:var(--tx);line-height:1.3;}
-#page-coach .coach-item .ci-body{font-size:12px;color:var(--tx2);line-height:1.55;}
-#page-coach .coach-item .ci-evidence{margin-top:8px;padding-top:8px;border-top:1px dashed color-mix(in srgb,var(--tx3) 18%,transparent);font-size:11px;color:var(--tx3);}
-#page-coach .coach-item .ci-evidence b{color:var(--tx2);font-weight:600;}
-#page-coach .coach-item .ci-kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;margin-top:6px;font-size:11px;}
-#page-coach .coach-item .ci-kv .k{color:var(--tx3);text-transform:uppercase;letter-spacing:.3px;font-weight:600;font-size:10px;padding-top:2px;}
-#page-coach .coach-item .ci-kv .v{color:var(--tx2);line-height:1.55;}
-#page-coach .coach-item .ci-kv .v code{background:color-mix(in srgb,var(--tx3) 15%,transparent);padding:1px 5px;border-radius:3px;font-size:10px;}
-
-/* Severity chips */
-#page-coach .sev{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.3px;text-transform:uppercase;flex-shrink:0;}
-#page-coach .sev-low{background:color-mix(in srgb,#22c55e 14%,transparent);color:#22c55e;border:1px solid color-mix(in srgb,#22c55e 30%,transparent);}
-#page-coach .sev-med{background:color-mix(in srgb,#f59e0b 14%,transparent);color:#f59e0b;border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);}
-#page-coach .sev-high{background:color-mix(in srgb,#fb923c 14%,transparent);color:#fb923c;border:1px solid color-mix(in srgb,#fb923c 40%,transparent);}
-#page-coach .sev-crit{background:color-mix(in srgb,#ef4444 16%,transparent);color:#ef4444;border:1px solid color-mix(in srgb,#ef4444 45%,transparent);}
-
-/* Cost chip */
-#page-coach .ci-cost{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:#ef4444;margin-left:8px;}
-#page-coach .ci-saves{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:#22c55e;margin-left:8px;}
-
-/* Rule priority */
-#page-coach .ci-prio{font-size:10px;font-weight:700;color:var(--tx3);padding:2px 7px;border-radius:4px;background:color-mix(in srgb,var(--tx3) 15%,transparent);letter-spacing:.3px;}
-
-#page-coach .coach-note-banner{
-  padding:10px 14px;margin:0 0 12px 0;border-radius:8px;font-size:12px;color:var(--tx2);
-  background:color-mix(in srgb,var(--blue,#60a5fa) 10%,transparent);
-  border:1px solid color-mix(in srgb,var(--blue,#60a5fa) 30%,transparent);
-  line-height:1.55;
-}
-
-#page-coach .coach-sec{animation:coachFade .2s ease-out;}
-@keyframes coachFade{from{opacity:0;transform:translateY(2px);}to{opacity:1;transform:none;}}
-
-#page-coach .coach-cta{
-  background:color-mix(in srgb,var(--blue,#60a5fa) 20%,transparent);
-  border:1px solid color-mix(in srgb,var(--blue,#60a5fa) 55%,transparent);
-  color:var(--blue,#60a5fa);padding:6px 12px;border-radius:6px;cursor:pointer;
-  font-size:12px;font-weight:700;letter-spacing:.2px;transition:background .15s;
-}
-#page-coach .coach-cta:hover{background:color-mix(in srgb,var(--blue,#60a5fa) 32%,transparent);}
-
-/* === Coach V2 — richer card chrome === */
-#page-coach .coach-sub-h{
-  font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.5px;text-transform:uppercase;
-  margin:16px 0 8px 0;
-}
-#page-coach .cp-chip{
-  display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;
-  padding:2px 8px;border-radius:999px;letter-spacing:.3px;text-transform:uppercase;
-  border:1px solid color-mix(in srgb,var(--tx3) 25%,transparent);
-  background:color-mix(in srgb,var(--tx3) 10%,transparent);color:var(--tx2);
-  margin-left:6px;
-}
-#page-coach .cp-chip-cat-chart   {color:#60a5fa;border-color:color-mix(in srgb,#60a5fa 38%,transparent);background:color-mix(in srgb,#60a5fa 10%,transparent);}
-#page-coach .cp-chip-cat-risk    {color:#ef4444;border-color:color-mix(in srgb,#ef4444 38%,transparent);background:color-mix(in srgb,#ef4444 10%,transparent);}
-#page-coach .cp-chip-cat-emotion {color:#a78bfa;border-color:color-mix(in srgb,#a78bfa 38%,transparent);background:color-mix(in srgb,#a78bfa 10%,transparent);}
-#page-coach .cp-chip-cat-meta    {color:#22c55e;border-color:color-mix(in srgb,#22c55e 38%,transparent);background:color-mix(in srgb,#22c55e 10%,transparent);}
-#page-coach .cp-chip-prio-1      {color:#ef4444;border-color:color-mix(in srgb,#ef4444 45%,transparent);background:color-mix(in srgb,#ef4444 10%,transparent);}
-#page-coach .cp-chip-prio-2      {color:#f59e0b;border-color:color-mix(in srgb,#f59e0b 45%,transparent);background:color-mix(in srgb,#f59e0b 10%,transparent);}
-#page-coach .cp-chip-prio-3      {color:#60a5fa;border-color:color-mix(in srgb,#60a5fa 40%,transparent);background:color-mix(in srgb,#60a5fa 10%,transparent);}
-#page-coach .cp-chip-status-active      {color:#f59e0b;border-color:color-mix(in srgb,#f59e0b 45%,transparent);background:color-mix(in srgb,#f59e0b 10%,transparent);}
-#page-coach .cp-chip-status-in_progress {color:#60a5fa;border-color:color-mix(in srgb,#60a5fa 40%,transparent);background:color-mix(in srgb,#60a5fa 10%,transparent);}
-#page-coach .cp-chip-status-mastered    {color:#22c55e;border-color:color-mix(in srgb,#22c55e 45%,transparent);background:color-mix(in srgb,#22c55e 10%,transparent);}
-#page-coach .cp-chip-enf-pending     {color:var(--tx3);border-color:color-mix(in srgb,var(--tx3) 25%,transparent);background:color-mix(in srgb,var(--tx3) 10%,transparent);}
-#page-coach .cp-chip-enf-partial     {color:#f59e0b;border-color:color-mix(in srgb,#f59e0b 40%,transparent);background:color-mix(in srgb,#f59e0b 10%,transparent);}
-#page-coach .cp-chip-enf-modal-ready {color:#60a5fa;border-color:color-mix(in srgb,#60a5fa 40%,transparent);background:color-mix(in srgb,#60a5fa 10%,transparent);}
-#page-coach .cp-chip-enf-live        {color:#22c55e;border-color:color-mix(in srgb,#22c55e 45%,transparent);background:color-mix(in srgb,#22c55e 10%,transparent);}
-#page-coach .coach-takeaway{
-  font-size:12px;color:var(--tx);font-weight:600;line-height:1.5;
-  padding:8px 10px;margin:8px 0 6px 0;border-radius:6px;
-  background:color-mix(in srgb,var(--tx3) 8%,transparent);
-  border-left:3px solid color-mix(in srgb,#60a5fa 55%,transparent);
-}
-#page-coach .cp-trend{font-size:11px;font-weight:700;letter-spacing:.3px;margin-left:6px;}
-#page-coach .cp-trend-worsening{color:#ef4444;}
-#page-coach .cp-trend-flat{color:var(--tx3);}
-#page-coach .cp-trend-improving{color:#22c55e;}
-#page-coach .coach-active-risk{border-color:color-mix(in srgb,#ef4444 45%,transparent)!important;background:color-mix(in srgb,#ef4444 5%,var(--bg2,#0f1419));}
-
-/* Overview list items */
-#page-coach .ov-list-item{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--tx3) 10%,transparent);font-size:12px;}
-#page-coach .ov-list-item:last-child{border-bottom:none;}
-#page-coach .ov-list-item .oli-title{color:var(--tx);font-weight:600;flex:1;line-height:1.4;}
-#page-coach .ov-list-item .oli-meta{color:var(--tx3);font-size:10px;flex-shrink:0;text-align:right;font-variant-numeric:tabular-nums;}
-#page-coach .ov-list-item .oli-cost{color:#ef4444;font-weight:700;font-variant-numeric:tabular-nums;}
-
-/* Override highlighted event card */
-#page-coach .ov-hl-item{
-  padding:8px 10px;margin-bottom:6px;border-radius:6px;font-size:11px;
-  background:color-mix(in srgb,var(--tx3) 8%,transparent);
-  border-left:3px solid color-mix(in srgb,#ef4444 55%,transparent);
-  line-height:1.5;color:var(--tx2);
-}
-#page-coach .ov-hl-item:last-child{margin-bottom:0;}
-#page-coach .ov-hl-item b{color:var(--tx);}
-#page-coach .ov-hl-item .ov-hl-act{font-weight:700;letter-spacing:.3px;text-transform:uppercase;font-size:10px;}
-
-/* Verdict chip */
-#page-coach .ov-verdict-good{color:#22c55e;}
-#page-coach .ov-verdict-mixed{color:#f59e0b;}
-#page-coach .ov-verdict-bad{color:#ef4444;}
-
-/* ═══════════ OVERRIDES panel (inside Coach) ═══════════ */
-#page-coach .ov-strip{
-  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-bottom:14px;
-  background:color-mix(in srgb,var(--bg2,#0f1419) 80%,black);
-  border:1px solid color-mix(in srgb,var(--tx3) 22%,transparent);border-radius:10px;overflow:hidden;
-}
-#page-coach .ov-cell{padding:12px 14px;display:flex;flex-direction:column;gap:4px;border-right:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);}
-#page-coach .ov-cell:last-child{border-right:none;}
-#page-coach .ov-k{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;font-weight:600;}
-#page-coach .ov-v{font-size:16px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums;line-height:1.2;}
-#page-coach .ov-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px;}
-@media (max-width:900px){
-  #page-coach .ov-strip{grid-template-columns:repeat(2,1fr);}
-  #page-coach .ov-strip .ov-cell{border-right:none;border-bottom:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);}
-  #page-coach .ov-grid-3{grid-template-columns:1fr;}
-}
-#page-coach .ov-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid color-mix(in srgb,var(--tx3) 10%,transparent);font-size:12px;}
-#page-coach .ov-row:last-child{border-bottom:none;}
-#page-coach .ov-k2{font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.3px;font-weight:600;display:flex;align-items:center;gap:6px;}
-#page-coach .ov-v2{font-size:13px;color:var(--tx);font-weight:700;font-variant-numeric:tabular-nums;}
-
-#page-coach .ov-table-wrap{overflow-x:auto;}
-#page-coach .ov-table{width:100%;border-collapse:collapse;font-size:11px;}
-#page-coach .ov-table th{text-align:left;color:var(--tx3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.3px;padding:6px 8px;border-bottom:1px solid color-mix(in srgb,var(--tx3) 20%,transparent);}
-#page-coach .ov-table td{padding:7px 8px;color:var(--tx2);border-bottom:1px solid color-mix(in srgb,var(--tx3) 8%,transparent);vertical-align:top;}
-
-#page-coach .ov-chip{display:inline-block;font-size:9px;font-weight:600;padding:1px 6px;border-radius:3px;margin:1px 3px 1px 0;letter-spacing:.2px;}
-#page-coach .ov-chip-warning{background:color-mix(in srgb,#f59e0b 14%,transparent);color:#f59e0b;border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);}
-#page-coach .ov-chip-restrict{background:color-mix(in srgb,#fb923c 14%,transparent);color:#fb923c;border:1px solid color-mix(in srgb,#fb923c 40%,transparent);}
-#page-coach .ov-chip-stop    {background:color-mix(in srgb,#ef4444 18%,transparent);color:#ef4444;border:1px solid color-mix(in srgb,#ef4444 50%,transparent);}
-
-#page-coach .pt-sev-mini{font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;letter-spacing:.3px;}
-#page-coach .ov-sev-stop    {background:color-mix(in srgb,#ef4444 18%,transparent);color:#ef4444;border:1px solid color-mix(in srgb,#ef4444 50%,transparent);}
-#page-coach .ov-sev-restrict{background:color-mix(in srgb,#fb923c 14%,transparent);color:#fb923c;border:1px solid color-mix(in srgb,#fb923c 40%,transparent);}
-#page-coach .ov-sev-warning {background:color-mix(in srgb,#f59e0b 14%,transparent);color:#f59e0b;border:1px solid color-mix(in srgb,#f59e0b 35%,transparent);}
-
-/* Alpha page — tiny override-activity ribbon */
-#page-alpha .alpha-override-strip{
-  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin:0 0 14px 0;
-  background:color-mix(in srgb,var(--bg2,#0f1419) 82%,black);
-  border:1px solid color-mix(in srgb,#60a5fa 22%,transparent);border-radius:10px;overflow:hidden;
-}
-#page-alpha .aos-cell{padding:10px 14px;display:flex;flex-direction:column;gap:3px;border-right:1px solid color-mix(in srgb,var(--tx3) 15%,transparent);}
-#page-alpha .aos-cell:last-child{border-right:none;}
-#page-alpha .aos-k{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;font-weight:600;}
-#page-alpha .aos-v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2;color:var(--tx);}
-#page-alpha .aos-v.good{color:#22c55e;}
-#page-alpha .aos-v.warn{color:#f59e0b;}
-#page-alpha .aos-v.bad{color:#ef4444;}
-
-/* ═══════════ PRE-TRADE INTERVENTION MODAL ═══════════
-   Scoped under .pt-root + .pt-modal selectors. Nothing leaks globally. */
-.pt-root{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;}
-.pt-backdrop{position:absolute;inset:0;background:rgba(5,8,14,.68);backdrop-filter:blur(4px);}
-.pt-modal{
-  position:relative;width:min(620px,92vw);max-height:90vh;overflow:auto;
-  background:color-mix(in srgb,#0d1117 94%,black);
-  border:1px solid color-mix(in srgb,#6b7280 26%,transparent);
-  border-radius:12px;padding:24px 26px;color:#e5e7eb;
-  box-shadow:0 20px 60px rgba(0,0,0,.55);
-  animation:ptFadeIn .18s ease-out;
-}
-@keyframes ptFadeIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
-.pt-modal[data-sev="WARNING"]   {border-color:color-mix(in srgb,#f59e0b 55%,transparent);box-shadow:0 0 40px color-mix(in srgb,#f59e0b 14%,transparent),0 20px 60px rgba(0,0,0,.55);}
-.pt-modal[data-sev="RESTRICT"]  {border-color:color-mix(in srgb,#fb923c 65%,transparent);box-shadow:0 0 50px color-mix(in srgb,#fb923c 18%,transparent),0 20px 60px rgba(0,0,0,.55);}
-.pt-modal[data-sev="STOP"]      {border-color:color-mix(in srgb,#ef4444 70%,transparent);box-shadow:0 0 60px color-mix(in srgb,#ef4444 24%,transparent),0 20px 60px rgba(0,0,0,.55);animation:ptFadeIn .18s ease-out, ptPulse 2.2s ease-in-out infinite;}
-@keyframes ptPulse{0%,100%{box-shadow:0 0 60px color-mix(in srgb,#ef4444 24%,transparent),0 20px 60px rgba(0,0,0,.55);}50%{box-shadow:0 0 80px color-mix(in srgb,#ef4444 36%,transparent),0 20px 60px rgba(0,0,0,.55);}}
-
-.pt-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
-.pt-eyebrow{font-size:10px;font-weight:700;letter-spacing:.7px;color:#9ca3af;text-transform:uppercase;}
-.pt-close{background:transparent;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:4px;line-height:1;}
-.pt-close:hover{color:#e5e7eb;}
-.pt-h2{font-size:18px;font-weight:700;color:#e5e7eb;margin:2px 0 6px 0;letter-spacing:-.15px;line-height:1.3;}
-.pt-sub{font-size:12px;color:#9ca3af;margin:0 0 18px 0;}
-
-.pt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-bottom:20px;}
-.pt-lbl{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.3px;font-weight:600;}
-.pt-lbl-wide{grid-column:1/-1;}
-.pt-input{
-  background:color-mix(in srgb,#0d1117 88%,black);border:1px solid color-mix(in srgb,#6b7280 28%,transparent);
-  color:#e5e7eb;padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:inherit;
-}
-.pt-input:focus{border-color:color-mix(in srgb,#60a5fa 65%,transparent);}
-select.pt-input{cursor:pointer;}
-
-.pt-sev-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-.pt-sev{font-size:10px;font-weight:800;padding:3px 10px;border-radius:4px;letter-spacing:.4px;}
-.pt-modal[data-sev="WARNING"]  .pt-sev{background:color-mix(in srgb,#f59e0b 18%,transparent);color:#f59e0b;border:1px solid color-mix(in srgb,#f59e0b 45%,transparent);}
-.pt-modal[data-sev="RESTRICT"] .pt-sev{background:color-mix(in srgb,#fb923c 18%,transparent);color:#fb923c;border:1px solid color-mix(in srgb,#fb923c 55%,transparent);}
-.pt-modal[data-sev="STOP"]     .pt-sev{background:color-mix(in srgb,#ef4444 20%,transparent);color:#ef4444;border:1px solid color-mix(in srgb,#ef4444 60%,transparent);}
-.pt-src{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.3px;}
-
-.pt-modal-copy{font-size:13px;color:#d1d5db;line-height:1.6;margin:8px 0 14px 0;}
-.pt-evidence{font-size:11px;color:#9ca3af;padding:10px 12px;background:color-mix(in srgb,#6b7280 10%,transparent);border-radius:6px;line-height:1.6;margin-bottom:10px;}
-.pt-evidence b{color:#d1d5db;font-weight:600;}
-.pt-evidence code{background:color-mix(in srgb,#6b7280 20%,transparent);padding:1px 5px;border-radius:3px;font-size:10px;color:#d1d5db;}
-.pt-secondary{font-size:11px;color:#9ca3af;margin-bottom:12px;}
-.pt-secondary:empty{display:none;}
-.pt-secondary .pt-also{display:inline-block;margin-right:8px;padding:2px 7px;border-radius:999px;background:color-mix(in srgb,#6b7280 14%,transparent);color:#9ca3af;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}
-.pt-reduce{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;margin-bottom:12px;border-radius:6px;background:color-mix(in srgb,#fb923c 10%,transparent);border:1px solid color-mix(in srgb,#fb923c 35%,transparent);}
-.pt-reduce-k{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.3px;font-weight:600;}
-.pt-reduce-v{font-size:16px;color:#fb923c;font-weight:800;font-variant-numeric:tabular-nums;}
-
-.pt-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px;}
-.pt-btn{padding:9px 16px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:.2px;cursor:pointer;border:1px solid transparent;transition:background .15s,border-color .15s;}
-.pt-btn-ghost{background:transparent;color:#9ca3af;border-color:color-mix(in srgb,#6b7280 28%,transparent);}
-.pt-btn-ghost:hover{color:#e5e7eb;border-color:color-mix(in srgb,#6b7280 55%,transparent);}
-.pt-btn-ghost-ok{background:transparent;color:#9ca3af;border-color:color-mix(in srgb,#6b7280 28%,transparent);}
-.pt-btn-ghost-ok:hover{color:#e5e7eb;}
-.pt-btn-primary{background:color-mix(in srgb,#60a5fa 22%,transparent);color:#60a5fa;border-color:color-mix(in srgb,#60a5fa 55%,transparent);}
-.pt-btn-primary:hover{background:color-mix(in srgb,#60a5fa 35%,transparent);}
-.pt-btn-warn{background:color-mix(in srgb,#fb923c 22%,transparent);color:#fb923c;border-color:color-mix(in srgb,#fb923c 55%,transparent);}
-.pt-btn-warn:hover{background:color-mix(in srgb,#fb923c 35%,transparent);}
-.pt-btn-danger{background:color-mix(in srgb,#ef4444 22%,transparent);color:#ef4444;border-color:color-mix(in srgb,#ef4444 55%,transparent);}
-.pt-btn-danger:hover{background:color-mix(in srgb,#ef4444 38%,transparent);}
-@media (max-width:640px){.pt-grid{grid-template-columns:1fr;}}
 </style>
 <!-- Firebase SDK (compat mode — no build tools needed) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -732,22 +288,50 @@ select.pt-input{cursor:pointer;}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Import Data
   </div>
-  <div class="nav-item" onclick="showPage('alpha')" data-page="alpha">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    Alpha
+  <div class="nav-item" onclick="showPage('dashboard')" data-page="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+    Dashboard
   </div>
-  <div class="nav-item" onclick="showPage('coach')" data-page="coach">
+  <div class="nav-item" onclick="showPage('analysis')" data-page="analysis">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Analysis
+  </div>
+  <div class="nav-item" onclick="showPage('checklist')" data-page="checklist">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    Checklist
+  </div>
+  <div class="nav-item" onclick="showPage('patterns')" data-page="patterns">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-    Coach
+    Patterns
+  </div>
+  <div class="nav-item" onclick="showPage('benchmark')" data-page="benchmark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Strategy Lab
   </div>
   <div class="nav-item" onclick="showPage('backtest')" data-page="backtest">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6l-5 9a2 2 0 002 3h12a2 2 0 002-3l-5-9V2"/><line x1="9" y1="2" x2="15" y2="2"/><line x1="7" y1="14" x2="17" y2="14"/></svg>
     Backtesting
   </div>
+  <div class="nav-item" onclick="showPage('coach')" data-page="coach">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Coach
+  </div>
+  <div class="nav-item" onclick="showPage('tradelog')" data-page="tradelog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Trade Log
+  </div>
   <div class="nav-item" onclick="showPage('taxes')" data-page="taxes">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 013-3h14a3 3 0 013 3v9a3 3 0 01-3 3H5a3 3 0 01-3-3V9z"/><path d="M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
     Taxes
-  </div><!-- Hidden by request: Dashboard, Analysis, Checklist, Patterns, Strategy Lab, Coach, Trade Log, Portfolio — pages remain in DOM for future re-enable. -->
+  </div>
+  <div class="nav-item" onclick="showPage('portfolio')" data-page="portfolio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    Portfolio
+  </div>
+  <div class="nav-item" onclick="showPage('trader-agent')" data-page="trader-agent" title="Read-only view of the Jump HQ Trader daemon output — signals, setups, paper trades.">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="10" r="1.5"/><path d="M8 15h8"/><path d="M12 4v-2"/><path d="M10 2h4"/></svg>
+    Trader Agent
+  </div>
   <div class="sidebar-footer">
     <div class="trade-count" id="sidebarCount">No data loaded</div>
     <button class="hide-toggle" id="hideAmountsBtn" onclick="toggleHideAmounts()">
@@ -759,200 +343,6 @@ select.pt-input{cursor:pointer;}
 
 <!-- Main content -->
 <div class="main">
-
-  <!-- ═══ SHEET SYNC STRIP ═══
-       Always-visible live snapshot pulled by the daemon from Google Sheets
-       into /tradingJournal/sheetSync/* every 120s. Non-intrusive: renders only
-       when Firebase serves data; stays quiet otherwise. -->
-  <div id="tj-sync-strip" class="tj-sync-strip" data-sev="ok" style="display:none;">
-    <div class="tj-sync-row">
-      <span class="tj-sync-dot"></span>
-      <span class="tj-sync-label">Sheet sync</span>
-      <span class="tj-sync-sep">·</span>
-      <span id="tj-sync-age" class="tj-sync-time">—</span>
-      <span class="tj-sync-sep">·</span>
-      <span class="tj-sync-kv"><span class="tj-sync-k">Trades today</span><span id="tj-sync-trades-today" class="tj-sync-v">0</span></span>
-      <span class="tj-sync-sep">·</span>
-      <span class="tj-sync-kv"><span class="tj-sync-k">Last hour</span><span id="tj-sync-trades-hour" class="tj-sync-v">0</span></span>
-      <span class="tj-sync-sep">·</span>
-      <span class="tj-sync-kv"><span class="tj-sync-k">Consec. losses</span><span id="tj-sync-consec-loss" class="tj-sync-v">0</span></span>
-      <span class="tj-sync-sep">·</span>
-      <span class="tj-sync-kv"><span class="tj-sync-k">PnL today</span><span id="tj-sync-pnl-today" class="tj-sync-v">$0</span></span>
-      <span class="tj-sync-sep">·</span>
-      <span class="tj-sync-kv"><span class="tj-sync-k">Emotion 5</span><span id="tj-sync-emo" class="tj-sync-v">—</span></span>
-      <span class="tj-sync-sep">·</span>
-      <span class="tj-sync-kv"><span class="tj-sync-k">DD</span><span id="tj-sync-dd" class="tj-sync-v">—</span></span>
-    </div>
-    <div id="tj-sync-flags" class="tj-sync-flags"></div>
-  </div>
-
-  <!-- ═══ ALPHA PAGE — data-driven tilt audit + counterfactual what-ifs ═══ -->
-  <div class="page" id="page-alpha">
-    <div class="page-title">⚡ Alpha — What Your Data Is Telling You</div>
-    <p style="color:var(--tx2);margin:-4px 0 18px 0;font-size:13px;">
-      Computed server-side from your Google Sheet every 120s. Fewer, more confident trades start with seeing where your edge actually lives — and what every tilt trade costs you.
-    </p>
-    <div id="alpha-loading" style="color:var(--tx3);padding:20px;text-align:center;">Waiting for sheet sync…</div>
-
-    <div id="alpha-body" style="display:none;">
-      <!-- OVERRIDE ACTIVITY RIBBON — mirrors Coach→Overrides telemetry for quick glance -->
-      <div id="alpha-override-strip" class="alpha-override-strip" style="display:none;">
-        <div class="aos-cell"><span class="aos-k">Override events</span><span class="aos-v" id="aos-total">0</span></div>
-        <div class="aos-cell"><span class="aos-k">Cancelled</span><span class="aos-v good" id="aos-cancelled">0</span></div>
-        <div class="aos-cell"><span class="aos-k">Reduced</span><span class="aos-v warn" id="aos-reduced">0</span></div>
-        <div class="aos-cell"><span class="aos-k">Continued anyway</span><span class="aos-v bad" id="aos-continued">0</span></div>
-        <div class="aos-cell"><span class="aos-k">Dismissed</span><span class="aos-v" id="aos-dismissed" style="color:#9ca3af;">0</span></div>
-      </div>
-
-      <!-- RISK GUARDRAILS — live behavior control, derived from synced data only -->
-      <div class="alpha-card alpha-guardrails" id="alpha-guardrails" data-status="NORMAL">
-        <div class="ag-top">
-          <div class="ag-left">
-            <div class="ag-eyebrow">Risk Guardrails · live</div>
-            <div class="ag-status" id="ag-status">NORMAL</div>
-            <div class="ag-sub" id="ag-sub">System is calm — trade your plan.</div>
-          </div>
-          <div class="ag-right">
-            <div class="ag-mult-label">Recommended size</div>
-            <div class="ag-mult" id="ag-mult">1.00×</div>
-          </div>
-        </div>
-        <div class="ag-kv-row">
-          <div class="ag-kv"><span class="ag-k">Drawdown</span><span class="ag-v" id="ag-kv-dd">—</span></div>
-          <div class="ag-kv"><span class="ag-k">Trades today</span><span class="ag-v" id="ag-kv-today">—</span></div>
-          <div class="ag-kv"><span class="ag-k">Consec. losses</span><span class="ag-v" id="ag-kv-consec">—</span></div>
-          <div class="ag-kv"><span class="ag-k">Hour bucket</span><span class="ag-v" id="ag-kv-hour">—</span></div>
-          <div class="ag-kv"><span class="ag-k">Weekday bias</span><span class="ag-v" id="ag-kv-day">—</span></div>
-        </div>
-        <div class="ag-reasons" id="ag-reasons"></div>
-      </div>
-
-      <!-- TILT TAX HEADLINE -->
-      <div class="alpha-card alpha-headline">
-        <div class="alpha-card-head">
-          <h3>Tilt tax · what you'd be up if you'd followed the rules</h3>
-          <span class="alpha-chip" id="alpha-actual-net">—</span>
-        </div>
-        <div id="alpha-cf-rows" class="alpha-cf-grid"></div>
-        <div class="alpha-note">Each row is computed directly from your trades. "If applied" = hypothetical balance after removing those trades / halving size. Not additive — habits overlap.</div>
-      </div>
-
-      <!-- STRATEGY LEADERBOARD -->
-      <div class="alpha-card">
-        <div class="alpha-card-head">
-          <h3>Strategy leaderboard</h3>
-          <span class="alpha-subtle">by net PnL · closed trades only · min 2</span>
-        </div>
-        <div class="alpha-table-wrap">
-          <table class="alpha-table" id="alpha-strat-table">
-            <thead><tr><th>Strategy</th><th class="r">N</th><th class="r">Win%</th><th class="r">Net $</th><th class="r">Avg</th><th class="r">Best</th><th class="r">Worst</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- TILT-LABELED TRADES -->
-      <div class="alpha-card">
-        <div class="alpha-card-head">
-          <h3>Self-labeled tilt trades</h3>
-          <span class="alpha-chip alpha-chip-bad" id="alpha-tilt-total">—</span>
-        </div>
-        <div class="alpha-note">Trades where you wrote <code>rushed</code>, <code>revenge</code>, <code>oversized</code>, <code>tilt</code>, <code>second trade</code>, <code>overtrading</code>, or <code>dummy</code> in the strategy column.</div>
-        <div class="alpha-table-wrap">
-          <table class="alpha-table" id="alpha-tilt-table">
-            <thead><tr><th>Date</th><th>Coin</th><th>Side</th><th>Strategy</th><th class="r">Net $</th><th class="r">R</th><th class="r">Emo</th><th>TV</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- EMOTION vs OUTCOME (the inverted one) -->
-      <div class="alpha-card">
-        <div class="alpha-card-head">
-          <h3>Emotional log vs outcome</h3>
-          <span class="alpha-subtle">your "certain" feeling is a sell signal</span>
-        </div>
-        <div class="alpha-table-wrap">
-          <table class="alpha-table" id="alpha-emo-table">
-            <thead><tr><th>Emotion</th><th class="r">N</th><th class="r">Win%</th><th class="r">Avg $</th><th class="r">Total $</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- DAY + HOUR side by side -->
-      <div class="alpha-grid">
-        <div class="alpha-card">
-          <div class="alpha-card-head"><h3>Day of week</h3></div>
-          <div class="alpha-table-wrap">
-            <table class="alpha-table" id="alpha-dow-table">
-              <thead><tr><th>Day</th><th class="r">N</th><th class="r">Win%</th><th class="r">Total $</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="alpha-card">
-          <div class="alpha-card-head"><h3>Hour of day</h3></div>
-          <div class="alpha-table-wrap">
-            <table class="alpha-table" id="alpha-hour-table">
-              <thead><tr><th>Hour</th><th class="r">N</th><th class="r">Win%</th><th class="r">Total $</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- SIZE CREEP + OVERTRADE -->
-      <div class="alpha-grid">
-        <div class="alpha-card">
-          <div class="alpha-card-head"><h3>Size creep in drawdown</h3></div>
-          <div id="alpha-size-creep" class="alpha-kv-stack"></div>
-          <div class="alpha-note">If you're sizing bigger while losing, that's the mechanical tilt. Goal: same or smaller size when down.</div>
-        </div>
-        <div class="alpha-card">
-          <div class="alpha-card-head"><h3>Overtrade-day tax</h3></div>
-          <div id="alpha-overtrade" class="alpha-kv-stack"></div>
-          <div id="alpha-overtrade-days" class="alpha-note"></div>
-        </div>
-      </div>
-
-      <!-- TOP WINS / WORST LOSSES -->
-      <div class="alpha-grid">
-        <div class="alpha-card">
-          <div class="alpha-card-head"><h3>🏆 Top 10 wins</h3></div>
-          <div class="alpha-table-wrap">
-            <table class="alpha-table" id="alpha-wins-table">
-              <thead><tr><th>Date</th><th>Coin</th><th>Side</th><th>Strategy</th><th class="r">Net $</th><th class="r">R</th><th>TV</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="alpha-card">
-          <div class="alpha-card-head"><h3>💀 Worst 10 losses</h3></div>
-          <div class="alpha-table-wrap">
-            <table class="alpha-table" id="alpha-losses-table">
-              <thead><tr><th>Date</th><th>Coin</th><th>Side</th><th>Strategy</th><th class="r">Net $</th><th class="r">R</th><th>TV</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- RULES DERIVED FROM DATA -->
-      <div class="alpha-card alpha-rules">
-        <div class="alpha-card-head"><h3>🎯 Rules your data is begging for</h3></div>
-        <ol class="alpha-rule-list">
-          <li><b>Hard stop at 5 trades/day.</b> Everything beyond that has been a net loss historically.</li>
-          <li><b>If confidence ≥ 8/10, halve size.</b> Your "zen" trades lose ~$1,369 each. Your "meh" trades are your actual edge.</li>
-          <li><b>Halve size while account is in ≥5% drawdown.</b> You currently do the opposite.</li>
-          <li><b>15-min cooldown after any loss ≥ 0.5R.</b> Kills the revenge / "second trade" pattern.</li>
-          <li><b>Require a grade tag (A+ / A / B+) on every short.</b> Ungraded MR Short = the single biggest bleed.</li>
-          <li><b>Skip 11:00 setups unless 10:00 was already a win day.</b> The dead-zone hour after the best hour.</li>
-        </ol>
-        <div class="alpha-note">These aren't opinions — each is derivable from the table above. We can wire them as hard gates in the sheet checklist or as soft banners first.</div>
-      </div>
-    </div>
-  </div>
 
   <!-- ═══ IMPORT PAGE ═══ -->
   <div class="page active" id="page-import">
@@ -1324,191 +714,25 @@ select.pt-input{cursor:pointer;}
 
   <!-- ═══ COACH PAGE ═══ -->
   <div class="page" id="page-coach">
-    <div class="page-title">🎯 Coach — Memory &amp; Enforcement</div>
-    <p style="color:var(--tx2);margin:-4px 0 18px 0;font-size:13px;">
-      Centralized memory of what your trade history has taught you + the enforcement backbone for live behavioral intervention. <span style="color:var(--tx3);">V1 — seeded from the 3-stage full-history analysis (881 trades). Intervention triggers are authored here; modals land in a follow-up phase.</span>
-    </p>
-
-    <!-- Top overview strip -->
-    <div id="coach-strip" class="coach-strip">
-      <div class="cs-cell"><span class="cs-k">Trades analyzed</span><span class="cs-v" id="cs-trades">—</span></div>
-      <div class="cs-cell"><span class="cs-k">Active lessons</span><span class="cs-v" id="cs-lessons">—</span></div>
-      <div class="cs-cell"><span class="cs-k">Top mistake</span><span class="cs-v" id="cs-mistake">—</span></div>
-      <div class="cs-cell"><span class="cs-k">Priority rule</span><span class="cs-v" id="cs-rule">—</span></div>
-      <div class="cs-cell"><span class="cs-k">Intervention focus</span><span class="cs-v" id="cs-focus">—</span></div>
+    <div class="page-title">🎯 Coach — Actionable Feedback</div>
+    <div id="coachNoData" class="no-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <h3>No data loaded</h3><p>Import your trades to get coaching feedback</p>
     </div>
-
-    <!-- Sub-tabs -->
-    <div class="coach-tabs" id="coach-tabs">
-      <button class="ct-btn active" data-sec="overview"       onclick="coachShowSection('overview')">Overview</button>
-      <button class="ct-btn"        data-sec="lessons"        onclick="coachShowSection('lessons')">Lessons</button>
-      <button class="ct-btn"        data-sec="mistakes"       onclick="coachShowSection('mistakes')">Mistakes</button>
-      <button class="ct-btn"        data-sec="rules"          onclick="coachShowSection('rules')">Rules</button>
-      <button class="ct-btn"        data-sec="interventions"  onclick="coachShowSection('interventions')">Interventions</button>
-      <button class="ct-btn"        data-sec="overrides"      onclick="coachShowSection('overrides')">Overrides</button>
+    <div id="coachContent" style="display:none">
+      <div style="margin-bottom:20px">
+        <h3 class="section-title" style="color:var(--green)">💪 Your Strengths</h3>
+        <div id="coachStrengths"></div>
+      </div>
+      <div style="margin-bottom:20px">
+        <h3 class="section-title" style="color:var(--red)">⚠️ Areas to Improve</h3>
+        <div id="coachWeaknesses"></div>
+      </div>
+      <div>
+        <h3 class="section-title" style="color:var(--blue)">📋 Detailed Insights</h3>
+        <div id="coachInsights"></div>
+      </div>
     </div>
-
-    <!-- Section: Overview -->
-    <section class="coach-sec" id="coach-sec-overview">
-      <!-- Top: Pre-Trade Check CTA + This Week's Focus (hero row) -->
-      <div class="coach-grid-2">
-        <div class="coach-card">
-          <div class="cc-head">
-            <h3>🎯 This week's coaching focus</h3>
-            <span class="cc-chip">authored</span>
-          </div>
-          <div class="cc-body" id="ov-weekly-focus"></div>
-        </div>
-        <div class="coach-card">
-          <div class="cc-head">
-            <h3>Pre-Trade Check</h3>
-            <button class="coach-cta" onclick="openPreTradeCheck()">▶ Check my next trade</button>
-          </div>
-          <div class="cc-body">
-            Run your next entry through the 5 live interventions before you log it in the sheet.
-            <div class="cc-note">Also fires automatically when a new row appears in the sheet that matches any high-severity trigger.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2×3 summary grid: lessons / risks / override / improvement / expensive / arc -->
-      <div class="coach-grid-2">
-        <div class="coach-card">
-          <div class="cc-head"><h3>Top 3 active lessons</h3><span class="cc-chip">priority ↓</span></div>
-          <div class="cc-body" id="ov-top-lessons"></div>
-        </div>
-        <div class="coach-card">
-          <div class="cc-head"><h3>Top 3 current risks</h3><span class="cc-chip">active mistakes</span></div>
-          <div class="cc-body" id="ov-top-risks"></div>
-        </div>
-
-        <div class="coach-card">
-          <div class="cc-head"><h3>Recent override summary</h3><span class="cc-chip">from /overrides</span></div>
-          <div class="cc-body" id="ov-override-summary"></div>
-        </div>
-        <div class="coach-card">
-          <div class="cc-head"><h3>Most expensive repeated mistake</h3></div>
-          <div class="cc-body" id="ov-top-cost-mistake"></div>
-        </div>
-
-        <div class="coach-card">
-          <div class="cc-head"><h3>Best improvement</h3></div>
-          <div class="cc-body" id="ov-best-improvement"></div>
-        </div>
-        <div class="coach-card">
-          <div class="cc-head"><h3>Edge vs overrides · cumulative</h3><span class="cc-chip">881 trades</span></div>
-          <div class="cc-body">
-            <div class="cc-metric">
-              <div class="cc-metric-row"><span class="cc-k">Positive system</span><span class="cc-v good">+$21,389</span></div>
-              <div class="cc-metric-row"><span class="cc-k">Overrides lost</span><span class="cc-v bad">−$15,670</span></div>
-              <div class="cc-metric-row"><span class="cc-k">Actual net</span><span class="cc-v">+$5,719</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Compact 3-stage arc -->
-      <div class="coach-card">
-        <div class="cc-head"><h3>Stage-by-stage arc</h3></div>
-        <div class="cc-body">
-          <table class="coach-table">
-            <thead><tr><th>Stage</th><th class="r">Trades</th><th class="r">Win%</th><th class="r">Net $</th><th>Notes</th></tr></thead>
-            <tbody>
-              <tr><td>1 · discovery</td>   <td class="r">297</td><td class="r">63.3</td><td class="r pos">+$11,227</td><td>Edge discovered · $550 → $7.5K median size</td></tr>
-              <tr><td>2 · collapse</td>    <td class="r">300</td><td class="r">54.7</td><td class="r neg">−$9,883</td><td>COAI (−$10,288) broke Stage-1 gains</td></tr>
-              <tr><td>3 · oscillation</td> <td class="r">274</td><td class="r">53.3</td><td class="r pos">+$4,375</td><td>Partial recovery · FHE (−$3,284) replay</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- Section: Lessons -->
-    <section class="coach-sec" id="coach-sec-lessons" style="display:none;">
-      <div class="coach-card" id="coach-lessons-pinned-card" style="display:none;">
-        <div class="cc-head"><h3>📌 Pinned — load-bearing lessons</h3><span class="cc-chip">keep front-of-mind</span></div>
-        <div id="coach-lessons-pinned" class="coach-list"></div>
-      </div>
-      <div class="coach-sub-h">All lessons</div>
-      <div id="coach-lessons-list" class="coach-list"></div>
-    </section>
-
-    <!-- Section: Mistakes -->
-    <section class="coach-sec" id="coach-sec-mistakes" style="display:none;">
-      <div id="coach-mistakes-list" class="coach-list"></div>
-    </section>
-
-    <!-- Section: Rules -->
-    <section class="coach-sec" id="coach-sec-rules" style="display:none;">
-      <div id="coach-rules-list" class="coach-list"></div>
-    </section>
-
-    <!-- Section: Interventions -->
-    <section class="coach-sec" id="coach-sec-interventions" style="display:none;">
-      <div class="coach-note-banner">
-        Interventions are the enforcement backbone. Each one below is fully authored — trigger logic, evidence, recommended action, and the exact modal copy that will fire. Modal wiring live: use the <b>Pre-Trade Check</b> button in the Overview tab (or wait for auto-detection on new trades).
-      </div>
-      <div id="coach-interventions-list" class="coach-list"></div>
-    </section>
-
-    <!-- Section: Overrides — behavioral telemetry -->
-    <section class="coach-sec" id="coach-sec-overrides" style="display:none;">
-      <div class="coach-note-banner">
-        Every modal decision (Continue / Reduce / Cancel) is logged to <code>/tradingJournal/overrides</code>. This panel answers the only question that matters: <b>is the modal actually changing my behavior?</b>
-      </div>
-
-      <!-- Summary strip -->
-      <div class="ov-strip">
-        <div class="ov-cell"><span class="ov-k">Total events</span><span class="ov-v" id="ov-total">—</span></div>
-        <div class="ov-cell"><span class="ov-k">Last 7d</span><span class="ov-v" id="ov-7d">—</span></div>
-        <div class="ov-cell"><span class="ov-k">Last 30d</span><span class="ov-v" id="ov-30d">—</span></div>
-        <div class="ov-cell"><span class="ov-k">STOP continued anyway</span><span class="ov-v" id="ov-stop-cont">—</span></div>
-      </div>
-
-      <!-- Split: severity / action / top-ignored -->
-      <div class="ov-grid-3">
-        <div class="coach-card">
-          <div class="cc-head"><h3>By severity</h3><span class="cc-chip">max sev per event</span></div>
-          <div class="cc-body" id="ov-sev-table"></div>
-          <div class="cc-note">Severity derived from matched interventions via the Coach definitions — STOP &gt; RESTRICT &gt; WARNING.</div>
-        </div>
-        <div class="coach-card">
-          <div class="cc-head"><h3>By chosen action</h3></div>
-          <div class="cc-body" id="ov-act-table"></div>
-          <div class="cc-note">Ideal shape: many Cancel + Reduce, few Continue. "Continue" on RESTRICT/STOP is the tell.</div>
-        </div>
-        <div class="coach-card">
-          <div class="cc-head"><h3>Top ignored intervention</h3></div>
-          <div class="cc-body" id="ov-top-ignored"></div>
-          <div class="cc-note">The pattern you override most often — where Coach needs to escalate.</div>
-        </div>
-      </div>
-
-      <!-- Behavior verdict + highlighted events -->
-      <div class="coach-grid-2" id="ov-verdict-row" style="display:none;">
-        <div class="coach-card">
-          <div class="cc-head"><h3>Behavior verdict</h3><span class="cc-chip" id="ov-verdict-chip">—</span></div>
-          <div class="cc-body" id="ov-verdict"></div>
-        </div>
-        <div class="coach-card">
-          <div class="cc-head"><h3>Highlighted events</h3><span class="cc-chip">STOP / RESTRICT</span></div>
-          <div class="cc-body" id="ov-highlights"></div>
-        </div>
-      </div>
-
-      <!-- Event log -->
-      <div class="coach-card">
-        <div class="cc-head"><h3>Last 20 events</h3><span class="cc-chip" id="ov-events-src">live</span></div>
-        <div class="ov-table-wrap">
-          <table class="ov-table" id="ov-events-table">
-            <thead>
-              <tr><th>When</th><th>Symbol</th><th>Matched interventions</th><th>Action</th><th>Source</th></tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
   </div>
 
   <!-- ═══ TRADE LOG PAGE ═══ -->
@@ -1873,6 +1097,62 @@ select.pt-input{cursor:pointer;}
     </div>
   </div>
 
+  <!-- ═══ TRADER AGENT PAGE ═══
+       Read-only view of the Trader daemon that currently runs inside Jump HQ
+       (agents/workers/trader_worker.py). Primary reads: /jumpTrading/*.
+       Fallback: /fundHQ/* filtered to source=trader-auto. Zero writes.
+       Never touches /tradingJournal/* (that's the manual journal data). -->
+  <div class="page" id="page-trader-agent">
+    <div class="page-title">🤖 Trader Agent <span id="taSourceBadge" style="margin-left:10px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;background:var(--bg3,#2a2d34);color:var(--tx2,#aaa);">loading…</span></div>
+    <div style="font-size:12px;color:var(--tx3,#888);margin:-12px 0 20px;">Autonomous Trader daemon — signals, setups, paper trades. Hosted temporarily by the Jump HQ daemon. This is a read-only viewer; no writes happen from this tab.</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;flex-wrap:wrap;">
+      <button class="btn" onclick="taRefresh()" id="taRefreshBtn" style="font-size:12px;padding:6px 14px;">🔄 Refresh</button>
+      <span id="taLastRefresh" style="font-size:11px;color:var(--tx3,#888);">never</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--tx3,#888);" id="taSourceLabel">source: —</span>
+    </div>
+
+    <!-- A. Status + Migration -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <h3 style="margin:0 0 12px;font-size:14px;color:var(--tx2,#ddd);">Agent Status</h3>
+      <div class="metric-grid" id="taStatusGrid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;"></div>
+      <div id="taMigrationNote" style="margin-top:12px;padding:10px 12px;border-radius:6px;background:var(--bg3,#1f2127);font-size:12px;color:var(--tx2,#ccc);line-height:1.6;display:none;"></div>
+    </div>
+
+    <!-- B. Latest Trader Signals -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:14px;color:var(--tx2,#ddd);">Latest Trader Signals <span id="taSignalsCount" style="font-weight:400;color:var(--tx3,#888);font-size:11px;"></span></h3>
+        <span style="font-size:11px;color:var(--tx3,#888);">newest first · cap 50</span>
+      </div>
+      <div id="taSignalsList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading signals…</div></div>
+    </div>
+
+    <!-- C. Setup Feed -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:14px;color:var(--tx2,#ddd);">Setup Feed <span id="taSetupsCount" style="font-weight:400;color:var(--tx3,#888);font-size:11px;"></span></h3>
+        <span style="font-size:11px;color:var(--tx3,#888);">live + frozen</span>
+      </div>
+      <div id="taSetupsList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading setups…</div></div>
+    </div>
+
+    <!-- D. Paper Trades -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <h3 style="margin:0;font-size:14px;color:var(--tx2,#ddd);">Paper Trades <span id="taPaperCount" style="font-weight:400;color:var(--tx3,#888);font-size:11px;"></span></h3>
+        <span style="font-size:11px;color:var(--tx3,#888);">agent paper trades only — separate from your manual journal</span>
+      </div>
+      <div id="taPaperStats" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:12px;color:var(--tx3,#888);"></div>
+      <div id="taPaperList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading paper trades…</div></div>
+    </div>
+
+    <!-- E. Debug / Source Health -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <h3 style="margin:0 0 12px;font-size:14px;color:var(--tx2,#ddd);">Debug · Source Health</h3>
+      <div id="taDebugTable" style="font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11px;color:var(--tx3,#888);"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Chat Coach -->
@@ -1997,1871 +1277,6 @@ function initFirebaseListeners() {
       updatePriceTimestamp();
     }
   });
-
-  // Sheet-sync strip — daemon mirrors Google Sheets every 120s.
-  // Lives under /fundHQ/tradingJournal/sheetSync because Firebase rules only
-  // permit anonymous daemon writes under /fundHQ; the browser reads either
-  // path fine, so we open a second ref rather than widening the rules.
-  try {
-    const tjSyncRef = firebase.database().ref('fundHQ/tradingJournal/sheetSync');
-    tjSyncRef.child('summary').on('value',         s => { tjSync.summary = s.val();         renderSyncStrip(); try { renderCoachStrip(); } catch(e){} });
-    tjSyncRef.child('trades').on('value',          s => { tjSync.trades  = s.val(); try { ptMaybeAutoFire(tjSync.trades); } catch(e){} });
-    tjSyncRef.child('tilt').on('value',            s => { tjSync.tilt    = s.val();         renderSyncStrip(); });
-    tjSyncRef.child('meta').on('value',            s => { tjSync.meta    = s.val();         renderSyncStrip(); });
-    tjSyncRef.child('alpha').on('value',           s => { tjSync.alpha   = s.val();         renderAlphaPage(); });
-    tjSyncRef.child('counterfactuals').on('value', s => { tjSync.counterfactuals = s.val(); renderAlphaPage(); });
-  } catch(e) { console.warn('sheetSync listener attach failed:', e); }
-}
-
-/* ── Sheet-sync strip renderer ── */
-const tjSync = { summary: null, tilt: null, meta: null };
-let _tjSyncAgeTimer = null;
-
-function _tjFmtMoney(n){
-  if (n == null || isNaN(n)) return '—';
-  const sign = n < 0 ? '-' : '';
-  const abs = Math.abs(n);
-  if (abs >= 1000) return sign + '$' + Math.round(abs).toLocaleString();
-  return sign + '$' + abs.toFixed(2);
-}
-function _tjFmtAge(iso){
-  if (!iso) return '—';
-  const t = Date.parse(iso); if (isNaN(t)) return '—';
-  const s = Math.max(0, Math.floor((Date.now() - t)/1000));
-  if (s < 60)    return s + 's ago';
-  if (s < 3600)  return Math.floor(s/60) + 'm ago';
-  if (s < 86400) return Math.floor(s/3600) + 'h ago';
-  return Math.floor(s/86400) + 'd ago';
-}
-
-function renderSyncStrip(){
-  const strip = document.getElementById('tj-sync-strip');
-  if (!strip) return;
-  const { summary, tilt, meta } = tjSync;
-  // No data yet → stay hidden (non-intrusive).
-  if (!summary && !tilt && !meta) { strip.style.display = 'none'; return; }
-  strip.style.display = '';
-
-  const sev = (tilt && tilt.severity) || 'ok';
-  strip.setAttribute('data-sev', sev);
-
-  const ageEl = document.getElementById('tj-sync-age');
-  if (ageEl) ageEl.textContent = meta && meta.synced_at ? _tjFmtAge(meta.synced_at) : '—';
-
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  const setV = (id, val, good) => {
-    const el = document.getElementById(id); if (!el) return;
-    el.textContent = val;
-    if (good === true)       { el.setAttribute('data-good','true'); el.removeAttribute('data-bad'); }
-    else if (good === false) { el.setAttribute('data-bad','true');  el.removeAttribute('data-good'); }
-    else                     { el.removeAttribute('data-good'); el.removeAttribute('data-bad'); }
-  };
-
-  if (tilt) {
-    set('tj-sync-trades-today', tilt.trades_today ?? 0);
-    set('tj-sync-trades-hour',  tilt.trades_last_hour ?? 0);
-    setV('tj-sync-consec-loss', tilt.consecutive_losses ?? 0, (tilt.consecutive_losses||0) === 0 ? null : false);
-    const pnl = tilt.pnl_today_usd;
-    setV('tj-sync-pnl-today', _tjFmtMoney(pnl), pnl > 0 ? true : (pnl < 0 ? false : null));
-    set('tj-sync-emo', tilt.avg_emotion_last_5 != null ? tilt.avg_emotion_last_5 + '/10' : '—');
-  }
-  if (summary) {
-    set('tj-sync-dd', summary.drawdown_pct != null ? summary.drawdown_pct + '%' : '—');
-  }
-
-  // Flag pills
-  const flagsEl = document.getElementById('tj-sync-flags');
-  if (flagsEl) {
-    const flags = (tilt && tilt.flags) || [];
-    flagsEl.innerHTML = flags.map(f =>
-      `<span class="tj-sync-flag" data-level="${(f.level||'warn')}">${(f.msg||f.key||'flag').replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))}</span>`
-    ).join('');
-  }
-
-  // Keep the "Xs ago" label live-ticking without needing new Firebase events.
-  if (!_tjSyncAgeTimer) {
-    _tjSyncAgeTimer = setInterval(() => {
-      const m = tjSync.meta;
-      const el = document.getElementById('tj-sync-age');
-      if (el && m && m.synced_at) el.textContent = _tjFmtAge(m.synced_at);
-    }, 5000);
-  }
-}
-
-/* ── Risk Guardrails — live behavior control ──
-   Rules (user-specified, in order):
-     - below peak                    → ≥ CAUTION
-     - drawdown ≥ 5%                 → ≥ RESTRICTED
-     - trades today ≥ 5              → ≥ RESTRICTED
-     - consecutive losses ≥ 3        → STOP
-     - current hour/day is a known loser → bump one level (capped at STOP)
-   Size multiplier tiers: NORMAL=1.00, CAUTION=0.75, RESTRICTED=0.50, STOP=0.00
-   Computes from tjSync.{summary, tilt, alpha} — no new data source. */
-const AG_STATUSES    = ['NORMAL','CAUTION','RESTRICTED','STOP'];
-const AG_MULTIPLIERS = [1.00, 0.75, 0.50, 0.00];
-
-function computeGuardrails(){
-  const s  = tjSync.summary || {};
-  const t  = tjSync.tilt    || {};
-  const a  = tjSync.alpha   || {};
-  let level = 0;
-  const reasons = [];
-
-  const dd          = Number(s.drawdown_pct || 0);
-  const bal         = s.latest_balance, peak = s.peak_balance;
-  const belowPeak   = bal != null && peak != null && bal < peak;
-  const tradesToday = Number(t.trades_today || 0);
-  const consecLoss  = Number(t.consecutive_losses || 0);
-
-  // Base rules
-  if (belowPeak && dd > 0) {
-    level = Math.max(level, 1);
-    reasons.push(`Below peak equity — ${dd.toFixed(2)}% drawdown from $${(peak||0).toLocaleString()}`);
-  }
-  if (dd >= 5) {
-    level = Math.max(level, 2);
-    reasons.push(`Drawdown ${dd.toFixed(2)}% ≥ 5% — size-creep historically adds ~$36K in losses in this zone`);
-  }
-  if (tradesToday >= 5) {
-    level = Math.max(level, 2);
-    reasons.push(`${tradesToday} trades today — overtrade days are net −$16,851 across your history`);
-  }
-  if (consecLoss >= 3) {
-    level = 3;
-    reasons.push(`${consecLoss} consecutive losses — revenge-trade window; walk away`);
-  }
-
-  // Hour / day bias — bump severity if the current slot has historically bled
-  const now     = new Date();
-  const curHour = now.getHours();
-  const dayMap  = {0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
-  const curDay  = dayMap[now.getDay()];
-  const hourRow = (a.hours || []).find(h => Number(h.hour) === curHour);
-  const dayRow  = (a.days  || []).find(d => d.day === curDay);
-
-  let hourState = 'neutral', dayState = 'neutral';
-  if (hourRow) {
-    if (hourRow.total < 0)     hourState = 'bad';
-    else if (hourRow.total > 0) hourState = 'good';
-  }
-  if (dayRow) {
-    if (dayRow.total < 0)      dayState = 'bad';
-    else if (dayRow.total > 0) dayState = 'good';
-  }
-  if (hourState === 'bad') {
-    level = Math.min(level + 1, 3);
-    reasons.push(`It's ${String(curHour).padStart(2,'0')}:00 — historically net ${hourRow.total >= 0 ? '+' : '−'}$${Math.abs(hourRow.total).toLocaleString()} across ${hourRow.n} trades (${hourRow.win_pct}% win)`);
-  }
-  if (dayState === 'bad') {
-    level = Math.min(level + 1, 3);
-    reasons.push(`${curDay} is historically net ${dayRow.total >= 0 ? '+' : '−'}$${Math.abs(dayRow.total).toLocaleString()} across ${dayRow.n} trades (${dayRow.win_pct}% win)`);
-  }
-
-  return {
-    status:     AG_STATUSES[level],
-    multiplier: AG_MULTIPLIERS[level],
-    reasons,
-    dd, tradesToday, consecLoss,
-    curHour, curDay,
-    hourRow, dayRow, hourState, dayState,
-  };
-}
-
-function renderGuardrails(){
-  const host = document.getElementById('alpha-guardrails');
-  if (!host) return;
-  const g = computeGuardrails();
-  host.setAttribute('data-status', g.status);
-
-  const statusEl = document.getElementById('ag-status');
-  if (statusEl) statusEl.textContent = g.status;
-  const multEl = document.getElementById('ag-mult');
-  if (multEl)   multEl.textContent   = g.multiplier.toFixed(2) + '×';
-
-  const subText = {
-    NORMAL:     'System is calm — trade your plan.',
-    CAUTION:    'One or more soft triggers active. Tighten size and setup quality.',
-    RESTRICTED: 'Multiple triggers active. Reduce size; only A+ setups.',
-    STOP:       'Stop. Close the chart. Revenge / loss-streak / deep-drawdown zone.',
-  }[g.status];
-  const subEl = document.getElementById('ag-sub');
-  if (subEl) subEl.textContent = subText;
-
-  const setKV = (id, text, cls) => {
-    const el = document.getElementById(id); if (!el) return;
-    el.textContent = text;
-    el.classList.remove('bad','warn','good');
-    if (cls) el.classList.add(cls);
-  };
-  setKV('ag-kv-dd',     g.dd > 0 ? `−${g.dd.toFixed(2)}%` : '0.00%',
-        g.dd >= 5 ? 'bad' : g.dd > 0 ? 'warn' : 'good');
-  setKV('ag-kv-today',  String(g.tradesToday),
-        g.tradesToday >= 5 ? 'bad' : g.tradesToday >= 3 ? 'warn' : 'good');
-  setKV('ag-kv-consec', String(g.consecLoss),
-        g.consecLoss >= 3 ? 'bad' : g.consecLoss >= 2 ? 'warn' : 'good');
-  setKV('ag-kv-hour',
-        g.hourRow ? `${String(g.curHour).padStart(2,'0')}:00 · ${g.hourRow.total >= 0 ? '+' : '−'}$${Math.abs(g.hourRow.total).toLocaleString()}` : `${String(g.curHour).padStart(2,'0')}:00 · —`,
-        g.hourState === 'bad' ? 'bad' : g.hourState === 'good' ? 'good' : '');
-  setKV('ag-kv-day',
-        g.dayRow ? `${g.curDay} · ${g.dayRow.total >= 0 ? '+' : '−'}$${Math.abs(g.dayRow.total).toLocaleString()}` : `${g.curDay} · —`,
-        g.dayState === 'bad' ? 'bad' : g.dayState === 'good' ? 'good' : '');
-
-  const reasonsEl = document.getElementById('ag-reasons');
-  if (reasonsEl) {
-    reasonsEl.innerHTML = g.reasons.length
-      ? g.reasons.map(r => `<div class="ag-reason">${_ae(r)}</div>`).join('')
-      : '';
-  }
-}
-
-/* ═══════════ COACH V1 — memory + enforcement ═══════════
-   Seed data authored from the 3-stage full-history analysis. Rendered fully
-   client-side; no Firebase writes. Intervention modals wire up in next phase. */
-const COACH_DATA = {
-  overview: {
-    // trades_analyzed binds to tjSync.summary.total_trades when available;
-    // fallback to 881 (the static baseline from the 3-stage study).
-    trades_analyzed_fallback: 881,
-    top_mistake: 'Removed stop-loss',
-    top_rule:    'Stop-loss cannot be removed once placed',
-    intervention_focus: 'Removed Stop Pattern',
-    // v2 additions — richer Overview summary
-    weekly_focus: {
-      title: 'Eliminate stop-loss removals',
-      body:  'PYTH (−$2,096) → COAI (−$10,288) → FHE (−$3,284) — all three share the same mechanism. Target this week: zero trades with "removed SL" in the thesis column.',
-    },
-    best_improvement: {
-      title: 'Max-loss severity trending down',
-      body:  'Oct 2025 peak single-trade loss −$10,288. Jan 2026 peak single-trade loss −$3,284. Damage-cap working, but the mechanism (no SL) has not yet been eradicated.',
-    },
-  },
-  lessons: [
-    {
-      id: 'l-vol-choppy',
-      title: 'Decreasing volume + choppy PA is NOT a long',
-      takeaway: 'Same chart, opposite outcome: long → loss, short → win. 4/4 A-grade shorts won with this annotation.',
-      category: 'chart-reading',
-      priority: 1,
-      status: 'active',
-      pinned: true,
-      resulting_rule: 'r-grade-required',
-      linked_reports: 'Stage 1 · Finding 1',
-      body: 'When the chart prints a fast spike followed by dying volume and choppy price action, you have historically shorted it for profit and longed it for loss. Your own annotations (`Fast spike / Decreasing volume / Choppy PA`) are your A-grade short template — not a long setup.',
-      evidence: 'PLAY (row 235, −$267) and MOG (252, −$306) both had these exact annotations on the chart and you longed them. TST (347, +$944), ZEC (374, +$979), BARD (355, +$1,291), SPK (305, +$601) had identical annotations and you shorted them, winning all four.',
-      source_trades: '235, 252 (losers); 347, 355, 374, 305 (winners)',
-    },
-    {
-      id: 'l-no-add-loser',
-      title: 'Never add to a losing position',
-      takeaway: 'PYTH taught the habit. COAI paid 5× the bill. FHE proved it survived two lessons.',
-      category: 'risk',
-      priority: 1,
-      status: 'active',
-      pinned: true,
-      resulting_rule: 'r-no-remove-sl',
-      linked_reports: 'Stage 1/2/3 · Finding 10',
-      body: 'Adding to losers is a variance-positive habit that occasionally produces a win, teaches you the wrong lesson, then detonates. Three catastrophes — PYTH (Aug 29 2025), COAI (Oct 6 2025), FHE (Jan 16 2026) — all share the same mechanism: losing position + removed stop + added size + eventual forced close.',
-      evidence: 'PYTH −$2,096 (row 294) is the founding incident. COAI −$10,288 (row 389, Oct 6) is the maximum damage. FHE −$3,284 (row 714) proved the habit survived past two lessons. Total damage: ~$15,670.',
-      source_trades: '294, 389, 714',
-    },
-    {
-      id: 'l-meh-peak',
-      title: 'The 4–6 emotion bucket is your peak state',
-      takeaway: 'Neutral wins. Certain blows up. "Zen 9-10" trades average −$1,369.',
-      category: 'emotion',
-      priority: 2,
-      status: 'active',
-      pinned: true,
-      resulting_rule: 'r-halve-high-conf',
-      linked_reports: 'Stage 2 · Finding 7',
-      body: 'Across all 881 trades, your "meh / neutral" emotional bucket (4-6 on your self-scored log) produced +$36,494 net. Every other bucket combined lost money. The most dangerous state is "zen 9-10" — you have 12 trades there and they averaged −$1,369 each.',
-      evidence: 'Stage 1 "meh" = +$11,616 · Stage 2 "meh" = +$15,436 · Stage 3 "meh" = +$9,442. The edge is consistent and state-specific. "Focused 7-8" drags every stage. "Zen 9-10" produced the entire COAI-era disaster.',
-      source_trades: 'Aggregate — 592 "meh" trades across history',
-    },
-    {
-      id: 'l-htf',
-      title: 'HTF context materially improves long quality',
-      takeaway: '<1h trades bleed; 1-6h+ trades profit. Use HTF for direction, LTF for entry timing.',
-      category: 'chart-reading',
-      priority: 3,
-      status: 'in_progress',
-      resulting_rule: null,
-      linked_reports: 'Stage 1 · Finding 5',
-      body: 'Trades held <1 hour lost −$1,859 in Stage 3 and −$11,470 in Stage 2. Trades held 1-6h and 6h+ were profitable in every stage. Your best-executed longs (ZEC, TAO, SQD) used HTF support/resistance with LTF entry timing — not pure LTF momentum chases.',
-      evidence: 'ZEC row 616 (+$2,862, R=7.1) was a "swing HTF" long. SQD row 371 (+$992) was spot with a clean invalidation. TAO row 5 (first trade ever) already had proper HTF markup.',
-      source_trades: '5, 371, 616, 655, 665',
-    },
-    {
-      id: 'l-first-attempt',
-      title: 'First attempt beats repeated attempts',
-      takeaway: 'Trade 1: 77% win. Trade 2 same ticker: 0% win across 9 attempts.',
-      category: 'risk',
-      priority: 2,
-      status: 'active',
-      resulting_rule: 'r-no-second-trade',
-      linked_reports: 'Stage 2/3',
-      body: '"MR Short – trade 1" scored 77% win rate with +$1,691 net. "MR Short – second trade" scored 0% win rate with −$1,825. The moment you re-enter the same ticker after a loss, your edge evaporates.',
-      evidence: 'The plain "MR Short" bucket contains most re-entries and lost $10,492 at 52% win. Graded/numbered first-attempts consistently outperformed.',
-      source_trades: 'Aggregate — 242 "trade 1" / 16 "second trade"',
-    },
-    {
-      id: 'l-edge-overrides',
-      title: 'Your edge is real. Your overrides destroy it.',
-      takeaway: 'Positive system +$21K. Manual overrides −$16K. Net +$5.7K. Don\'t add strategies — remove overrides.',
-      category: 'meta',
-      priority: 1,
-      status: 'active',
-      resulting_rule: null,
-      linked_reports: 'Full 3-stage cumulative',
-      body: 'The positive-expectancy subset of your journal (graded shorts + MR longs in "meh" state with HTF + fast-spike wins) produced roughly +$21,389 over 881 trades. Manual overrides — removing stops, oversizing on conviction, revenge entries — lost about $15,670. Net $5,719 is what\'s left.',
-      evidence: 'Excluding the 3 blow-ups alone (PYTH/COAI/FHE) lifts net to ~$21K — 3.7× what you actually made. The journal doesn\'t need new strategies; it needs fewer overrides.',
-      source_trades: 'Entire dataset',
-    },
-    {
-      id: 'l-grade-filter',
-      title: 'Grading IS your edge — no grade, no trade',
-      takeaway: 'Graded shorts: 84% win, +$4.8K across 19 trades. Ungraded: 59% win, −$10.5K across 301 trades. Same strategy name, same chart, opposite outcomes.',
-      category: 'risk',
-      priority: 1,
-      status: 'active',
-      pinned: true,
-      resulting_rule: 'r-grade-required',
-      linked_reports: 'Stage 2 · Finding 6 · Stage 3 · strategy leaderboard',
-      body: 'The single largest delta in your journal between winning and losing cohorts is not strategy choice — it is whether the entry carried a grade tag. "MR Short A+" / "A" / "B+" entries win 84% across their history. Plain "MR Short" wins 52-59% depending on the period and bleeds −$10K+ cumulatively. The filter lives in the label. When the label is missing, so is the discipline.',
-      evidence: 'Graded (A+/A/B+) across dataset: 19 trades · 84% win · +$4,884. Ungraded "MR Short": 301 trades · 59% win · −$8,895. Stage 3 grading usage collapsed to 2.3% — directly correlated with the Jan 2026 losing month (−$7,848).',
-      source_trades: '355 BARD A+ · 347 TST · 374 ZEC · 305 SPK  (winners) · aggregate ungraded bucket (losers)',
-    },
-    {
-      id: 'l-hour-11-trap',
-      title: 'The 11:00 dead zone is a trap',
-      takeaway: '10:00 is your best hour (+$11.8K on 193 trades, 60% win). 11:00 is your worst (−$14.4K on 139 trades, 50% win). Adjacent hours, opposite signs.',
-      category: 'timing',
-      priority: 3,
-      status: 'in_progress',
-      resulting_rule: null,
-      linked_reports: 'Full-dataset hour analysis',
-      body: 'Your trading day has a clean bimodal edge. The first open hour (10:00) is where discipline and setup quality are highest. The second hour (11:00) is where you keep clicking without new setups appearing — degrading into low-quality momentum chases. The edge does not carry forward; the gun stays hot.',
-      evidence: 'Hour 10:00 — 193 trades, 60% win, +$11,793 net. Hour 11:00 — 139 trades, 50% win, −$14,360 net. Other profitable hours: 09:00 (+$3.4K) and 16:00-17:00 (+$7.5K). Other losing hours: 14:00-15:00 (−$1.9K net).',
-      source_trades: 'Aggregate — see Alpha tab hour-of-day leaderboard',
-    },
-  ],
-  mistakes: [
-    {
-      id: 'm-removed-sl',
-      title: 'Removing the stop-loss mid-trade',
-      pattern: 'Open position moves against you → stop feels too close → stop is moved or removed → position blows up past the original stop.',
-      cost_usd: 15670,
-      count: 3,
-      frequency: '3 catastrophic instances (PYTH / COAI / FHE) plus 4+ smaller ones (LYN 669, River 677, BTC 896, others)',
-      examples: 'PYTH −$2,096 · COAI −$10,288 · FHE −$3,284 · LYN −$1,579 · River −$1,722',
-      severity: 'crit',
-      last_seen: '2026-01-16',
-      trend: 'worsening',
-      linked_rule: 'r-no-remove-sl',
-      active_risk: true,
-    },
-    {
-      id: 'm-add-loser',
-      title: 'Adding size to losing positions',
-      pattern: 'Position is underwater → thesis feels more valid at worse price → add → if first add works, reinforces habit → next time, full blow-up.',
-      cost_usd: 15000,
-      count: 3,
-      frequency: 'Founding incident Aug 2025, maximum damage Oct 2025, recurred Jan 2026',
-      examples: 'Row 294 PYTH · Row 389 COAI · Row 714 FHE',
-      severity: 'crit',
-      last_seen: '2026-01-16',
-      trend: 'flat',
-      linked_rule: 'r-no-remove-sl',
-      active_risk: true,
-    },
-    {
-      id: 'm-oversized',
-      title: 'Oversizing at high confidence',
-      pattern: 'Chart reading is correct (A/A+ setup) → feel "certain" → size 1.5-2× normal → normal adverse excursion stops you out for outsized $ loss.',
-      cost_usd: 8000,
-      count: 12,
-      frequency: 'Primary Stage 2/3 killer. "Zen 9-10" bucket = 12 trades, avg −$1,369.',
-      examples: 'AVNT 341 −$1,120 · LYN 669 −$1,579 · RIVER 718 −$783 · BTC 896 −$664',
-      severity: 'high',
-      last_seen: '2026-04-16',
-      trend: 'flat',
-      linked_rule: 'r-halve-high-conf',
-      active_risk: true,
-    },
-    {
-      id: 'm-second-trade',
-      title: 'Second-trade revenge on same ticker',
-      pattern: 'Loss closes on ticker X → re-enter ticker X same direction within minutes → lose again → often third attempt.',
-      cost_usd: 5500,
-      count: 9,
-      frequency: '"MR Short – second trade" 0/9 win rate. Dec 2 PARTI/BEAT 6-loss streak. Jan 2026 FHE/LYN/River cluster.',
-      examples: 'Row 718 RIVER · Row 632 BEAT · Row 667 LYN · PARTI/BEAT streaks',
-      severity: 'high',
-      last_seen: '2026-04-16',
-      trend: 'flat',
-      linked_rule: 'r-no-second-trade',
-      active_risk: true,
-    },
-    {
-      id: 'm-ungraded',
-      title: 'Ungraded entries ("MR Short" without A+/A/B+)',
-      pattern: 'Template fits roughly → click entry without applying the grade filter → take a 50-50 setup at full size.',
-      cost_usd: 13000,
-      count: 515,
-      frequency: 'Plain "MR Short" 301 trades at 59% win for −$8,895. Graded variants (24 trades) won $4,884 at 84% win.',
-      examples: 'Aggregate — see Alpha tab strategy leaderboard',
-      severity: 'high',
-      last_seen: '2026-04-22',
-      trend: 'worsening',
-      linked_rule: 'r-grade-required',
-      active_risk: true,
-    },
-    {
-      id: 'm-tilt-entries',
-      title: 'Tilt / rushed entries (self-labeled)',
-      pattern: 'You know you\'re rushed. You type "rushed" in the strategy field. You submit anyway.',
-      cost_usd: 5077,
-      count: 91,
-      frequency: '67 trades explicitly labeled rushed/revenge/tilt across Stages 2 & 3. Clustered on Nov 7 2025, Dec 2 2025, Apr 15-16 2026.',
-      examples: 'Nov 7 rushed cluster (rows 479-484) · Dec 2 PARTI/BEAT 6-streak · Apr 15-16 cross-ticker streak',
-      severity: 'high',
-      last_seen: '2026-04-16',
-      trend: 'flat',
-      linked_rule: 'r-tilt-words-skip',
-      active_risk: true,
-    },
-    {
-      id: 'm-drawdown-sizing-up',
-      title: 'Sizing UP while in drawdown',
-      pattern: 'Account is down from peak → next entry is larger than normal-state median → drawdown compounds. This is the opposite of what the position sizing should do.',
-      cost_usd: 36300,
-      count: 500,
-      frequency: 'Persistent across all three stages. Median size in ≥5% drawdown = $8,500; normal-state median = $3,000. Multiplier: 2.83× — you size up exactly when you should size down.',
-      examples: 'Aggregate — see Alpha tab counterfactual (row #1) · largest single lever in your journal',
-      severity: 'crit',
-      last_seen: '2026-04-22',
-      trend: 'flat',
-      linked_rule: 'r-dd-halve',
-      active_risk: true,
-    },
-    {
-      id: 'm-hour-11-trap',
-      title: 'Trading past 10:00 into the 11:00 dead zone',
-      pattern: 'Great first hour → confidence carries into the next hour even though the setup quality is gone → chase momentum that has already exhausted → net loser.',
-      cost_usd: 14360,
-      count: 139,
-      frequency: '193 trades at 10:00 (+$11.8K) versus 139 trades at 11:00 (−$14.4K). Not a one-off — a structural hour-of-day pattern.',
-      examples: 'Aggregate — see Alpha tab hour-of-day leaderboard',
-      severity: 'high',
-      last_seen: '2026-04-22',
-      trend: 'flat',
-      linked_rule: null,
-      active_risk: true,
-    },
-  ],
-  rules: [
-    {
-      id: 'r-no-remove-sl',
-      title: 'Stop-loss cannot be removed once placed.',
-      rationale: 'This is the founding mechanism of every 4-figure blowup in the journal. One rule, three catastrophes neutralized.',
-      body: 'If a stop exists, it stays. Period. No "just this once." This is the single highest-leverage rule in the entire journal — responsible for the three catastrophic blow-ups.',
-      priority: 1,
-      severity: 'crit',
-      evidence: 'PYTH / COAI / FHE chain · ~$15,670 preventable',
-      source_lesson: 'l-no-add-loser',
-      auto_enforce: 'Planned: broker-level lockout + pre-modify modal',
-      enforcement_status: 'pending',
-    },
-    {
-      id: 'r-no-second-trade',
-      title: 'No second trade on same ticker same side within 2 hours of a close.',
-      rationale: 'Re-entry after a stopout is not a new setup; it\'s emotional recovery. Your data makes this unambiguous at 0/9.',
-      body: 'One shot per ticker per session. If the first setup fails, the ticker is done for at least 2h regardless of how tempting the re-entry looks.',
-      priority: 2,
-      severity: 'high',
-      evidence: '"MR Short – second trade" 0/9 win · multiple 5+ trade losing streaks on same pair',
-      source_lesson: 'l-first-attempt',
-      auto_enforce: 'Planned: Sheet-side block + modal',
-      enforcement_status: 'modal-ready',
-    },
-    {
-      id: 'r-halve-high-conf',
-      title: 'Confidence ≥ 8/10 → halve size.',
-      rationale: 'High conviction ruins sizing, not chart reading. Halving protects the valid setup from oversized execution.',
-      body: 'High-confidence state ruins size discipline, not chart reading. The setup is probably valid; the position is 2× too big. Halve, don\'t skip.',
-      priority: 3,
-      severity: 'high',
-      evidence: '"Zen 9-10" bucket −$16,243 on 12 trades · AVNT / LYN / RIVER / BTC oversized losses',
-      source_lesson: 'l-meh-peak',
-      auto_enforce: 'Planned: size gate in pre-trade modal',
-      enforcement_status: 'modal-ready',
-    },
-    {
-      id: 'r-grade-required',
-      title: 'Every entry requires a grade tag (A+ / A / B+ / skip).',
-      rationale: 'The label is the filter. Without it you default to ungraded, which is a 50-50 setup at full size.',
-      body: 'The label is the filter. Graded setups win 84% of the time in your history; ungraded win 52%. A required field produces the discipline that willpower doesn\'t.',
-      priority: 4,
-      severity: 'high',
-      evidence: 'Graded (24) +$4,884 vs Ungraded (515) −$13,000+ across dataset',
-      source_lesson: 'l-vol-choppy',
-      auto_enforce: 'Planned: required cell in sheet entry template',
-      enforcement_status: 'pending',
-    },
-    {
-      id: 'r-three-loss-stop',
-      title: 'Hard stop for the day after 3 consecutive losses.',
-      rationale: 'Three losses in a row is state information. Continuing is how single bad days become 6-loss streaks.',
-      body: 'Three losses in a row = close the chart. No "find a better setup." Your data says every 4th+ trade on a 3-loss-streak day bleeds.',
-      priority: 5,
-      severity: 'high',
-      evidence: 'Nov 7 / Dec 2 / Apr 15-16 streak days · Guardrails STOP tier already modeled on this',
-      source_lesson: 'l-first-attempt',
-      auto_enforce: 'Planned: Guardrails STOP tier + modal',
-      enforcement_status: 'partial',
-    },
-    {
-      id: 'r-tilt-words-skip',
-      title: 'If your own note contains "rushed / revenge / tilt / in sync" → default skip.',
-      rationale: 'Your language is diagnostic — acting on it earlier is cheaper than discovering it post-mortem.',
-      body: 'You diagnose tilt accurately in real time. The journal now treats those words as a veto. Override requires an explicit acknowledgment.',
-      priority: 6,
-      severity: 'high',
-      evidence: '91 tilt-tagged trades lost ~$5,077. 67 non-dummy tilt trades cumulative.',
-      source_lesson: 'l-edge-overrides',
-      auto_enforce: 'Planned: word scanner on reason field',
-      enforcement_status: 'modal-ready',
-    },
-    {
-      id: 'r-dd-halve',
-      title: 'Halve size when account is ≥ 5% in drawdown.',
-      rationale: 'Single largest counterfactual lever in your journal. Reversing the size-creep habit alone recovers ~$36K historically.',
-      body: 'You currently size UP in drawdown (median 2.83× normal). Reversing this single habit alone would have saved ~$36,300 historically.',
-      priority: 7,
-      severity: 'crit',
-      evidence: 'Alpha-tab counterfactual: biggest single lever. Full-dataset size-creep multiplier 2.83×.',
-      source_lesson: 'l-edge-overrides',
-      auto_enforce: 'Planned: Guardrails RESTRICTED tier multiplier',
-      enforcement_status: 'partial',
-    },
-  ],
-  interventions: [
-    {
-      id: 'i-removed-stop',
-      title: 'Removed Stop Pattern',
-      severity: 'crit',
-      related_rule: 'r-no-remove-sl',
-      trigger: 'Position open AND (stop field blank OR stop moved further from entry post-fill OR stop equals entry). Cross-check: last 3 "removed SL" notes in history.',
-      evidence: 'PYTH −$2,096, COAI −$10,288, FHE −$3,284, LYN −$1,579, River −$1,722. 5 trades, $19K cumulative loss. All five contain "removed SL" or "no SL" in your own notes.',
-      linked_trades: 'rows 294, 389, 714, 669, 677',
-      action: 'Freeze new orders. Force re-acknowledgment. If stop is being modified, require a written override reason logged to Firebase.',
-      modal: '"You just modified/removed a stop-loss. In your journal history, 5 prior trades that removed SL lost $19,000. You personally wrote \'removed SL\' 7 times. Re-enter a valid stop before continuing."',
-    },
-    {
-      id: 'i-second-trade',
-      title: 'Second Trade Revenge Pattern',
-      severity: 'high',
-      related_rule: 'r-no-second-trade',
-      trigger: 'New entry AND (same ticker AND same side within 2 hours of a closed loss on that ticker) OR (strategy field contains "second trade", "revenge", or "trade 2+").',
-      evidence: '"MR Short – second trade" 0/9 win rate, −$1,825. Dec 2 2025 PARTI/BEAT 6-loss streak. Jan 2026 RIVER / FHE / LYN cluster. Rushed clusters on Nov 7 and Apr 15-16.',
-      linked_trades: 'rows 632, 667, 676, 677, 718, 486, 626, PARTI/BEAT streak',
-      action: 'Block same-ticker entry for 2 hours after a loss close. Display the prior loss\'s P&L and thesis.',
-      modal: '"You closed $COIN at −$X 23 min ago. Your second-trade win rate on this pattern: 0% across 9 attempts. Wait 2 hours."',
-    },
-    {
-      id: 'i-oversized-conviction',
-      title: 'Oversized Conviction Pattern',
-      severity: 'high',
-      related_rule: 'r-halve-high-conf',
-      trigger: 'Emotion log ≥ 8/10 AND position size > 1.5× median of last 20 trades. Also fires if size > risk-budget defined in sheet config.',
-      evidence: 'AVNT −$1,120, LYN 669 −$1,579, RIVER 718 −$783, BTC 896 −$664. Common note: "Oversized − too confident". "Zen 9-10" bucket −$16,243 total on just 12 trades.',
-      linked_trades: 'rows 341, 669, 718, 896',
-      action: 'Auto-halve position size. Require confirmation that the new size stays within 1.0× median.',
-      modal: '"Confidence 9/10 + size $X = 1.8× median. High-conviction oversizing has cost $8K+ in your history. Halve to $Y?"',
-    },
-    {
-      id: 'i-drawdown-escalation',
-      title: 'Drawdown Escalation Pattern',
-      severity: 'crit',
-      related_rule: 'r-dd-halve',
-      trigger: 'Live account balance ≥ 5% below peak AND new entry size ≥ normal-state median. (Currently active via Guardrails RESTRICTED tier.)',
-      evidence: 'Counterfactual analysis: halving size during drawdowns would have saved $36,304 historically — the single largest lever in your journal. Current median size in DD is 2.83× normal state.',
-      linked_trades: 'Aggregate: 500+ trades in drawdown state',
-      action: 'Force size multiplier to 0.5× normal. Display current drawdown prominently. Block further size escalation until new peak.',
-      modal: '"Account is −X% from peak of $Y. Halving size in drawdown would have saved $36K in your history. Submit at 0.5× size?"',
-    },
-    {
-      id: 'i-tilt-self-report',
-      title: 'Tilt-Word Self-Report Pattern',
-      severity: 'high',
-      related_rule: 'r-tilt-words-skip',
-      trigger: 'Reason/thesis field on new entry contains any of: "rushed", "revenge", "tilt", "in sync", "second trade", "oversized", "no SL", "removed SL", "super quick", "just looked".',
-      evidence: '67 non-dummy tilt-tagged trades lost $5,077. 91 total tagged. Win rate on explicit-tilt trades: ~10%. The user diagnoses tilt accurately in real time.',
-      linked_trades: 'rows 389, 443, 479-484, 626, 669, 714, 718, PARTI/BEAT/SAPIEN clusters',
-      action: 'Force a 30-second pause. Highlight the trigger word. Require re-typing "I acknowledge this is a tilt trade" to continue.',
-      modal: '"You typed \'rushed\' in your thesis. Your 10 prior \'rushed\' trades lost $2,208 at 10% win. Still submit?"',
-    },
-    {
-      id: 'i-ungraded',
-      title: 'Ungraded Entry Pattern',
-      severity: 'high',
-      related_rule: 'r-grade-required',
-      trigger: 'Note/strategy does NOT contain any of: A+ · A · B+ · B · skip (case-insensitive, standalone token).',
-      evidence: 'Ungraded "MR Short" 301 trades at 59% win for −$8,895. Graded variants (24 trades) won +$4,884 at 84% win. Grading usage fell from 8% (Stage 2) → 2.3% (Stage 3) — discipline collapse correlates with the worst months.',
-      linked_trades: 'Aggregate — see Alpha tab strategy leaderboard (all "MR Short" rows without a grade suffix)',
-      action: 'Block entry until a grade token is added to the note/strategy. If the grade is honestly "skip", logging that is acceptable (creates a dataset of setups you declined).',
-      modal: '"Note contains no grade (A+/A/B+/B/skip). Ungraded trades in your history: 59% win, −$10K. Graded: 84% win, +$4.8K. Tag this entry or log as skip."',
-    },
-    {
-      id: 'i-three-loss-streak',
-      title: 'Three-Loss Streak Pattern',
-      severity: 'crit',
-      related_rule: 'r-three-loss-stop',
-      trigger: 'Live tilt snapshot reports consecutive_losses ≥ 3 — reads tjSync.tilt.consecutive_losses from the daemon heartbeat.',
-      evidence: 'Apr 15-16 2026 produced a 7-loss streak (−$1,454) across GOLD/VVV/SP500/AAVE/AVAX/ZEC. Dec 2 2025 PARTI/BEAT alternating 6-streak. Nov 7 2025 SAPIEN rushed 6-streak. Every cluster-day fits the same shape — the 4th+ trade bleeds.',
-      linked_trades: 'rows 479-484 (Nov 7) · Dec 2 PARTI/BEAT · rows 887-893 (Apr 15-16)',
-      action: 'Auto-flip Guardrails to STOP tier. Modal requires explicit "I acknowledge I am continuing past 3 losses" to proceed.',
-      modal: '"3 consecutive losses. Every historical streak-day in your journal kept bleeding from the 4th trade. Close the chart — the streak resets with rest, not another entry."',
-    },
-  ],
-};
-
-// Look up helpers across the Coach data graph.
-function _coachLookup(collection, id){
-  const arr = (COACH_DATA && COACH_DATA[collection]) || [];
-  return arr.find(x => x && x.id === id) || null;
-}
-
-function coachShowSection(name) {
-  ['overview','lessons','mistakes','rules','interventions','overrides'].forEach(s => {
-    const sec = document.getElementById('coach-sec-' + s);
-    if (sec) sec.style.display = (s === name) ? '' : 'none';
-    const btn = document.querySelector('#coach-tabs .ct-btn[data-sec="' + s + '"]');
-    if (btn) btn.classList.toggle('active', s === name);
-  });
-  // Lazy-attach override listener when user lands on the tab.
-  if (name === 'overrides') { try { initOverridesListener(); } catch(e){} }
-}
-
-function _coachM(n) {
-  if (n == null || isNaN(n)) return '—';
-  const sign = n < 0 ? '−' : '';
-  return sign + '$' + Math.round(Math.abs(n)).toLocaleString();
-}
-
-function renderCoachStrip() {
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  const trades = (tjSync && tjSync.summary && tjSync.summary.total_trades) || COACH_DATA.overview.trades_analyzed_fallback;
-  set('cs-trades',  trades.toLocaleString());
-  set('cs-lessons', COACH_DATA.lessons.length);
-  set('cs-mistake', COACH_DATA.overview.top_mistake);
-  set('cs-rule',    COACH_DATA.overview.top_rule);
-  set('cs-focus',   COACH_DATA.overview.intervention_focus);
-}
-
-function _coachLessonCard(l) {
-  const ruleTitle = l.resulting_rule ? ((_coachLookup('rules', l.resulting_rule)||{}).title || l.resulting_rule) : '—';
-  const cat = (l.category || '').replace(/[^a-z]/gi,'_');
-  const chips =
-    (l.pinned ? `<span class="cp-chip" title="Pinned">📌</span>` : '') +
-    (l.category ? `<span class="cp-chip cp-chip-cat-${_ae(cat)}">${_ae(l.category)}</span>` : '') +
-    (l.priority ? `<span class="cp-chip cp-chip-prio-${l.priority}">P${l.priority}</span>` : '') +
-    (l.status ? `<span class="cp-chip cp-chip-status-${_ae((l.status||'').replace(/[^a-z_]/gi,'_'))}">${_ae(l.status.replace('_',' '))}</span>` : '');
-  return `
-    <div class="coach-item">
-      <div class="ci-head">
-        <div class="ci-title">${_ae(l.title)}</div>
-        <div>${chips}</div>
-      </div>
-      ${l.takeaway ? `<div class="coach-takeaway">${_ae(l.takeaway)}</div>` : ''}
-      <div class="ci-body">${_ae(l.body)}</div>
-      <div class="ci-kv">
-        <span class="k">Evidence</span><span class="v">${_ae(l.evidence)}</span>
-        <span class="k">Resulting rule</span><span class="v">${_ae(ruleTitle)}</span>
-        <span class="k">Linked trades</span><span class="v"><code>${_ae(l.source_trades)}</code></span>
-        <span class="k">Linked reports</span><span class="v">${_ae(l.linked_reports || '—')} <i style="color:var(--tx3);font-size:10px;">(placeholder)</i></span>
-      </div>
-    </div>
-  `;
-}
-
-function renderCoachLessons() {
-  const host = document.getElementById('coach-lessons-list');
-  const pinnedCard = document.getElementById('coach-lessons-pinned-card');
-  const pinnedHost = document.getElementById('coach-lessons-pinned');
-  if (!host) return;
-  const all = COACH_DATA.lessons || [];
-  // Sort by priority ascending then by pinned.
-  const sorted = all.slice().sort((a,b) => (a.priority||99)-(b.priority||99));
-  const pinned = sorted.filter(l => l.pinned);
-  if (pinnedHost) pinnedHost.innerHTML = pinned.map(_coachLessonCard).join('');
-  if (pinnedCard) pinnedCard.style.display = pinned.length ? '' : 'none';
-  host.innerHTML = sorted.map(_coachLessonCard).join('');
-}
-
-function renderCoachMistakes() {
-  const host = document.getElementById('coach-mistakes-list');
-  if (!host) return;
-  const sorted = [...COACH_DATA.mistakes].sort((a,b) => (b.cost_usd||0) - (a.cost_usd||0));
-  host.innerHTML = sorted.map(m => {
-    const linkedRuleTitle = m.linked_rule ? ((_coachLookup('rules', m.linked_rule)||{}).title || m.linked_rule) : '—';
-    const trend = (m.trend || 'flat');
-    const trendSym = trend === 'worsening' ? '▲' : trend === 'improving' ? '▼' : '—';
-    const risk = m.active_risk ? ' coach-active-risk' : '';
-    return `
-      <div class="coach-item${risk}">
-        <div class="ci-head">
-          <div class="ci-title">${_ae(m.title)} <span class="ci-cost">−${_coachM(m.cost_usd).replace('−','')}</span></div>
-          <div>
-            ${m.active_risk ? '<span class="cp-chip cp-chip-prio-1">ACTIVE RISK</span>' : ''}
-            <span class="sev sev-${_ae(m.severity||'high')}">${_ae((m.severity||'high').toUpperCase())}</span>
-          </div>
-        </div>
-        <div class="ci-body"><b>Pattern:</b> ${_ae(m.pattern)}</div>
-        <div class="ci-kv">
-          <span class="k">Count</span><span class="v">${m.count}</span>
-          <span class="k">Cost</span><span class="v" style="color:#ef4444;font-weight:700;">−${_coachM(m.cost_usd).replace('−','')}</span>
-          <span class="k">Last seen</span><span class="v">${_ae(m.last_seen || '—')}</span>
-          <span class="k">Trend</span><span class="v"><span class="cp-trend cp-trend-${_ae(trend)}">${trendSym} ${_ae(trend)}</span></span>
-          <span class="k">Linked rule</span><span class="v">${_ae(linkedRuleTitle)}</span>
-          <span class="k">Frequency</span><span class="v">${_ae(m.frequency)}</span>
-          <span class="k">Worst examples</span><span class="v"><code>${_ae(m.examples)}</code></span>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// Rules that Guardrails (Alpha page) enforces indirectly but that no intervention
-// directly targets yet. Kept narrow — only rules whose concept is materially
-// covered by the live Guardrails state machine. Update only when Guardrails
-// logic itself changes.
-const GUARDRAIL_COVERED_RULES = new Set(['r-three-loss-stop', 'r-dd-halve']);
-
-// Derive enforcement status from actual wiring, not authored state:
-//   live        — reserved for true auto-apply (not yet implemented for any rule)
-//   modal-ready — a Coach intervention points at this rule AND the modal engine loaded
-//   partial     — covered indirectly by live Guardrails tier but no modal trigger
-//   pending     — nothing live references this rule
-function _ruleEnforcementDerived(ruleId) {
-  const linked = (COACH_DATA.interventions || []).filter(i => i.related_rule === ruleId);
-  const modalReady = (typeof _ptLogAction === 'function');
-  if (linked.length > 0 && modalReady) return 'modal-ready';
-  if (GUARDRAIL_COVERED_RULES.has(ruleId)) return 'partial';
-  return 'pending';
-}
-
-// Rich violation aggregation from the override log:
-//   - returns {wired:false, ...} if no intervention targets this rule
-//   - else returns counts over all-time / 7d / 30d plus a simple trend label
-// A "violation" = override event with chosen_action ∈ {continue, dismissed}
-// whose matched_interventions include at least one of the rule's linked IDs.
-function _ruleViolations(ruleId) {
-  const linkedIntIds = (COACH_DATA.interventions || [])
-    .filter(i => i.related_rule === ruleId)
-    .map(i => i.id);
-  if (!linkedIntIds.length) {
-    return { wired: false, total: 0, c7: 0, c30: 0, trend: 'flat', linkedIntIds: [] };
-  }
-  const now = Date.now();
-  const D7  = now - 7  * 86400 * 1000;
-  const D30 = now - 30 * 86400 * 1000;
-  let total = 0, c7 = 0, c30 = 0;
-  const events = (typeof _ovState !== 'undefined' && _ovState.events) ? _ovState.events : [];
-  for (const e of events) {
-    const act = e.chosen_action;
-    if (act !== 'continue' && act !== 'dismissed') continue;
-    const ids = e.matched_interventions || [];
-    if (!linkedIntIds.some(ri => ids.indexOf(ri) !== -1)) continue;
-    total++;
-    const t = Date.parse(e.timestamp);
-    if (!isNaN(t)) {
-      if (t >= D7)  c7++;
-      if (t >= D30) c30++;
-    }
-  }
-  // Trend: 7d per-day rate vs prior 21-day per-day rate. Needs ≥3 events in 30d
-  // to call a direction — below that, report 'flat' to avoid noisy trends.
-  const prev21      = Math.max(0, c30 - c7);
-  const rate7       = c7 / 7;
-  const ratePrev21  = prev21 / 21;
-  let trend = 'flat';
-  if (c30 >= 3) {
-    if      (rate7 > ratePrev21 * 1.3) trend = 'worsening';
-    else if (rate7 < ratePrev21 * 0.7) trend = 'improving';
-  }
-  return { wired: true, total, c7, c30, trend, linkedIntIds };
-}
-
-function renderCoachRules() {
-  const host = document.getElementById('coach-rules-list');
-  if (!host) return;
-  const sorted = [...COACH_DATA.rules].sort((a,b) => (a.priority||99) - (b.priority||99));
-  host.innerHTML = sorted.map(r => {
-    const lessonTitle = r.source_lesson ? ((_coachLookup('lessons', r.source_lesson)||{}).title || r.source_lesson) : '—';
-
-    // Derived enforcement status
-    const derivedEnf = _ruleEnforcementDerived(r.id);
-    const enfKey     = derivedEnf.replace(/[^a-z_-]/gi, '_');
-    const enfLabel   = derivedEnf; // 'pending' | 'partial' | 'modal-ready' | 'live'
-
-    // Derived violations
-    const viol = _ruleViolations(r.id);
-    const linkedIntTitles = viol.linkedIntIds
-      .map(id => (_coachLookup('interventions', id) || {}).title || id)
-      .join(' · ') || '— no intervention wired';
-
-    let violLine;
-    if (!viol.wired) {
-      violLine = '<span style="color:var(--tx3);font-size:10px;font-style:italic;">Not wired — no intervention targets this rule yet.</span>';
-    } else if (viol.total === 0) {
-      violLine = '<span style="color:#22c55e;font-weight:700;">0 violations · clean</span>';
-    } else {
-      const tSym = viol.trend === 'worsening' ? '▲' : viol.trend === 'improving' ? '▼' : '—';
-      const tCol = viol.trend === 'worsening' ? '#ef4444' : viol.trend === 'improving' ? '#22c55e' : 'var(--tx3)';
-      violLine = `
-        <b style="color:var(--tx);">${viol.total}</b> <span style="color:var(--tx3);">total</span>
-        · <b style="color:${viol.c7>0?'#ef4444':'var(--tx)'};">${viol.c7}</b> <span style="color:var(--tx3);">in 7d</span>
-        · <b>${viol.c30}</b> <span style="color:var(--tx3);">in 30d</span>
-        · <span class="cp-trend cp-trend-${viol.trend}" style="color:${tCol};">${tSym} ${viol.trend}</span>
-      `;
-    }
-
-    return `
-      <div class="coach-item">
-        <div class="ci-head">
-          <div class="ci-title"><span class="ci-prio">P${r.priority}</span>&nbsp;&nbsp;${_ae(r.title)}</div>
-          <div>
-            <span class="sev sev-${_ae(r.severity||'high')}">${_ae((r.severity||'high').toUpperCase())}</span>
-            <span class="cp-chip cp-chip-enf-${_ae(enfKey)}" title="Derived live from interventions + Guardrails coverage">${_ae(enfLabel)}</span>
-          </div>
-        </div>
-        ${r.rationale ? `<div class="coach-takeaway">${_ae(r.rationale)}</div>` : ''}
-        <div class="ci-body">${_ae(r.body)}</div>
-        <div class="ci-kv">
-          <span class="k">Evidence</span><span class="v">${_ae(r.evidence)}</span>
-          <span class="k">Source lesson</span><span class="v">${_ae(lessonTitle)}</span>
-          <span class="k">Enforced via</span><span class="v">${_ae(linkedIntTitles)}</span>
-          <span class="k">Enforcement plan</span><span class="v">${_ae(r.auto_enforce)}</span>
-          <span class="k">Violations</span><span class="v">${violLine}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderCoachInterventions() {
-  const host = document.getElementById('coach-interventions-list');
-  if (!host) return;
-  host.innerHTML = COACH_DATA.interventions.map(i => {
-    const relRule = i.related_rule ? ((_coachLookup('rules', i.related_rule)||{}).title || i.related_rule) : '—';
-    return `
-      <div class="coach-item">
-        <div class="ci-head">
-          <div class="ci-title">${_ae(i.title)}</div>
-          <span class="sev sev-${_ae(i.severity)}">${_ae(i.severity.toUpperCase())}</span>
-        </div>
-        <div class="ci-kv">
-          <span class="k">Trigger logic</span><span class="v"><code>${_ae(i.trigger)}</code></span>
-          <span class="k">Evidence</span><span class="v">${_ae(i.evidence)}</span>
-          <span class="k">Linked examples</span><span class="v"><code>${_ae(i.linked_trades)}</code></span>
-          <span class="k">Recommended action</span><span class="v">${_ae(i.action)}</span>
-          <span class="k">Related rule</span><span class="v">${_ae(relRule)}</span>
-          <span class="k">Modal preview</span><span class="v" style="font-style:italic;padding:8px 10px;background:color-mix(in srgb,var(--tx3) 8%,transparent);border-radius:6px;display:block;">${_ae(i.modal)}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderCoachOverview(){
-  // Top 3 active lessons — by priority then pinned
-  const lessonHost = document.getElementById('ov-top-lessons');
-  if (lessonHost){
-    const top3 = (COACH_DATA.lessons || [])
-      .filter(l => l.status !== 'mastered')
-      .slice()
-      .sort((a,b) => (a.priority||99)-(b.priority||99))
-      .slice(0,3);
-    lessonHost.innerHTML = top3.map(l => `
-      <div class="ov-list-item">
-        <span class="oli-title">${l.pinned?'📌 ':''}${_ae(l.title)}</span>
-        <span class="oli-meta"><span class="cp-chip cp-chip-prio-${l.priority||3}">P${l.priority||3}</span></span>
-      </div>
-    `).join('') || '<div style="color:var(--tx3);font-size:12px;">No active lessons.</div>';
-  }
-
-  // Top 3 current risks — active_risk mistakes ranked by cost_usd
-  const riskHost = document.getElementById('ov-top-risks');
-  if (riskHost){
-    const top3 = (COACH_DATA.mistakes || [])
-      .filter(m => m.active_risk)
-      .slice()
-      .sort((a,b) => (b.cost_usd||0)-(a.cost_usd||0))
-      .slice(0,3);
-    riskHost.innerHTML = top3.map(m => `
-      <div class="ov-list-item">
-        <span class="oli-title">${_ae(m.title)}</span>
-        <span class="oli-meta oli-cost">−${_coachM(m.cost_usd).replace('−','')}</span>
-      </div>
-    `).join('') || '<div style="color:var(--tx3);font-size:12px;">No active risks.</div>';
-  }
-
-  // Weekly focus
-  const focusHost = document.getElementById('ov-weekly-focus');
-  if (focusHost){
-    const wf = (COACH_DATA.overview || {}).weekly_focus || {};
-    focusHost.innerHTML = `
-      <div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:6px;">${_ae(wf.title||'—')}</div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.55;">${_ae(wf.body||'')}</div>
-    `;
-  }
-
-  // Best improvement
-  const impHost = document.getElementById('ov-best-improvement');
-  if (impHost){
-    const bi = (COACH_DATA.overview || {}).best_improvement || {};
-    impHost.innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:#22c55e;margin-bottom:6px;">${_ae(bi.title||'—')}</div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.55;">${_ae(bi.body||'')}</div>
-    `;
-  }
-
-  // Most expensive repeated mistake — top cost_usd where count >= 2
-  const costHost = document.getElementById('ov-top-cost-mistake');
-  if (costHost){
-    const top = (COACH_DATA.mistakes || [])
-      .filter(m => (m.count || 0) >= 2)
-      .slice()
-      .sort((a,b) => (b.cost_usd||0) - (a.cost_usd||0))[0];
-    if (top) {
-      const linkedRule = top.linked_rule ? ((_coachLookup('rules', top.linked_rule)||{}).title || top.linked_rule) : '—';
-      costHost.innerHTML = `
-        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px;">${_ae(top.title)}</div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">${top.count} instances · last seen ${_ae(top.last_seen||'—')}</div>
-        <div style="font-size:20px;font-weight:800;color:#ef4444;font-variant-numeric:tabular-nums;">−${_coachM(top.cost_usd).replace('−','')}</div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:6px;">Linked rule: ${_ae(linkedRule)}</div>
-      `;
-    } else {
-      costHost.innerHTML = '<div style="color:var(--tx3);font-size:12px;">No repeated mistakes tracked.</div>';
-    }
-  }
-
-  // Override summary — from _ovState if present, otherwise friendly placeholder
-  const ovHost = document.getElementById('ov-override-summary');
-  if (ovHost){
-    const evs = (typeof _ovState !== 'undefined' && _ovState.events) ? _ovState.events : [];
-    if (!evs.length){
-      ovHost.innerHTML = '<div style="color:var(--tx3);font-size:12px;">No override events yet. Fire the Pre-Trade Check modal once to seed this panel.</div>';
-    } else {
-      const byAction = {};
-      let stopT=0, stopCont=0;
-      for (const e of evs){
-        const act = e.chosen_action || 'unknown';
-        byAction[act] = (byAction[act]||0)+1;
-        const sev = e.max_severity || (typeof _ovMaxSev==='function' ? _ovMaxSev(e.matched_interventions) : 'WARNING');
-        if (sev === 'STOP'){ stopT++; if (act === 'continue') stopCont++; }
-      }
-      const stopPct = stopT ? Math.round(stopCont/stopT*100) : 0;
-      ovHost.innerHTML = `
-        <div class="cc-metric">
-          <div class="cc-metric-row"><span class="cc-k">Total events</span><span class="cc-v">${evs.length}</span></div>
-          <div class="cc-metric-row"><span class="cc-k">Cancelled</span><span class="cc-v good">${byAction.cancel||0}</span></div>
-          <div class="cc-metric-row"><span class="cc-k">Reduced</span><span class="cc-v" style="color:#f59e0b;">${byAction.reduce||0}</span></div>
-          <div class="cc-metric-row"><span class="cc-k">Continued anyway</span><span class="cc-v bad">${byAction.continue||0}</span></div>
-          <div class="cc-metric-row"><span class="cc-k">Dismissed</span><span class="cc-v" style="color:#9ca3af;">${byAction.dismissed||0}</span></div>
-          <div class="cc-metric-row"><span class="cc-k">STOP continued %</span><span class="cc-v ${stopPct>=50?'bad':stopPct>0?'warn':'good'}">${stopT?stopPct+'%':'—'}</span></div>
-        </div>
-      `;
-    }
-  }
-}
-
-function renderCoach() {
-  try { renderCoachStrip(); }         catch(e) { console.warn('coach strip:', e); }
-  try { renderCoachOverview(); }      catch(e) { console.warn('coach overview:', e); }
-  try { renderCoachLessons(); }       catch(e) { console.warn('coach lessons:', e); }
-  try { renderCoachMistakes(); }      catch(e) { console.warn('coach mistakes:', e); }
-  try { renderCoachRules(); }         catch(e) { console.warn('coach rules:', e); }
-  try { renderCoachInterventions(); } catch(e) { console.warn('coach interventions:', e); }
-}
-// Render once on load; re-render when sync data arrives (to refresh trades_analyzed).
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderCoach);
-} else {
-  renderCoach();
-}
-
-/* ═══════════ PRE-TRADE INTERVENTION MODAL — engine ═══════════
-   5 trigger functions, shared modal, override logging.
-
-   Limitation (architectural): trades originate in Google Sheets; the browser
-   sees them only AFTER sheet entry. Therefore:
-     - Manual mode = user clicks "Check my next trade" BEFORE entering the
-       trade in the sheet. This is the only real pre-trade gate.
-     - Auto mode   = when sheet sync detects a new row matching high-severity
-       triggers, modal fires as a REVIEW prompt (copy is retroactive). */
-
-const PT_SEVERITIES = { WARNING: 1, RESTRICT: 2, STOP: 3 };
-const PT_INT_ORDER  = ['i-removed-stop','i-three-loss-streak','i-tilt-self-report','i-second-trade','i-oversized-conviction','i-drawdown-escalation','i-ungraded'];
-let _ptState = { matched: [], ctx: null, source: 'manual', open: false, decided: false };
-
-const TILT_WORDS = ['rushed','revenge','tilt','in sync','second trade','oversized','no sl','removed sl','super quick','just looked'];
-
-// Grade tokens accepted as a valid label on an entry. Detection uses a custom
-// non-alphanumeric+plus boundary on both sides so "A+" / "B+" / "skip" / plain
-// "A" / "B" register as standalone tokens without falsely matching letters
-// inside unrelated words (e.g. "ABC", "superb").
-const GRADE_TOKENS = ['A+', 'B+', 'A', 'B', 'skip'];
-function _ptHasGradeToken(text){
-  if (!text) return false;
-  const s = String(text);
-  for (const g of GRADE_TOKENS) {
-    const esc = g.toLowerCase().replace('+','\\+');
-    const re  = new RegExp('(^|[^a-z0-9+])' + esc + '($|[^a-z0-9+])', 'i');
-    if (re.test(s)) return true;
-  }
-  return false;
-}
-
-function _ptMedianSize(sampleSize = 20){
-  // Median size over last N trades (closed or not) using tjSync.trades.
-  try {
-    const tr = tjSync.trades;
-    if (!tr || typeof tr !== 'object') return null;
-    const rows = Object.values(tr)
-      .filter(r => r && typeof r === 'object' && Number(r.size_usd) > 0)
-      .sort((a,b) => (a.row||0) - (b.row||0));
-    const tail = rows.slice(-sampleSize).map(r => Number(r.size_usd));
-    if (!tail.length) return null;
-    const sorted = tail.slice().sort((a,b) => a-b);
-    return sorted[Math.floor(sorted.length/2)];
-  } catch(e) { return null; }
-}
-
-function _ptLastClosedLossOnTicker(coin, side, hoursBack = 2){
-  try {
-    const tr = tjSync.trades;
-    if (!tr || !coin) return null;
-    const cutoffMs = Date.now() - hoursBack*60*60*1000;
-    const coinLC = coin.trim().toLowerCase();
-    const sideLC = (side||'').trim().toLowerCase();
-    const rows = Object.values(tr).filter(r => r && r.coin && r.coin.toLowerCase() === coinLC);
-    for (const r of rows) {
-      if (r.win_loss !== 'L') continue;
-      if (sideLC && r.side && r.side.toLowerCase() !== sideLC) continue;
-      if (!r.exit_dt) continue;
-      const t = Date.parse(r.exit_dt);
-      if (isNaN(t)) continue;
-      if (t >= cutoffMs) return r;
-    }
-    return null;
-  } catch(e) { return null; }
-}
-
-/* Build the trade context from form inputs OR from a sheet row. */
-function _ptCtxFromForm(){
-  const coin = (document.getElementById('pt-in-coin').value || '').trim();
-  const side = document.getElementById('pt-in-side').value || 'Long';
-  const size = Number(document.getElementById('pt-in-size').value || 0);
-  const stop = document.getElementById('pt-in-stop').value === 'yes';
-  const conf = Number(document.getElementById('pt-in-conf').value || 0);
-  const note = (document.getElementById('pt-in-note').value || '').trim();
-  return { coin, side, size, has_stop: stop, confidence: conf, note, source: 'manual' };
-}
-function _ptCtxFromRow(r){
-  if (!r) return null;
-  return {
-    coin: r.coin || '',
-    side: r.side || '',
-    size: Number(r.size_usd || 0),
-    has_stop: !!(r.stop_px && r.stop_px !== 0),
-    confidence: Number(r.emotion || 0),
-    // Concatenate strategy + thesis + comment so grade tokens ("MR Short A+")
-    // and tilt words in the strategy column ("MR Short - rushed") reach the
-    // same text-scanning triggers (tilt-word, ungraded).
-    note: [r.strategy, r.thesis, r.comment].filter(Boolean).join(' ').trim(),
-    strategy: r.strategy || '',
-    source: 'auto',
-    row: r.row,
-    uid: r.uid,
-  };
-}
-
-/* Individual trigger functions. Return `null` for no-match OR a match descriptor. */
-function ptTrigger_removedStop(ctx){
-  if (ctx.has_stop) return null;
-  return {
-    id: 'i-removed-stop',
-    title: 'Removed / missing stop-loss',
-    severity: 'STOP',
-    copy: 'You are about to enter without a stop-loss placed. In your journal history, 5 prior trades with "removed SL" lost $19,000 (PYTH, COAI, FHE, LYN, River). The pattern is documented; the stop is non-negotiable.',
-    evidence: 'PYTH −$2,096 · COAI −$10,288 · FHE −$3,284 · LYN −$1,579 · River −$1,722. Your own words: "removed SL", "no SL, wanted to put it later, then didn\'t have a chance".',
-    examples: 'rows 294, 389, 714, 669, 677',
-    recommended_multiplier: 0,
-  };
-}
-
-function ptTrigger_secondTrade(ctx){
-  // Note-based fast path.
-  const nLC = (ctx.note || '').toLowerCase();
-  const noteHit = /(second trade|revenge)/.test(nLC);
-  const priorLoss = _ptLastClosedLossOnTicker(ctx.coin, ctx.side, 2);
-  if (!noteHit && !priorLoss) return null;
-  const pnl = priorLoss && Number(priorLoss.net_pnl || 0);
-  const detail = priorLoss
-    ? `You closed a loss on ${ctx.coin} at ${pnl ? '−$'+Math.abs(pnl).toLocaleString() : '—'} in the last 2h.`
-    : `Your note contains "${(nLC.match(/(second trade|revenge)/)||['?'])[0]}".`;
-  return {
-    id: 'i-second-trade',
-    title: 'Second-trade / revenge on same ticker',
-    severity: priorLoss ? 'RESTRICT' : 'WARNING',
-    copy: detail + ' Second-trade win rate in your history: 0% across 9 attempts; "MR Short – second trade" net −$1,825. One shot per ticker per session is the rule.',
-    evidence: '"MR Short – second trade" 0/9 win, −$1,825. Dec 2 PARTI/BEAT 6-streak. Nov 7 SAPIEN rushed cluster.',
-    examples: 'rows 486, 626, 632, 644, 667, 718',
-    recommended_multiplier: 0.5,
-    prior_loss_row: priorLoss ? priorLoss.row : null,
-  };
-}
-
-function ptTrigger_oversizedConviction(ctx){
-  if (!(ctx.confidence >= 8)) return null;
-  const med = _ptMedianSize(20);
-  const mult = (med && ctx.size) ? (ctx.size / med) : null;
-  if (mult === null || mult < 1.5) return null;
-  return {
-    id: 'i-oversized-conviction',
-    title: 'Oversized at high confidence',
-    severity: 'RESTRICT',
-    copy: `Confidence ${ctx.confidence}/10 + size $${ctx.size.toLocaleString()} is ${mult.toFixed(2)}× your 20-trade median ($${med.toLocaleString()}). High-confidence oversizing has cost $8K+ (AVNT, LYN, RIVER, BTC). Your chart reading is probably right; your size is the problem.`,
-    evidence: 'AVNT 341 −$1,120 · LYN 669 −$1,579 · RIVER 718 −$783 · BTC 896 −$664. "Zen 9-10" bucket = 12 trades, avg −$1,369.',
-    examples: 'rows 341, 669, 718, 896',
-    recommended_multiplier: 0.5,
-  };
-}
-
-function ptTrigger_drawdownEscalation(ctx){
-  const s  = (tjSync && tjSync.summary) || {};
-  const tl = (tjSync && tjSync.tilt)    || {};
-  const dd = Number(s.drawdown_pct || 0);
-  if (dd < 5) return null;
-  const med = _ptMedianSize(20);
-  if (!med || !ctx.size || ctx.size < med) return null;
-  return {
-    id: 'i-drawdown-escalation',
-    title: 'Drawdown escalation — size ≥ normal while down',
-    severity: dd >= 10 ? 'STOP' : 'RESTRICT',
-    copy: `Account is −${dd.toFixed(2)}% from peak and your size ($${ctx.size.toLocaleString()}) is ≥ normal-state median. Halving size during drawdown would have saved $36,300 historically — the single largest lever in your journal.`,
-    evidence: `Current DD ${dd.toFixed(2)}% · median normal size $${med.toLocaleString()} · full-dataset size-creep multiplier 2.83×. Counterfactual savings $36,304.`,
-    examples: 'Aggregate — Alpha-tab counterfactual row 1',
-    recommended_multiplier: 0.5,
-  };
-}
-
-function ptTrigger_tiltWord(ctx){
-  const nLC = (ctx.note || '').toLowerCase();
-  if (!nLC) return null;
-  const hit = TILT_WORDS.find(w => nLC.includes(w));
-  if (!hit) return null;
-  return {
-    id: 'i-tilt-self-report',
-    title: 'Tilt-word self-report',
-    severity: ['no sl','removed sl'].includes(hit) ? 'STOP' : 'WARNING',
-    copy: `Your thesis contains "${hit}". 67 prior tilt-tagged trades lost $5,077 cumulatively at ~10% win rate. Your language is diagnostic — act on it now, not after the fact.`,
-    evidence: '91 tilt-tagged trades · rushed / revenge / tilt / oversized clusters on Nov 7, Dec 2, Apr 15-16.',
-    examples: 'rows 389, 443, 479-484, 626, 669, 714, 718',
-    recommended_multiplier: 0.5,
-  };
-}
-
-function ptTrigger_ungraded(ctx){
-  // Inspect note + strategy together. Manual mode has only `note`; auto mode's
-  // context builder concatenates strategy into note plus exposes `strategy`
-  // independently. Either source satisfies the grade check.
-  const scope = [ctx.note, ctx.strategy].filter(Boolean).join(' ');
-  if (!scope.trim()) return null;                       // no text to evaluate — don't fire
-  if (_ptHasGradeToken(scope)) return null;             // graded — all good
-  return {
-    id: 'i-ungraded',
-    title: 'Ungraded entry — no A+/A/B+/B/skip tag',
-    severity: 'RESTRICT',
-    copy: 'Your note contains no grade token. In your journal, ungraded "MR Short" entries lost −$10,492 across 301 trades at 59% win. Graded variants (24 trades) won +$4,884 at 84% win. The label IS the filter — tag this entry A+, A, B+, B, or skip before continuing.',
-    evidence: 'Ungraded MR Short: 301 trades, 59% win, −$8,895 net · Graded (A+/A/B+): 19 trades, 84% win, +$4,884 · Stage 3 grading usage fell from 8% → 2.3% — discipline collapsed exactly when it mattered most.',
-    examples: 'Aggregate — see Coach → Mistakes → "Ungraded entries"',
-    recommended_multiplier: 0.5,
-  };
-}
-
-function ptTrigger_threeLossStreak(ctx){
-  // Reads from the live tilt snapshot maintained by the daemon.
-  const t = (tjSync && tjSync.tilt) || {};
-  const n = Number(t.consecutive_losses || 0);
-  if (n < 3) return null;
-  return {
-    id: 'i-three-loss-streak',
-    title: 'Three-loss streak — hard stop for the day',
-    severity: 'STOP',
-    copy: `${n} consecutive losses on record. Every cluster-day in your history (Nov 7 / Dec 2 / Apr 15-16) fits the same shape: by the 4th loss you're not trading, you're recovering. Close the chart. The streak resets with rest, not with another entry.`,
-    evidence: `Current streak: ${n}. Historical precedents: Nov 7 2025 SAPIEN rushed cluster (6 losses), Dec 2 2025 PARTI/BEAT alternating (6), Apr 15-16 2026 cross-ticker (7 across GOLD/VVV/SP500/AAVE/AVAX/ZEC). Every 4th+ trade on these days bled.`,
-    examples: 'rows 479-484 · Dec 2 PARTI/BEAT · rows 887-893 (Apr 15-16)',
-    recommended_multiplier: 0,
-  };
-}
-
-function ptEvaluateTriggers(ctx){
-  const all = [
-    ptTrigger_removedStop(ctx),
-    ptTrigger_tiltWord(ctx),
-    ptTrigger_threeLossStreak(ctx),
-    ptTrigger_secondTrade(ctx),
-    ptTrigger_oversizedConviction(ctx),
-    ptTrigger_drawdownEscalation(ctx),
-    ptTrigger_ungraded(ctx),
-  ].filter(Boolean);
-  all.sort((a,b) => (PT_SEVERITIES[b.severity]||0) - (PT_SEVERITIES[a.severity]||0));
-  return all;
-}
-
-/* ── Modal: open / close / render ── */
-function openPreTradeCheck(){
-  const root = document.getElementById('pt-modal-root'); if (!root) return;
-  document.getElementById('pt-form').style.display   = '';
-  document.getElementById('pt-result').style.display = 'none';
-  root.querySelector('.pt-modal').setAttribute('data-sev','WARNING');
-  root.style.display = 'flex';
-  _ptState.open = true;
-  setTimeout(() => { const el = document.getElementById('pt-in-coin'); if (el) el.focus(); }, 50);
-}
-function closePreTradeModal(){
-  const root = document.getElementById('pt-modal-root'); if (!root) return;
-  // If the modal has shown an intervention result and the user closes without
-  // choosing Continue/Reduce/Cancel, log a 'dismissed' event so we capture it.
-  // Silent for: form-mode closes (no evaluation yet), already-decided closes,
-  // and "all clear" results (i-none with no real matches).
-  try {
-    if (_ptState.open && !_ptState.decided) {
-      const matched = _ptState.matched || [];
-      const hasReal = matched.some(m => m && m.id && m.id !== 'i-none');
-      if (hasReal) _ptLogAction('dismissed');
-    }
-  } catch(e) { /* non-fatal */ }
-  root.style.display = 'none';
-  _ptState.open = false;
-}
-
-function ptEvaluateForm(){
-  const ctx = _ptCtxFromForm();
-  const matched = ptEvaluateTriggers(ctx);
-  if (!matched.length) {
-    // All clear — quick acknowledgment.
-    _ptShowResult(ctx, [{
-      id: 'i-none',
-      title: 'All clear — trade fits your spec',
-      severity: 'WARNING',
-      copy: 'No intervention pattern matches this entry. Size, confidence, stop, note, drawdown and second-trade checks all passed.',
-      evidence: 'Based on rules 1-7 in Coach → Rules.',
-      examples: '',
-      recommended_multiplier: 1.0,
-    }], 'manual');
-    return;
-  }
-  _ptShowResult(ctx, matched, 'manual');
-}
-
-function _ptShowResult(ctx, matched, source){
-  _ptState.matched = matched;
-  _ptState.ctx     = ctx;
-  _ptState.source  = source;
-  _ptState.decided = false;
-  document.getElementById('pt-form').style.display   = 'none';
-  document.getElementById('pt-result').style.display = '';
-  const modal = document.querySelector('#pt-modal-root .pt-modal');
-  const top = matched[0];
-  modal.setAttribute('data-sev', top.severity || 'WARNING');
-
-  document.getElementById('pt-result-eyebrow').textContent =
-    (source === 'auto') ? 'Review · new sheet entry matched a pattern' : 'Pre-Trade Check · result';
-  document.getElementById('pt-src').textContent = source === 'auto' ? 'auto-detected on new trade' : 'pre-trade check';
-  document.getElementById('pt-sev').textContent = top.severity || 'WARNING';
-  document.getElementById('pt-primary-title').textContent = top.title || '';
-  document.getElementById('pt-modal-copy').textContent    = top.copy  || '';
-
-  const ev = document.getElementById('pt-evidence');
-  ev.innerHTML = '<b>Evidence:</b> ' + _ae(top.evidence || '—') +
-    (top.examples ? '<br/><b>Linked trades:</b> <code>' + _ae(top.examples) + '</code>' : '');
-
-  const sec = document.getElementById('pt-secondary');
-  const more = matched.slice(1);
-  sec.innerHTML = more.length
-    ? '<span class="pt-also">Also triggered</span>' + more.map(m => _ae(m.title) + ' <span style="opacity:.6;">(' + (m.severity||'') + ')</span>').join(' · ')
-    : '';
-
-  const mult = Number(top.recommended_multiplier);
-  const reduceBox = document.getElementById('pt-reduce');
-  const reduceBtn = document.getElementById('pt-btn-reduce');
-  if (matched[0].id === 'i-none' || !isFinite(mult) || mult >= 1) {
-    reduceBox.style.display = 'none';
-    if (reduceBtn) reduceBtn.style.display = 'none';
-  } else {
-    reduceBox.style.display = '';
-    if (reduceBtn) reduceBtn.style.display = '';
-    const newSize = ctx.size ? Math.round(ctx.size * mult) : null;
-    document.getElementById('pt-reduce-v').textContent =
-      (mult === 0)
-        ? 'Do not place this trade'
-        : (newSize != null ? '$' + newSize.toLocaleString() + '  (' + mult.toFixed(2) + '×)' : mult.toFixed(2) + '× current');
-  }
-}
-
-// Canonical writer for override events. Splits logging from closing so that
-// "dismissed" (ESC / X) can route through the same schema without recursing.
-// event_version bumped to 2 when all derived fields are stored at write time.
-function _ptLogAction(action){
-  const ctx = _ptState.ctx || {};
-  const matched = _ptState.matched || [];
-  const top = matched[0] || null;
-  const topMult = top ? Number(top.recommended_multiplier) : null;
-  const maxSev  = top ? (top.severity || 'WARNING') : 'WARNING';
-  const mode    = (_ptState.source === 'auto') ? 'auto_detected' : 'manual_check';
-  const log = {
-    event_version:          2,
-    timestamp:              new Date().toISOString(),
-    source:                 _ptState.source || 'manual',       // legacy field — kept
-    mode:                   mode,                              // v2 canonical name
-    matched_interventions:  matched.map(m => m.id),
-    matched_titles:         matched.map(m => m.title || m.id),
-    top_intervention_id:    top ? top.id    : null,
-    top_intervention_title: top ? top.title : null,
-    max_severity:           maxSev,                            // 'WARNING'|'RESTRICT'|'STOP'
-    recommended_multiplier: (topMult != null && isFinite(topMult)) ? topMult : null,
-    chosen_action:          action,                            // 'continue'|'reduce'|'cancel'|'dismissed'
-    symbol:                 ctx.coin || '',
-    side:                   ctx.side || '',
-    size:                   Number(ctx.size || 0),
-    confidence:             Number(ctx.confidence || 0),
-    has_stop:               !!ctx.has_stop,
-    drawdown_state:         ((tjSync && tjSync.summary && Number(tjSync.summary.drawdown_pct))||0) >= 5 ? 'in_drawdown' : 'normal',
-    note_excerpt:           (ctx.note || '').slice(0, 200),
-    reduce_multiplier:      action === 'reduce' ? (topMult != null ? topMult : null) : null, // legacy BC — kept
-    row:                    ctx.row || null,
-    uid:                    ctx.uid || null,
-  };
-  try {
-    if (typeof tjDbRef !== 'undefined' && tjDbRef) {
-      tjDbRef.child('overrides').push(log);
-    }
-  } catch(e) { console.warn('override log failed (non-fatal):', e); }
-  try { console.info('[pt-override]', log); } catch(_) {}
-  _ptState.decided = true;
-  return log;
-}
-
-function ptChoose(action){
-  _ptLogAction(action);
-  closePreTradeModal();
-}
-
-/* ── Auto-fire: new-row detection on the synced sheet ──
-   When tjSync.trades gains a row with a larger `row` index than last seen,
-   re-run the trigger engine against it. If anything trips at RESTRICT or STOP
-   severity, open the modal in auto-review mode. WARNING-only hits stay
-   silent so we don\'t spam the operator on every benign entry. */
-let _ptLastRowSeen = null;
-function ptMaybeAutoFire(tradesObj){
-  try {
-    if (!tradesObj || typeof tradesObj !== 'object') return;
-    const rows = Object.values(tradesObj).filter(r => r && Number(r.row) > 0);
-    if (!rows.length) return;
-    rows.sort((a,b) => (a.row||0) - (b.row||0));
-    const latest = rows[rows.length - 1];
-    if (_ptLastRowSeen == null) { _ptLastRowSeen = latest.row; return; } // first load — don\'t fire retroactively
-    if (latest.row <= _ptLastRowSeen) return;
-    _ptLastRowSeen = latest.row;
-    // Only autoscan real trades that have an entry price
-    if (!Number(latest.entry_px)) return;
-    const ctx = _ptCtxFromRow(latest);
-    const matched = ptEvaluateTriggers(ctx);
-    if (!matched.length) return;
-    const top = matched[0];
-    if ((PT_SEVERITIES[top.severity]||0) < PT_SEVERITIES.RESTRICT) return;
-    if (_ptState.open) return; // respect any modal already open
-    openPreTradeCheck();
-    _ptShowResult(ctx, matched, 'auto');
-  } catch(e) { console.warn('auto-fire failed (non-fatal):', e); }
-}
-
-// ESC to close
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && _ptState.open) closePreTradeModal();
-});
-
-/* ═══════════ OVERRIDES — behavioral telemetry panel ═══════════
-   Reads /tradingJournal/overrides (written by ptChoose on every modal event).
-   Pure aggregation — no writes. Severity derived via OV_SEV_FROM_INT using
-   the Coach-authored intervention definitions. */
-
-// Max severity per intervention id (matches the levels in the PT triggers).
-const OV_SEV_FROM_INT = {
-  'i-removed-stop':         'STOP',
-  'i-drawdown-escalation':  'STOP',
-  'i-three-loss-streak':    'STOP',
-  'i-second-trade':         'RESTRICT',
-  'i-oversized-conviction': 'RESTRICT',
-  'i-ungraded':             'RESTRICT',
-  'i-tilt-self-report':     'WARNING',
-  'i-none':                 'WARNING',
-};
-const OV_SEV_RANK = { WARNING: 1, RESTRICT: 2, STOP: 3 };
-const OV_RANK_SEV = [null, 'WARNING', 'RESTRICT', 'STOP'];
-
-function _ovMaxSev(ids){
-  let max = 0;
-  for (const id of (ids || [])) {
-    const s = OV_SEV_RANK[OV_SEV_FROM_INT[id] || 'WARNING'] || 0;
-    if (s > max) max = s;
-  }
-  return max ? OV_RANK_SEV[max] : 'WARNING';
-}
-
-const _ovState = { events: [], listening: false };
-
-function initOverridesListener(){
-  if (_ovState.listening) return;
-  if (typeof tjDbRef === 'undefined' || !tjDbRef) return;
-  try {
-    tjDbRef.child('overrides').on('value', snap => {
-      const raw = snap.val() || {};
-      const rows = Object.entries(raw)
-        .map(([k,v]) => (v && typeof v === 'object') ? Object.assign({_id:k}, v) : null)
-        .filter(Boolean);
-      // newest first by ISO timestamp
-      rows.sort((a,b) => String(b.timestamp||'').localeCompare(String(a.timestamp||'')));
-      _ovState.events = rows;
-      try { renderOverridesSection();    } catch(e) { console.warn('ov render:', e); }
-      try { renderAlphaOverrideStrip();  } catch(e) { console.warn('ov alpha strip:', e); }
-      try { renderCoachOverview();       } catch(e) { console.warn('ov coach overview:', e); }
-      try { renderCoachRules();          } catch(e) { console.warn('ov coach rules:', e); }
-    });
-    _ovState.listening = true;
-  } catch(e) { console.warn('override listener attach failed:', e); }
-}
-
-function renderOverridesSection(){
-  const evs = _ovState.events || [];
-  const now = Date.now();
-  const D7  = now - 7  * 86400 * 1000;
-  const D30 = now - 30 * 86400 * 1000;
-
-  const byAction = {};      // continue / reduce / cancel / unknown
-  const bySev    = {};      // WARNING / RESTRICT / STOP
-  const ignoredByInt = {};  // interventionId → continue-count
-  let count7 = 0, count30 = 0;
-  let stopTotal = 0, stopContinued = 0;
-
-  for (const e of evs) {
-    const t = Date.parse(e.timestamp);
-    if (!isNaN(t)) {
-      if (t >= D7)  count7++;
-      if (t >= D30) count30++;
-    }
-    const act = e.chosen_action || 'unknown';
-    byAction[act] = (byAction[act] || 0) + 1;
-
-    // v2 records carry max_severity at write time; v1 records are derived.
-    const sev = e.max_severity || _ovMaxSev(e.matched_interventions);
-    bySev[sev] = (bySev[sev] || 0) + 1;
-
-    if (sev === 'STOP') {
-      stopTotal++;
-      if (act === 'continue') stopContinued++;
-    }
-    if (act === 'continue') {
-      for (const id of (e.matched_interventions || [])) {
-        ignoredByInt[id] = (ignoredByInt[id] || 0) + 1;
-      }
-    }
-  }
-
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set('ov-total', Number(evs.length).toLocaleString());
-  set('ov-7d',    String(count7));
-  set('ov-30d',   String(count30));
-  set('ov-stop-cont',
-    stopTotal > 0
-      ? `${Math.round(stopContinued/stopTotal*100)}%  (${stopContinued}/${stopTotal})`
-      : '—'
-  );
-
-  // Severity breakdown
-  const sevHost = document.getElementById('ov-sev-table');
-  if (sevHost) {
-    sevHost.innerHTML = ['STOP','RESTRICT','WARNING'].map(s => {
-      const n = bySev[s] || 0;
-      const pct = evs.length ? Math.round(n/evs.length*100) : 0;
-      return `<div class="ov-row">
-        <span class="ov-k2"><span class="pt-sev-mini ov-sev-${s.toLowerCase()}">${s}</span></span>
-        <span class="ov-v2">${n} <span style="color:var(--tx3);font-weight:400;">(${pct}%)</span></span>
-      </div>`;
-    }).join('');
-  }
-
-  // Action breakdown (dismissed = modal closed via ESC/X without a choice)
-  const actHost = document.getElementById('ov-act-table');
-  if (actHost) {
-    const actColors = { cancel:'#22c55e', reduce:'#f59e0b', continue:'#ef4444', dismissed:'#9ca3af' };
-    actHost.innerHTML = ['cancel','reduce','continue','dismissed'].map(a => {
-      const n = byAction[a] || 0;
-      const pct = evs.length ? Math.round(n/evs.length*100) : 0;
-      return `<div class="ov-row">
-        <span class="ov-k2" style="color:${actColors[a]||'var(--tx2)'};">${a.toUpperCase()}</span>
-        <span class="ov-v2">${n} <span style="color:var(--tx3);font-weight:400;">(${pct}%)</span></span>
-      </div>`;
-    }).join('');
-  }
-
-  // Top ignored intervention (most "continue" overrides).
-  // Prefer a stored matched_titles entry if present on a continue record, so
-  // history stays readable even if Coach definitions are later reworded.
-  const topHost = document.getElementById('ov-top-ignored');
-  if (topHost) {
-    const entries = Object.entries(ignoredByInt).sort((a,b) => b[1]-a[1]);
-    if (!entries.length) {
-      topHost.innerHTML = '<div style="color:var(--tx3);font-size:12px;padding:8px 0;">No "continue" overrides logged yet.</div>';
-    } else {
-      const [id, n] = entries[0];
-      // Prefer a stored title from a continue-action v2 record; fallback to Coach def; fallback to id.
-      let storedTitle = null;
-      for (const e of evs) {
-        if (e.chosen_action !== 'continue') continue;
-        const ids = e.matched_interventions || [];
-        const titles = e.matched_titles || [];
-        const idx = ids.indexOf(id);
-        if (idx >= 0 && titles[idx]) { storedTitle = titles[idx]; break; }
-      }
-      const def = (COACH_DATA.interventions || []).find(i => i.id === id) || {};
-      const title = storedTitle || def.title || id;
-      const sev   = OV_SEV_FROM_INT[id] || 'WARNING';
-      topHost.innerHTML = `
-        <div style="font-size:13px;font-weight:700;color:var(--tx);line-height:1.3;margin-bottom:4px;">${_ae(title)}</div>
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:8px;">Continued anyway ${n} time${n!==1?'s':''}</div>
-        <span class="pt-sev-mini ov-sev-${sev.toLowerCase()}">${sev}</span>
-      `;
-    }
-  }
-
-  // Verdict + highlighted events (above the event table)
-  const verdictRow = document.getElementById('ov-verdict-row');
-  const verdictHost = document.getElementById('ov-verdict');
-  const verdictChip = document.getElementById('ov-verdict-chip');
-  const highlightsHost = document.getElementById('ov-highlights');
-  if (verdictRow && evs.length){
-    verdictRow.style.display = '';
-    // Verdict: grade the behavior on 3 pillars (STOP-continue rate, cancel rate, dismissed rate)
-    const total    = evs.length;
-    const canc     = byAction.cancel   || 0;
-    const cont     = byAction.continue || 0;
-    const dismRate = (byAction.dismissed || 0) / total;
-    const stopContPct = stopTotal ? (stopContinued/stopTotal) : 0;
-    const cancelPct   = canc / total;
-    // Heuristic: if ≥50% STOPs continued → bad; else if ≥40% cancelled → good; else mixed.
-    let verdict = 'mixed', vlabel = 'Mixed', bullets = [];
-    if (stopContPct >= 0.5 || (cont/total) >= 0.6) { verdict='bad';  vlabel='Behavior declining'; }
-    else if (cancelPct >= 0.4 && stopContPct <= 0.2) { verdict='good'; vlabel='Discipline improving'; }
-    bullets.push(`<li><b>${Math.round(cancelPct*100)}%</b> cancelled (${canc}/${total})</li>`);
-    bullets.push(`<li><b>${stopTotal?Math.round(stopContPct*100)+'%':'—'}</b> STOP alerts continued anyway${stopTotal?' ('+stopContinued+'/'+stopTotal+')':''}</li>`);
-    if ((byAction.dismissed||0) > 0) bullets.push(`<li><b>${Math.round(dismRate*100)}%</b> dismissed via ESC — engage with the modal, don't dismiss</li>`);
-    if (verdictChip) {
-      verdictChip.textContent = vlabel;
-      verdictChip.className = 'cc-chip ov-verdict-' + verdict;
-    }
-    if (verdictHost) {
-      verdictHost.innerHTML = '<ul style="margin:0;padding-left:18px;color:var(--tx2);font-size:12px;line-height:1.85;">' + bullets.join('') + '</ul>';
-    }
-    // Highlighted events: up to 5 STOP/RESTRICT with 'continue' or 'dismissed' action
-    if (highlightsHost){
-      const highlights = evs.filter(e => {
-        const sev = e.max_severity || _ovMaxSev(e.matched_interventions);
-        return (sev === 'STOP' || sev === 'RESTRICT') && (e.chosen_action === 'continue' || e.chosen_action === 'dismissed');
-      }).slice(0, 5);
-      if (highlights.length){
-        highlightsHost.innerHTML = highlights.map(e => {
-          const ts = e.timestamp ? new Date(e.timestamp).toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + new Date(e.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—';
-          const sev = e.max_severity || _ovMaxSev(e.matched_interventions);
-          const title = e.top_intervention_title || (e.matched_interventions||[]).map(id => (_coachLookup('interventions', id)||{}).title || id).join(' · ') || '(no interventions)';
-          return `<div class="ov-hl-item">
-            <span class="pt-sev-mini ov-sev-${sev.toLowerCase()}">${sev}</span>
-            <b>${_ae(e.symbol || '—')}</b> · ${_ae(title)}
-            <span class="ov-hl-act" style="color:${e.chosen_action==='continue'?'#ef4444':'#9ca3af'};">· ${_ae(e.chosen_action)}</span>
-            <div style="color:var(--tx3);font-size:10px;margin-top:2px;">${_ae(ts)}${e.size?' · $'+Number(e.size).toLocaleString():''}</div>
-          </div>`;
-        }).join('');
-      } else {
-        highlightsHost.innerHTML = '<div style="color:var(--tx3);font-size:12px;padding:4px 0;">No high-severity events continued / dismissed. 🟢</div>';
-      }
-    }
-  } else if (verdictRow) {
-    verdictRow.style.display = 'none';
-  }
-
-  // Last-20 event log
-  const tbl = document.getElementById('ov-events-table');
-  if (tbl) {
-    const tbody = tbl.querySelector('tbody');
-    if (tbody) {
-      if (!evs.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:24px;">No override events yet. Fire the Pre-Trade Check modal once to seed this table.</td></tr>';
-      } else {
-        const actColors = { cancel:'#22c55e', reduce:'#f59e0b', continue:'#ef4444', dismissed:'#9ca3af' };
-        tbody.innerHTML = evs.slice(0, 20).map(e => {
-          const ts  = e.timestamp ? new Date(e.timestamp).toLocaleString() : '—';
-          const ids = e.matched_interventions || [];
-          // v2: prefer stored sev per event; v1: derive per id.
-          const evSev = e.max_severity || null;
-          const ints = ids.map((id, idx) => {
-            const sev = evSev || OV_SEV_FROM_INT[id] || 'WARNING';
-            const short = String(id).replace(/^i-/,'');
-            return `<span class="ov-chip ov-chip-${sev.toLowerCase()}">${_ae(short)}</span>`;
-          }).join(' ');
-          const action = e.chosen_action || '—';
-          const color  = actColors[action] || 'var(--tx2)';
-          // v2: prefer `mode` over legacy `source`.
-          const srcLabel = e.mode || e.source || '—';
-          return `<tr>
-            <td>${_ae(ts)}</td>
-            <td>${_ae(e.symbol || '—')}</td>
-            <td>${ints || '—'}</td>
-            <td style="color:${color};font-weight:700;text-transform:uppercase;letter-spacing:.3px;font-size:10px;">${_ae(action)}</td>
-            <td>${_ae(srcLabel)}</td>
-          </tr>`;
-        }).join('');
-      }
-    }
-  }
-}
-
-function renderAlphaOverrideStrip(){
-  const host = document.getElementById('alpha-override-strip');
-  if (!host) return;
-  const evs = _ovState.events || [];
-  if (!evs.length) { host.style.display = 'none'; return; }
-  host.style.display = '';
-  const byAction = {};
-  for (const e of evs) { byAction[e.chosen_action || 'unknown'] = (byAction[e.chosen_action || 'unknown'] || 0) + 1; }
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
-  set('aos-total',     evs.length);
-  set('aos-cancelled', byAction.cancel    || 0);
-  set('aos-reduced',   byAction.reduce    || 0);
-  set('aos-continued', byAction.continue  || 0);
-  set('aos-dismissed', byAction.dismissed || 0);
-}
-
-// Attach the listener now if Firebase is ready; otherwise retry briefly.
-function _ovTryAttach(){
-  if (typeof tjDbRef !== 'undefined' && tjDbRef) { initOverridesListener(); return; }
-  setTimeout(_ovTryAttach, 500);
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _ovTryAttach);
-} else {
-  _ovTryAttach();
-}
-
-/* ── Alpha page renderer ── */
-function _ae(s){return String(s==null?'':s).replace(/[<>&"']/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;","'":"&#39;"}[c]));}
-function _aM(n){
-  if (n == null || isNaN(n)) return '—';
-  const sign = n < 0 ? '−' : (n > 0 ? '+' : '');
-  const abs = Math.abs(n);
-  return sign + '$' + (abs >= 1000 ? Math.round(abs).toLocaleString() : abs.toFixed(0));
-}
-function _aCls(n){ return n > 0 ? 'pos' : (n < 0 ? 'neg' : ''); }
-function _aTV(link, label){
-  if (!link) return '';
-  return `<a class="tv" target="_blank" rel="noopener" href="${_ae(link)}">${label||'chart ↗'}</a>`;
-}
-
-function renderAlphaPage(){
-  const page = document.getElementById('page-alpha');
-  if (!page) return;
-  const a  = tjSync.alpha;
-  const cf = tjSync.counterfactuals;
-  const loading = document.getElementById('alpha-loading');
-  const body    = document.getElementById('alpha-body');
-  if (!a || !cf){ if (loading) loading.style.display=''; if (body) body.style.display='none'; return; }
-  if (loading) loading.style.display = 'none';
-  if (body)    body.style.display    = '';
-
-  // Risk Guardrails — runs first so the behavior-control card is live before any analytics.
-  try { renderGuardrails(); } catch(e) { console.warn('guardrails render failed:', e); }
-
-  // Tilt-tax headline
-  const actual = cf.actual_net;
-  const actualEl = document.getElementById('alpha-actual-net');
-  if (actualEl){ actualEl.textContent = 'Actual: ' + _aM(actual); }
-  const cfRows = document.getElementById('alpha-cf-rows');
-  if (cfRows){
-    cfRows.innerHTML = (cf.rules || []).map(r => `
-      <div class="alpha-cf-row">
-        <div>
-          <div class="alpha-cf-rule">${_ae(r.rule)}</div>
-          <div class="alpha-cf-basis">${_ae(r.basis)}</div>
-        </div>
-        <div class="alpha-cf-delta">${r.delta_usd>=0?'+':''}${_aM(Math.abs(r.delta_usd)).replace('+','').replace('−','-')}</div>
-        <div class="alpha-cf-applied">${_aM(r.if_applied)}<br/><small>if applied</small></div>
-      </div>
-    `).join('');
-    // Fix sign rendering: _aM above swallowed sign for delta; rebuild cleanly
-    cfRows.querySelectorAll('.alpha-cf-row').forEach((row, i) => {
-      const r = cf.rules[i];
-      const d = row.querySelector('.alpha-cf-delta');
-      if (d) {
-        const v = Math.abs(r.delta_usd);
-        d.textContent = (r.delta_usd >= 0 ? '+$' : '−$') + (v >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(0));
-        d.style.color = r.delta_usd >= 0 ? '#22c55e' : '#ef4444';
-      }
-    });
-  }
-
-  // Strategy leaderboard
-  const sTbl = document.querySelector('#alpha-strat-table tbody');
-  if (sTbl){
-    const rows = (a.strategy_leaderboard || []).filter(s => s.n >= 2);
-    sTbl.innerHTML = rows.map(s => `
-      <tr>
-        <td class="strat">${_ae(s.strategy)}</td>
-        <td class="r">${s.n}</td>
-        <td class="r">${s.win_pct}%</td>
-        <td class="r ${_aCls(s.net)}">${_aM(s.net)}</td>
-        <td class="r ${_aCls(s.avg)}">${_aM(s.avg)}</td>
-        <td class="r pos">${_aM(s.best)}</td>
-        <td class="r neg">${_aM(s.worst)}</td>
-      </tr>
-    `).join('');
-  }
-
-  // Tilt-labeled trades
-  const tiltTotalEl = document.getElementById('alpha-tilt-total');
-  if (tiltTotalEl) tiltTotalEl.textContent = `${a.tilt_labeled.count} trades · ${_aM(a.tilt_labeled.total_pnl)}`;
-  const tTbl = document.querySelector('#alpha-tilt-table tbody');
-  if (tTbl){
-    tTbl.innerHTML = (a.tilt_labeled.rows || []).map(t => `
-      <tr>
-        <td>${_ae(t.entry_date)}</td>
-        <td class="coin">${_ae(t.coin)}</td>
-        <td>${_ae(t.side)}</td>
-        <td class="strat">${_ae(t.strategy)}</td>
-        <td class="r ${_aCls(t.net_pnl)}">${_aM(t.net_pnl)}</td>
-        <td class="r">${t.r_planned ?? '—'}</td>
-        <td class="r">${t.emotion ?? '—'}</td>
-        <td>${_aTV(t.tv_link)}</td>
-      </tr>
-    `).join('');
-  }
-
-  // Emotion buckets
-  const eTbl = document.querySelector('#alpha-emo-table tbody');
-  if (eTbl){
-    eTbl.innerHTML = (a.emotion_buckets || []).map(e => `
-      <tr>
-        <td>${_ae(e.bucket)}</td>
-        <td class="r">${e.n}</td>
-        <td class="r">${e.win_pct}%</td>
-        <td class="r ${_aCls(e.avg)}">${_aM(e.avg)}</td>
-        <td class="r ${_aCls(e.total)}">${_aM(e.total)}</td>
-      </tr>
-    `).join('');
-  }
-
-  // Day-of-week
-  const dTbl = document.querySelector('#alpha-dow-table tbody');
-  if (dTbl){
-    dTbl.innerHTML = (a.days || []).map(d => `
-      <tr>
-        <td>${_ae(d.day)}</td>
-        <td class="r">${d.n}</td>
-        <td class="r">${d.win_pct}%</td>
-        <td class="r ${_aCls(d.total)}">${_aM(d.total)}</td>
-      </tr>
-    `).join('');
-  }
-
-  // Hour-of-day
-  const hTbl = document.querySelector('#alpha-hour-table tbody');
-  if (hTbl){
-    hTbl.innerHTML = (a.hours || []).map(h => `
-      <tr>
-        <td>${String(h.hour).padStart(2,'0')}:00</td>
-        <td class="r">${h.n}</td>
-        <td class="r">${h.win_pct}%</td>
-        <td class="r ${_aCls(h.total)}">${_aM(h.total)}</td>
-      </tr>
-    `).join('');
-  }
-
-  // Size creep
-  const sc = a.size_creep || {};
-  const scEl = document.getElementById('alpha-size-creep');
-  if (scEl){
-    const mult = sc.multiplier;
-    const bad = mult && mult >= 1.3;
-    scEl.innerHTML = `
-      <div class="kv"><span class="k">Median size — normal state</span><span class="v">$${(sc.normal_median||0).toLocaleString()}</span></div>
-      <div class="kv"><span class="k">Median size — in ≥5% drawdown</span><span class="v ${bad?'bad':'good'}">$${(sc.drawdown_median||0).toLocaleString()}</span></div>
-      <div class="kv"><span class="k">Multiplier</span><span class="v ${bad?'bad':'good'}">${mult ? mult.toFixed(2)+'×' : '—'} ${bad?'⚠ size creep':''}</span></div>
-      <div class="kv"><span class="k">Sample</span><span class="v">${sc.normal_n||0} normal · ${sc.drawdown_n||0} in DD</span></div>
-    `;
-  }
-
-  // Overtrade tax
-  const ov = a.overtrade || {};
-  const ovEl = document.getElementById('alpha-overtrade');
-  if (ovEl){
-    const overPct = ov.total_days ? Math.round(ov.over_days / ov.total_days * 100) : 0;
-    ovEl.innerHTML = `
-      <div class="kv"><span class="k">Overtrade days (≥${ov.threshold||6} trades)</span><span class="v">${ov.over_days||0} / ${ov.total_days||0}  (${overPct}%)</span></div>
-      <div class="kv"><span class="k">PnL on overtrade days</span><span class="v ${(ov.over_pnl||0)<0?'bad':'good'}">${_aM(ov.over_pnl||0)} on ${ov.over_trades||0} trades</span></div>
-      <div class="kv"><span class="k">PnL on normal days</span><span class="v ${(ov.normal_pnl||0)<0?'bad':'good'}">${_aM(ov.normal_pnl||0)} on ${ov.normal_trades||0} trades</span></div>
-    `;
-  }
-  const ovDays = document.getElementById('alpha-overtrade-days');
-  if (ovDays){
-    const worst = (ov.worst_days || []).slice(0,5);
-    if (worst.length){
-      ovDays.innerHTML = 'Worst overtrade days: ' + worst.map(d =>
-        `<code>${_ae(d.date)}</code> — ${d.trades} trades, <span style="color:${d.pnl<0?'#ef4444':'#22c55e'};">${_aM(d.pnl)}</span>`
-      ).join(' · ');
-    } else ovDays.innerHTML = '';
-  }
-
-  // Top wins + worst losses
-  const wTbl = document.querySelector('#alpha-wins-table tbody');
-  if (wTbl){
-    wTbl.innerHTML = (a.top_wins || []).map(t => `
-      <tr>
-        <td>${_ae(t.entry_date)}</td>
-        <td class="coin">${_ae(t.coin)}</td>
-        <td>${_ae(t.side)}</td>
-        <td class="strat">${_ae(t.strategy)}</td>
-        <td class="r pos">${_aM(t.net_pnl)}</td>
-        <td class="r">${t.r_planned ?? '—'}</td>
-        <td>${_aTV(t.tv_link)}</td>
-      </tr>
-    `).join('');
-  }
-  const lTbl = document.querySelector('#alpha-losses-table tbody');
-  if (lTbl){
-    lTbl.innerHTML = (a.worst_losses || []).map(t => `
-      <tr>
-        <td>${_ae(t.entry_date)}</td>
-        <td class="coin">${_ae(t.coin)}</td>
-        <td>${_ae(t.side)}</td>
-        <td class="strat">${_ae(t.strategy)}</td>
-        <td class="r neg">${_aM(t.net_pnl)}</td>
-        <td class="r">${t.r_planned ?? '—'}</td>
-        <td>${_aTV(t.tv_link)}</td>
-      </tr>
-    `).join('');
-  }
 }
 
 function checkFirebaseReady() {
@@ -3899,6 +1314,401 @@ function migrateToFirebase() {
   });
 }
 
+/* ── Trader Agent (read-only viewer) ───────────────────────────────────────
+   Reads the Trader daemon output that currently runs inside Jump HQ.
+   Primary:  /jumpTrading/*  (future-primary, may be rules-blocked today)
+   Fallback: /fundHQ/*       (legacy, source of truth today)
+
+   Never writes. Never touches /tradingJournal/* (that's the manual journal).
+   Cache is in-memory only; page re-reads Firebase on each visit + Refresh.
+*/
+const TA_PATHS = {
+  jt_signals:   'jumpTrading/signals',
+  jt_scorecard: 'jumpTrading/agentScorecards/trader',
+  jt_paper:     'jumpTrading/paperTrades',
+  jt_setups:    'jumpTrading/legacy/setups',
+  jt_meta:      'jumpTrading/metadata/migration',
+  fh_signals:   'fundHQ/signals',
+  fh_scorecard: 'fundHQ/agentScorecards',
+  fh_paper:     'fundHQ/paperTrades',
+  fh_setups:    'fundHQ/setups',
+  fh_tradelog:  'fundHQ/tradeLog',
+};
+
+const taState = {
+  source: 'unknown',   // 'jumpTrading' | 'fundHQ-legacy' | 'mixed' | 'unknown'
+  signals: [],
+  scorecard: null,
+  paperTrades: [],
+  paperStats: null,
+  setups: [],
+  migration: null,
+  lastRefresh: null,
+  pathReport: {},      // path → { count, status, error }
+};
+
+function taFbReadOnce(path) {
+  return new Promise((resolve) => {
+    if (typeof firebase === 'undefined' || !firebase.database) {
+      resolve({ path, val: null, error: 'firebase-unavailable', count: 0 });
+      return;
+    }
+    let settled = false;
+    const ref = firebase.database().ref(path);
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve({ path, val: null, error: 'timeout(6s)', count: 0 });
+    }, 6000);
+    ref.once('value').then((snap) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      const val = snap.val();
+      let count = 0;
+      if (val && typeof val === 'object') count = Array.isArray(val) ? val.length : Object.keys(val).length;
+      resolve({ path, val, count, error: null });
+    }).catch((e) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      const msg = (e && (e.code || e.message)) ? String(e.code || e.message) : 'read-failed';
+      resolve({ path, val: null, error: msg, count: 0 });
+    });
+  });
+}
+
+function taIsTraderSignal(sig) {
+  if (!sig || typeof sig !== 'object') return false;
+  const src = String(sig.source || '').toLowerCase();
+  return src === 'trader-auto' || src === 'trader' || src.startsWith('trader');
+}
+
+function taNormalizeSignals(raw) {
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : Object.values(raw);
+  return arr.filter(s => s && typeof s === 'object');
+}
+
+function taSortNewestFirst(arr) {
+  return arr.slice().sort((a, b) => {
+    const ta = (a && (a.created || a.opened_at || a.updated_at || a.mirrored_at)) || '';
+    const tb = (b && (b.created || b.opened_at || b.updated_at || b.mirrored_at)) || '';
+    if (ta === tb) return 0;
+    return ta < tb ? 1 : -1;
+  });
+}
+
+function taFmtTimeShort(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const now = new Date();
+    const diffMs = now - d;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return days + 'd ago';
+    return d.toISOString().slice(0, 10);
+  } catch (e) { return String(iso); }
+}
+
+function taEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function taRefresh() {
+  const btn = document.getElementById('taRefreshBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Refreshing…'; }
+  try {
+    // Probe primary namespace first.
+    const [jtSignals, jtScorecard, jtPaper, jtSetups, jtMeta] = await Promise.all([
+      taFbReadOnce(TA_PATHS.jt_signals),
+      taFbReadOnce(TA_PATHS.jt_scorecard),
+      taFbReadOnce(TA_PATHS.jt_paper),
+      taFbReadOnce(TA_PATHS.jt_setups),
+      taFbReadOnce(TA_PATHS.jt_meta),
+    ]);
+
+    taState.pathReport = {};
+    [jtSignals, jtScorecard, jtPaper, jtSetups, jtMeta].forEach(r => {
+      taState.pathReport[r.path] = { count: r.count, status: r.error ? 'error' : 'ok', error: r.error };
+    });
+
+    const jtHasAnyData = (jtSignals.count || jtScorecard.count || jtPaper.count || jtSetups.count || jtMeta.count) > 0;
+    const jtAllBlocked = [jtSignals, jtScorecard, jtPaper, jtSetups].every(r => r.error);
+
+    let signals = taNormalizeSignals(jtSignals.val).filter(taIsTraderSignal);
+    let scorecard = (jtScorecard.val && typeof jtScorecard.val === 'object') ? jtScorecard.val : null;
+    let paperTrades = taNormalizeSignals(jtPaper.val).filter(t => t && !String(t.id || '').startsWith('_'));
+    let setups = taNormalizeSignals(jtSetups.val);
+    let migration = (jtMeta.val && typeof jtMeta.val === 'object') ? jtMeta.val : null;
+    let source = jtHasAnyData ? 'jumpTrading' : (jtAllBlocked ? 'fundHQ-legacy' : 'fundHQ-legacy');
+
+    // Fallback to /fundHQ/* for any slice that came back empty or blocked.
+    // Always hit legacy so the debug panel has a full picture.
+    const [fhSignals, fhScorecard, fhPaper, fhSetups, fhTradeLog] = await Promise.all([
+      taFbReadOnce(TA_PATHS.fh_signals),
+      taFbReadOnce(TA_PATHS.fh_scorecard),
+      taFbReadOnce(TA_PATHS.fh_paper),
+      taFbReadOnce(TA_PATHS.fh_setups),
+      taFbReadOnce(TA_PATHS.fh_tradelog),
+    ]);
+    [fhSignals, fhScorecard, fhPaper, fhSetups, fhTradeLog].forEach(r => {
+      taState.pathReport[r.path] = { count: r.count, status: r.error ? 'error' : 'ok', error: r.error };
+    });
+
+    if (!signals.length) {
+      signals = taNormalizeSignals(fhSignals.val).filter(taIsTraderSignal);
+      if (signals.length) source = (source === 'jumpTrading') ? 'mixed' : 'fundHQ-legacy';
+    }
+    if (!scorecard) {
+      const allSc = (fhScorecard.val && typeof fhScorecard.val === 'object') ? fhScorecard.val : null;
+      const agents = allSc && allSc.agents && typeof allSc.agents === 'object' ? allSc.agents : null;
+      const traderSlice = agents ? (agents['trader-auto'] || agents['trader'] || null) : null;
+      if (traderSlice) {
+        scorecard = Object.assign({}, traderSlice, { overall_updated: allSc.updated });
+        source = (source === 'jumpTrading') ? 'mixed' : 'fundHQ-legacy';
+      }
+    }
+    if (!paperTrades.length) {
+      const fhTrades = taNormalizeSignals(fhPaper.val).filter(t => t && !String(t.id || '').startsWith('_'));
+      const legacyStats = (fhPaper.val && typeof fhPaper.val === 'object' && fhPaper.val._stats) ? fhPaper.val._stats : null;
+      if (fhTrades.length || legacyStats) {
+        paperTrades = fhTrades;
+        taState.paperStats = legacyStats;
+        if (fhTrades.length) source = (source === 'jumpTrading') ? 'mixed' : 'fundHQ-legacy';
+      }
+    } else {
+      // primary had rows — pull stats from primary too if present
+      const primStats = (jtPaper.val && typeof jtPaper.val === 'object' && jtPaper.val._stats) ? jtPaper.val._stats : null;
+      taState.paperStats = primStats || taState.paperStats || null;
+    }
+    if (!setups.length) {
+      setups = taNormalizeSignals(fhSetups.val);
+      if (setups.length) source = (source === 'jumpTrading') ? 'mixed' : 'fundHQ-legacy';
+    }
+
+    taState.signals = taSortNewestFirst(signals).slice(0, 50);
+    taState.scorecard = scorecard;
+    taState.paperTrades = taSortNewestFirst(paperTrades).slice(0, 20);
+    taState.setups = taSortNewestFirst(setups).slice(0, 30);
+    taState.migration = migration;
+    taState.source = source;
+    taState.lastRefresh = new Date();
+    taRender();
+  } catch (e) {
+    console.error('[trader-agent] refresh error:', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Refresh'; }
+  }
+}
+
+function taRender() {
+  taRenderBadge();
+  taRenderStatus();
+  taRenderSignals();
+  taRenderSetups();
+  taRenderPaper();
+  taRenderDebug();
+  const ts = document.getElementById('taLastRefresh');
+  if (ts) ts.textContent = taState.lastRefresh ? ('updated ' + taFmtTimeShort(taState.lastRefresh.toISOString())) : 'never';
+  const sl = document.getElementById('taSourceLabel');
+  if (sl) sl.textContent = 'source: ' + taState.source;
+}
+
+function taRenderBadge() {
+  const b = document.getElementById('taSourceBadge');
+  if (!b) return;
+  const s = taState.source;
+  let label = 'unknown', bg = '#333', color = '#aaa';
+  if (s === 'jumpTrading')       { label = '/jumpTrading live';      bg = '#1e3a2f'; color = '#34d399'; }
+  else if (s === 'mixed')        { label = '/jumpTrading + legacy';  bg = '#3a2f1e'; color = '#fbbf24'; }
+  else if (s === 'fundHQ-legacy'){ label = 'legacy source /fundHQ';  bg = '#3a2526'; color = '#f87171'; }
+  b.textContent = label;
+  b.style.background = bg;
+  b.style.color = color;
+}
+
+function taRenderStatus() {
+  const grid = document.getElementById('taStatusGrid');
+  if (!grid) return;
+  const sc = taState.scorecard || {};
+  const hasScorecard = sc && (sc.total_signals != null || sc.accuracy != null || sc.grade);
+  const latestSig = taState.signals[0] || null;
+  const lastRun = latestSig ? taFmtTimeShort(latestSig.created || latestSig.mirrored_at) : '—';
+  const gradeColor = (sc.grade === 'A' || sc.grade === 'B') ? '#34d399'
+                   : (sc.grade === 'C') ? '#fbbf24'
+                   : (sc.grade === 'D' || sc.grade === 'F') ? '#f87171'
+                   : '#888';
+
+  grid.innerHTML = [
+    `<div style="padding:12px;background:var(--bg3,#1f2127);border-radius:6px;">
+       <div style="font-size:10px;color:var(--tx3,#888);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Latest run</div>
+       <div style="font-size:16px;font-weight:600;color:var(--tx1,#eee);">${taEsc(lastRun)}</div>
+       <div style="font-size:11px;color:var(--tx3,#888);margin-top:2px;">via ${taEsc(taState.source)}</div>
+     </div>`,
+    `<div style="padding:12px;background:var(--bg3,#1f2127);border-radius:6px;">
+       <div style="font-size:10px;color:var(--tx3,#888);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Grade</div>
+       <div style="font-size:22px;font-weight:700;color:${gradeColor};">${taEsc(sc.grade || '?')}</div>
+       <div style="font-size:11px;color:var(--tx3,#888);margin-top:2px;">${sc.accuracy != null ? (sc.accuracy + '% acc') : 'n/a'}</div>
+     </div>`,
+    `<div style="padding:12px;background:var(--bg3,#1f2127);border-radius:6px;">
+       <div style="font-size:10px;color:var(--tx3,#888);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Signals</div>
+       <div style="font-size:16px;font-weight:600;color:var(--tx1,#eee);">${sc.total_signals != null ? sc.total_signals : taState.signals.length}</div>
+       <div style="font-size:11px;color:var(--tx3,#888);margin-top:2px;">${sc.evaluated != null ? (sc.evaluated + ' evaluated') : (taState.signals.length + ' mirrored')}</div>
+     </div>`,
+    `<div style="padding:12px;background:var(--bg3,#1f2127);border-radius:6px;">
+       <div style="font-size:10px;color:var(--tx3,#888);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Paper trades</div>
+       <div style="font-size:16px;font-weight:600;color:var(--tx1,#eee);">${taState.paperTrades.length}</div>
+       <div style="font-size:11px;color:var(--tx3,#888);margin-top:2px;">${taState.paperStats && taState.paperStats.equity != null ? ('equity $' + Number(taState.paperStats.equity).toFixed(0)) : 'no stats'}</div>
+     </div>`,
+  ].join('');
+
+  const note = document.getElementById('taMigrationNote');
+  if (note) {
+    const lines = [];
+    if (taState.migration) {
+      lines.push('<strong>Ownership:</strong> ' + taEsc(taState.migration.owner || 'Trading Journal') + ' · phase <code>' + taEsc(taState.migration.phase || '—') + '</code> · primary ns <code>' + taEsc(taState.migration.new_namespace || '/jumpTrading') + '</code>');
+      if (taState.migration.migrated_at) lines.push('<strong>Last marker:</strong> ' + taEsc(taFmtTimeShort(taState.migration.migrated_at)));
+    } else if (taState.source === 'fundHQ-legacy') {
+      lines.push('<strong>Ownership:</strong> Trader UI now lives in Trading Journal. Backend daemon still writes to <code>/fundHQ/*</code> — reads here fall through to the legacy namespace until <code>/jumpTrading/*</code> rules are opened.');
+    }
+    if (lines.length) { note.innerHTML = lines.join('<br>'); note.style.display = 'block'; }
+    else { note.style.display = 'none'; }
+  }
+  if (!hasScorecard && taState.source === 'unknown') {
+    grid.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No status data yet.</div>';
+  }
+}
+
+function taRenderSignals() {
+  const el = document.getElementById('taSignalsList');
+  const counter = document.getElementById('taSignalsCount');
+  if (!el) return;
+  if (counter) counter.textContent = taState.signals.length ? ('· ' + taState.signals.length) : '';
+  if (!taState.signals.length) {
+    el.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No trader signals found in primary or legacy namespace.</div>';
+    return;
+  }
+  const rows = taState.signals.map(s => {
+    const side = (s.side || '').toUpperCase();
+    const sideColor = side === 'LONG' ? '#34d399' : side === 'SHORT' ? '#f87171' : 'var(--tx2,#ccc)';
+    const outcome = s.outcome || '';
+    const outcomeColor = outcome === 'correct' ? '#34d399' : outcome === 'incorrect' ? '#f87171' : 'var(--tx3,#888)';
+    const pnl = (s.pnl_pct != null) ? (Number(s.pnl_pct).toFixed(1) + '%') : '';
+    const conviction = s.conviction || '';
+    const reason = (s.assessment || s.reason || s.type || '').toString();
+    const shortReason = reason.length > 160 ? (reason.slice(0, 160) + '…') : reason;
+    return `<div style="display:grid;grid-template-columns:60px 60px 80px 1fr 100px 90px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border,#2a2d34);font-size:12px;">
+      <div><strong>${taEsc((s.coin || s.asset || '—').toUpperCase())}</strong></div>
+      <div style="color:${sideColor};font-weight:600;">${taEsc(side || '—')}</div>
+      <div style="color:var(--tx2,#ccc);">${taEsc(s.type || '—')}</div>
+      <div style="color:var(--tx3,#888);line-height:1.4;">${taEsc(shortReason)}</div>
+      <div style="color:${outcomeColor};font-size:11px;">${taEsc(outcome || s.status || '')} ${taEsc(pnl)}</div>
+      <div style="color:var(--tx3,#888);font-size:11px;text-align:right;" title="${taEsc(s.created || '')}">${taEsc(taFmtTimeShort(s.created || s.mirrored_at))}<br><span style="color:var(--tx3,#888);opacity:0.7;">${taEsc(conviction)}</span></div>
+    </div>`;
+  }).join('');
+  el.innerHTML = '<div style="max-height:480px;overflow-y:auto;">' + rows + '</div>';
+}
+
+function taRenderSetups() {
+  const el = document.getElementById('taSetupsList');
+  const counter = document.getElementById('taSetupsCount');
+  if (!el) return;
+  if (counter) counter.textContent = taState.setups.length ? ('· ' + taState.setups.length) : '';
+  if (!taState.setups.length) {
+    el.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No setups yet.</div>';
+    return;
+  }
+  const rows = taState.setups.map(s => {
+    const sym = (s.symbol || s.coin || '—').toString().toUpperCase();
+    const status = s.status || '';
+    const entry = s.entry != null ? Number(s.entry).toFixed(4) : (s.price != null ? Number(s.price).toFixed(4) : '—');
+    const stop = (s.stop || s.stopLoss) != null ? Number(s.stop || s.stopLoss).toFixed(4) : '—';
+    const target = (s.target || s.takeProfit) != null ? Number(s.target || s.takeProfit).toFixed(4) : '—';
+    return `<div style="display:grid;grid-template-columns:80px 90px 100px 100px 100px 1fr;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border,#2a2d34);font-size:12px;">
+      <div><strong>${taEsc(sym)}</strong></div>
+      <div style="color:var(--tx2,#ccc);">${taEsc(status)}</div>
+      <div>entry <span style="color:var(--tx2,#ccc);">${taEsc(entry)}</span></div>
+      <div>stop <span style="color:#f87171;">${taEsc(stop)}</span></div>
+      <div>target <span style="color:#34d399;">${taEsc(target)}</span></div>
+      <div style="color:var(--tx3,#888);font-size:11px;">${taEsc(taFmtTimeShort(s.created || s.updated_at))}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = '<div style="max-height:360px;overflow-y:auto;">' + rows + '</div>';
+}
+
+function taRenderPaper() {
+  const el = document.getElementById('taPaperList');
+  const counter = document.getElementById('taPaperCount');
+  const stats = document.getElementById('taPaperStats');
+  if (!el) return;
+  if (counter) counter.textContent = taState.paperTrades.length ? ('· ' + taState.paperTrades.length) : '';
+  if (stats) {
+    const s = taState.paperStats || {};
+    const bits = [];
+    if (s.equity != null)         bits.push('equity <strong style="color:var(--tx1,#eee);">$' + Number(s.equity).toFixed(0) + '</strong>');
+    if (s.total_pnl_pct != null)  bits.push('pnl <strong style="color:' + (Number(s.total_pnl_pct) >= 0 ? '#34d399' : '#f87171') + ';">' + Number(s.total_pnl_pct).toFixed(1) + '%</strong>');
+    if (s.win_rate != null)       bits.push('win rate <strong style="color:var(--tx1,#eee);">' + Number(s.win_rate).toFixed(1) + '%</strong>');
+    if (s.open_trades != null)    bits.push('open <strong style="color:var(--tx1,#eee);">' + s.open_trades + '</strong>');
+    if (s.closed_trades != null)  bits.push('closed <strong style="color:var(--tx1,#eee);">' + s.closed_trades + '</strong>');
+    stats.innerHTML = bits.join(' · ');
+  }
+  if (!taState.paperTrades.length) {
+    el.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No agent paper trades yet.</div>';
+    return;
+  }
+  const rows = taState.paperTrades.map(t => {
+    const side = (t.side || '').toUpperCase();
+    const sideColor = side === 'LONG' ? '#34d399' : side === 'SHORT' ? '#f87171' : 'var(--tx2,#ccc)';
+    const status = (t.status || '').toUpperCase();
+    const pnlPct = t.pnl_pct != null ? Number(t.pnl_pct).toFixed(2) + '%' : '—';
+    const pnlColor = t.pnl_pct != null && Number(t.pnl_pct) < 0 ? '#f87171' : t.pnl_pct != null && Number(t.pnl_pct) > 0 ? '#34d399' : 'var(--tx3,#888)';
+    const entry = t.entry_price != null ? Number(t.entry_price).toFixed(4) : '—';
+    const stop  = t.stop_price  != null ? Number(t.stop_price).toFixed(4)  : '—';
+    const tgt   = t.target_price!= null ? Number(t.target_price).toFixed(4): '—';
+    return `<div style="display:grid;grid-template-columns:70px 60px 80px 100px 100px 100px 80px 1fr;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border,#2a2d34);font-size:12px;">
+      <div><strong>${taEsc((t.coin || '—').toUpperCase())}</strong></div>
+      <div style="color:${sideColor};font-weight:600;">${taEsc(side || '—')}</div>
+      <div style="color:var(--tx3,#888);">${taEsc(status)}</div>
+      <div>entry <span style="color:var(--tx2,#ccc);">${taEsc(entry)}</span></div>
+      <div>stop <span style="color:#f87171;">${taEsc(stop)}</span></div>
+      <div>target <span style="color:#34d399;">${taEsc(tgt)}</span></div>
+      <div style="color:${pnlColor};font-weight:600;">${taEsc(pnlPct)}</div>
+      <div style="color:var(--tx3,#888);font-size:11px;">${taEsc(taFmtTimeShort(t.opened_at || t.closed_at))}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = '<div style="max-height:360px;overflow-y:auto;">' + rows + '</div>';
+}
+
+function taRenderDebug() {
+  const el = document.getElementById('taDebugTable');
+  if (!el) return;
+  const rows = Object.keys(TA_PATHS).map(k => {
+    const p = TA_PATHS[k];
+    const r = taState.pathReport[p] || { count: 0, status: '—', error: null };
+    const statusColor = r.status === 'ok' ? '#34d399' : r.status === 'error' ? '#f87171' : '#888';
+    return `<div style="display:grid;grid-template-columns:180px 1fr 60px 70px 1fr;gap:12px;padding:4px 0;border-bottom:1px dotted var(--border,#2a2d34);">
+      <div style="color:var(--tx2,#ccc);">${taEsc(k)}</div>
+      <div style="color:var(--tx3,#888);">/${taEsc(p)}</div>
+      <div style="color:var(--tx2,#ccc);text-align:right;">${taEsc(r.count)}</div>
+      <div style="color:${statusColor};">${taEsc(r.status || '—')}</div>
+      <div style="color:var(--tx3,#888);">${taEsc(r.error || '')}</div>
+    </div>`;
+  }).join('');
+  const legend = `<div style="display:grid;grid-template-columns:180px 1fr 60px 70px 1fr;gap:12px;padding:4px 0;border-bottom:1px solid var(--border,#2a2d34);color:var(--tx3,#888);font-weight:600;">
+    <div>key</div><div>path</div><div style="text-align:right;">count</div><div>status</div><div>error</div>
+  </div>`;
+  el.innerHTML = legend + rows;
+}
+
 /* ── Navigation ── */
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -3907,9 +1717,34 @@ function showPage(id) {
   if (pg) pg.classList.add('active');
   const nav = document.querySelector(`.nav-item[data-page="${id}"]`);
   if (nav) nav.classList.add('active');
+  // Keep the URL hash in sync so deep links from Jump HQ survive a reload.
+  try {
+    const expected = '#' + id;
+    if (window.location.hash !== expected) window.history.replaceState(null, '', expected);
+  } catch (e) { /* ignore hash write errors */ }
+  if (id === 'trader-agent') { taRefresh(); return; }
   if (id === 'portfolio' || id === 'checklist' || id === 'taxes') renderPage(id);
   else if (TRADES.length > 0 && id !== 'import') renderPage(id);
 }
+
+/* ── Hash-based deep linking ───────────────────────────────────────────────
+   Jump HQ redirects #trader (and friends) to this app with
+   #trader-agent appended. Route it on load + on hash changes.
+*/
+const TA_VALID_HASH_PAGES = new Set([
+  'trader-agent', 'import', 'dashboard', 'analysis', 'checklist',
+  'patterns', 'benchmark', 'backtest', 'coach', 'tradelog', 'taxes', 'portfolio',
+]);
+function taRouteFromHash() {
+  const h = (window.location.hash || '').replace(/^#/, '').toLowerCase();
+  if (!h) return;
+  // Accept a few friendly aliases for the trader page.
+  const aliases = { 'trader': 'trader-agent', 'trading': 'trader-agent', 'traderagent': 'trader-agent' };
+  const target = aliases[h] || h;
+  if (TA_VALID_HASH_PAGES.has(target)) showPage(target);
+}
+window.addEventListener('hashchange', taRouteFromHash);
+window.addEventListener('DOMContentLoaded', taRouteFromHash);
 
 /* ── Hide Amounts Toggle ── */
 function toggleHideAmounts() {
@@ -4189,7 +2024,7 @@ function importData(csvText) {
   if (tjDbRef) tjDbRef.child('trades').set(csvText);
   updateSidebarCount();
   showImportStatus(`Successfully imported ${TRADES.length} trades!`, 'success');
-  showPage('alpha');
+  showPage('dashboard');
 }
 
 function importFromPaste() {
@@ -4963,6 +2798,142 @@ function renderSessionMetrics() {
       `${s.total} trades | P/L: ${fmt$(s.totalPL)}`);
   });
   document.getElementById('sessionMetrics').innerHTML = cards.join('');
+}
+
+/* ═══ COACH PAGE ═══ */
+function renderCoach() {
+  if (TRADES.length === 0) { show('coachNoData'); hide('coachContent'); return; }
+  hide('coachNoData'); show('coachContent');
+
+  const s = stats(TRADES);
+  const strengths = [];
+  const weaknesses = [];
+  const insights = [];
+
+  // Win rate analysis
+  if (s.winRate >= 0.55) {
+    strengths.push(insightCard('positive', 'Solid Win Rate',
+      `Your win rate is ${fmtPct(s.winRate)} — above the 50% threshold. You're picking the right direction more often than not.`,
+      'Keep refining your entry criteria to maintain this edge.'));
+  } else if (s.winRate < 0.45) {
+    weaknesses.push(insightCard('negative', 'Low Win Rate',
+      `Your win rate is ${fmtPct(s.winRate)}. You need either higher R:R to compensate or better entry filtering.`,
+      'Review your entry criteria — consider adding a confirmation signal before entering.'));
+  }
+
+  // Win/Loss size ratio
+  const wlRatio = s.avgWin / (s.avgLoss || 1);
+  if (wlRatio < 1) {
+    weaknesses.push(insightCard('negative', 'Losses Bigger Than Wins',
+      `Avg win (${fmt$(s.avgWin)}) is ${((1-wlRatio)*100).toFixed(0)}% smaller than avg loss (${fmt$(s.avgLoss)}). Even with ${fmtPct(s.winRate)} win rate, your expectancy is ${fmt$(s.expectancy)}/trade.`,
+      'Tighten stop losses OR let winners run longer. Target at least 1:1 win/loss ratio.'));
+  } else {
+    strengths.push(insightCard('positive', 'Winners > Losers',
+      `Your avg win (${fmt$(s.avgWin)}) is larger than avg loss (${fmt$(s.avgLoss)}). Win/loss ratio: ${wlRatio.toFixed(2)}.`,
+      'Great risk management. Keep this ratio above 1.0.'));
+  }
+
+  // Expectancy
+  if (s.expectancy < 0) {
+    weaknesses.push(insightCard('negative', 'Negative Expectancy',
+      `At ${fmt$(s.expectancy)}/trade, you're losing money on average per trade. Over ${s.total} trades this amounts to ${fmt$(s.totalPL)}.`,
+      'Focus on either improving win rate OR increasing your R:R. Even a small improvement in either will flip you positive.'));
+  } else {
+    strengths.push(insightCard('positive', 'Positive Expectancy',
+      `At ${fmt$(s.expectancy)}/trade, you have an edge. Keep trading consistently and the math works in your favor.`,
+      'Stick to your strategy and avoid overtrading.'));
+  }
+
+  // Strategy analysis
+  const byStrat = groupBy(TRADES, t => t.strategy || 'Unknown');
+  const stratStats = Object.entries(byStrat).map(([name, trades]) => ({name, ...stats(trades)}))
+    .filter(s => s.total >= 10).sort((a,b) => b.total - a.total);
+
+  stratStats.forEach(st => {
+    if (st.totalPL < -100 && st.total >= 20) {
+      insights.push(insightCard('warning', `Strategy "${st.name}" is Losing Money`,
+        `${st.total} trades, ${fmtPct(st.winRate)} win rate, net P/L: ${fmt$(st.totalPL)}, expectancy: ${fmt$(st.expectancy)}/trade.`,
+        `Consider reducing size or adding filters for this strategy. If expectancy stays negative after 50+ trades, consider dropping it.`));
+    } else if (st.totalPL > 100 && st.total >= 20) {
+      insights.push(insightCard('positive', `Strategy "${st.name}" is Profitable`,
+        `${st.total} trades, ${fmtPct(st.winRate)} win rate, net P/L: ${fmt$(st.totalPL)}, expectancy: ${fmt$(st.expectancy)}/trade.`,
+        `This is one of your best strategies. Consider increasing position size here (within risk limits).`));
+    }
+  });
+
+  // Overtrading analysis
+  const byDate = groupBy(TRADES, t => t.entryDate ? t.entryDate.toDateString() : 'unknown');
+  const tradeCounts = Object.values(byDate).map(arr => arr.length);
+  const avgPerDay = tradeCounts.reduce((s,v)=>s+v,0) / tradeCounts.length;
+  const heavyDays = Object.entries(byDate).filter(([,arr]) => arr.length >= 5);
+  if (heavyDays.length > 0) {
+    const heavyStats = stats(heavyDays.flatMap(([,arr]) => arr));
+    const lightDays = Object.entries(byDate).filter(([,arr]) => arr.length < 5);
+    const lightStats = stats(lightDays.flatMap(([,arr]) => arr));
+    if (heavyStats.winRate < lightStats.winRate) {
+      insights.push(insightCard('warning', 'Overtrading Hurts Your Performance',
+        `On days with 5+ trades (${heavyDays.length} days): ${fmtPct(heavyStats.winRate)} win rate, ${fmt$(heavyStats.expectancy)}/trade. On lighter days: ${fmtPct(lightStats.winRate)} win rate, ${fmt$(lightStats.expectancy)}/trade.`,
+        `Limit yourself to 3-4 quality trades per day. Quality over quantity.`));
+    }
+  }
+
+  // Emotional analysis
+  const emoTrades = TRADES.filter(t => t.emotional > 0);
+  if (emoTrades.length > 20) {
+    const lowEmo = emoTrades.filter(t => t.emotional <= 4);
+    const highEmo = emoTrades.filter(t => t.emotional >= 7);
+    if (lowEmo.length > 10 && highEmo.length > 10) {
+      const lowStats = stats(lowEmo);
+      const highStats = stats(highEmo);
+      if (lowStats.winRate < highStats.winRate) {
+        insights.push(insightCard('warning', 'Low Emotional State Hurts Trading',
+          `When emotional score ≤ 4: ${fmtPct(lowStats.winRate)} win rate, ${fmt$(lowStats.expectancy)}/trade. When ≥ 7: ${fmtPct(highStats.winRate)} win rate, ${fmt$(highStats.expectancy)}/trade.`,
+          'Consider not trading when your emotional state is below 5. Take a break, journal, or reduce size.'));
+      }
+    }
+  }
+
+  // Long vs Short
+  const longs = TRADES.filter(t => t.side.toLowerCase().includes('long'));
+  const shorts = TRADES.filter(t => t.side.toLowerCase().includes('short'));
+  if (longs.length > 20 && shorts.length > 20) {
+    const ls = stats(longs), ss = stats(shorts);
+    if (ls.totalPL > 0 && ss.totalPL < 0) {
+      insights.push(insightCard('warning', 'Shorts Are Losing Money',
+        `Long P/L: ${fmt$(ls.totalPL)} (${fmtPct(ls.winRate)} WR) vs Short P/L: ${fmt$(ss.totalPL)} (${fmtPct(ss.winRate)} WR).`,
+        'Consider reducing short exposure or only shorting with higher-conviction setups.'));
+    } else if (ss.totalPL > 0 && ls.totalPL < 0) {
+      insights.push(insightCard('warning', 'Longs Are Losing Money',
+        `Short P/L: ${fmt$(ss.totalPL)} (${fmtPct(ss.winRate)} WR) vs Long P/L: ${fmt$(ls.totalPL)} (${fmtPct(ls.winRate)} WR).`,
+        'Consider reducing long exposure or waiting for better long setups.'));
+    }
+  }
+
+  // Duration insight
+  const durTrades = TRADES.filter(t => t.duration > 0);
+  if (durTrades.length > 20) {
+    const quick = durTrades.filter(t => t.duration <= 1);
+    const medium = durTrades.filter(t => t.duration > 1 && t.duration <= 4);
+    const long_ = durTrades.filter(t => t.duration > 4);
+    const best = [{name:'Quick (<1h)', s:stats(quick)}, {name:'Medium (1-4h)', s:stats(medium)}, {name:'Long (4h+)', s:stats(long_)}]
+      .filter(x => x.s.total >= 10).sort((a,b) => b.s.expectancy - a.s.expectancy);
+    if (best.length > 1 && best[0].s.expectancy > best[best.length-1].s.expectancy) {
+      insights.push(insightCard('blue', 'Optimal Trade Duration',
+        `${best[0].name} trades: ${fmt$(best[0].s.expectancy)}/trade. ${best[best.length-1].name} trades: ${fmt$(best[best.length-1].s.expectancy)}/trade.`,
+        `Your best results come from ${best[0].name.toLowerCase()} trades. Consider focusing on this timeframe.`));
+    }
+  }
+
+  // Profit factor
+  if (s.profitFactor > 0 && s.profitFactor < 1) {
+    insights.push(insightCard('negative', 'Profit Factor Below 1.0',
+      `Your profit factor is ${s.profitFactor.toFixed(2)}, meaning you lose ${fmtPrice(1/s.profitFactor,2)} for every $1 you make.`,
+      'You need PF > 1.0 to be profitable. Focus on cutting losers faster and letting winners ride.'));
+  }
+
+  document.getElementById('coachStrengths').innerHTML = strengths.join('') || '<p style="color:var(--tx2);padding:12px">Import more data to discover your strengths.</p>';
+  document.getElementById('coachWeaknesses').innerHTML = weaknesses.join('') || '<p style="color:var(--tx2);padding:12px">Looking good! No major issues detected.</p>';
+  document.getElementById('coachInsights').innerHTML = insights.join('') || '<p style="color:var(--tx2);padding:12px">Import more data for detailed insights.</p>';
 }
 
 function insightCard(type, title, body, action) {
@@ -9410,66 +7381,5 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
-<!-- ═══════════ PRE-TRADE INTERVENTION MODAL ═══════════ -->
-<div id="pt-modal-root" class="pt-root" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="pt-title">
-  <div class="pt-backdrop" onclick="closePreTradeModal()"></div>
-  <div class="pt-modal" data-sev="warning">
-    <!-- Mode A: input form (pre-trade manual check) -->
-    <div class="pt-form" id="pt-form">
-      <div class="pt-header">
-        <div class="pt-eyebrow">Pre-Trade Check</div>
-        <button class="pt-close" onclick="closePreTradeModal()" aria-label="Close">✕</button>
-      </div>
-      <h2 class="pt-h2">Run your next trade past the 5 interventions</h2>
-      <p class="pt-sub">Fill this before you enter the trade in your sheet. No data is saved unless you submit.</p>
-      <div class="pt-grid">
-        <label class="pt-lbl">Coin <input id="pt-in-coin" class="pt-input" placeholder="e.g. ZEC" autocomplete="off"></label>
-        <label class="pt-lbl">Side
-          <select id="pt-in-side" class="pt-input">
-            <option value="Long">Long</option>
-            <option value="Short">Short</option>
-          </select>
-        </label>
-        <label class="pt-lbl">Size ($) <input id="pt-in-size" class="pt-input" type="number" step="100" placeholder="e.g. 10000"></label>
-        <label class="pt-lbl">Stop loss set? <select id="pt-in-stop" class="pt-input">
-          <option value="yes">Yes — placed</option>
-          <option value="no">No / removed / mental</option>
-        </select></label>
-        <label class="pt-lbl">Confidence (1–10) <input id="pt-in-conf" class="pt-input" type="number" min="1" max="10" placeholder="e.g. 6"></label>
-        <label class="pt-lbl pt-lbl-wide">Thesis / note <input id="pt-in-note" class="pt-input" placeholder="copy what you'll put in the sheet"></label>
-      </div>
-      <div class="pt-actions">
-        <button class="pt-btn pt-btn-ghost" onclick="closePreTradeModal()">Cancel</button>
-        <button class="pt-btn pt-btn-primary" onclick="ptEvaluateForm()">Check this trade →</button>
-      </div>
-    </div>
-
-    <!-- Mode B: result / intervention (populated after evaluate) -->
-    <div class="pt-result" id="pt-result" style="display:none;">
-      <div class="pt-header">
-        <div class="pt-eyebrow" id="pt-result-eyebrow">Intervention</div>
-        <button class="pt-close" onclick="closePreTradeModal()" aria-label="Close">✕</button>
-      </div>
-      <div class="pt-sev-row">
-        <span class="pt-sev" id="pt-sev">WARNING</span>
-        <span class="pt-src" id="pt-src">pre-trade check</span>
-      </div>
-      <h2 class="pt-h2" id="pt-primary-title">—</h2>
-      <p class="pt-modal-copy" id="pt-modal-copy">—</p>
-      <div class="pt-evidence" id="pt-evidence"></div>
-      <div class="pt-secondary" id="pt-secondary"></div>
-      <div class="pt-reduce" id="pt-reduce" style="display:none;">
-        <span class="pt-reduce-k">Recommended size</span>
-        <span class="pt-reduce-v" id="pt-reduce-v">—</span>
-      </div>
-      <div class="pt-actions">
-        <button class="pt-btn pt-btn-danger"   onclick="ptChoose('cancel')">Cancel trade</button>
-        <button class="pt-btn pt-btn-warn"     onclick="ptChoose('reduce')" id="pt-btn-reduce">Reduce size</button>
-        <button class="pt-btn pt-btn-ghost-ok" onclick="ptChoose('continue')">Continue anyway</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
