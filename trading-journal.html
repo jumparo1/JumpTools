@@ -8385,31 +8385,85 @@ function parseBinanceEarnCSV(text) {
 }
 
 // ── Bybit Futures/Derivatives Parser ──
+// Robust to header case/spacing/singular-plural variants.
+// Auto-detects header row (Bybit may prepend UID/account metadata lines).
 function parseBybitFuturesCSV(text) {
   const rows = parseCSVRows(text);
   if (rows.length < 2) return [];
-  const headers = rows[0].map(h => h.trim());
+
+  const norm = h => String(h||'').toLowerCase().replace(/^﻿/,'').replace(/[\s_\-]+/g,' ').replace(/[\. ]+/g,'').trim();
+
+  // Find header row — must contain a symbol-ish AND a pnl-ish column name
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(8, rows.length); i++) {
+    const joined = ' ' + rows[i].map(norm).join(' | ') + ' ';
+    const hasSym = /\b(symbol|contract|contracts|pair|trading pair|instrument)\b/.test(joined);
+    const hasPnl = /(p&l|pnl|profit)/.test(joined);
+    if (hasSym && hasPnl) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const rawHeaders = rows[headerIdx];
+  const idxByName = {};
+  rawHeaders.forEach((h,j) => { const n = norm(h); if (n) idxByName[n] = j; });
+
+  function getCol(vals, candidates) {
+    for (const c of candidates) {
+      const i = idxByName[norm(c)];
+      if (i !== undefined && vals[i] !== undefined && String(vals[i]).trim() !== '') {
+        return String(vals[i]).trim();
+      }
+    }
+    return '';
+  }
+
+  function parseDateLoose(s) {
+    if (!s) return null;
+    const d1 = new Date(s);
+    if (!isNaN(d1.getTime())) return d1;
+    const ms = parseFloat(s);
+    if (!isNaN(ms) && ms > 1e10) {
+      const d2 = new Date(ms < 1e12 ? ms*1000 : ms);
+      if (!isNaN(d2.getTime())) return d2;
+    }
+    return null;
+  }
+
   const txs = [];
-  for (let i = 1; i < rows.length; i++) {
-    const vals = rows[i]; if (vals.length < 4) continue;
-    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
-    const dateStr = obj['Date'] || obj['Close Time'] || obj['Created Time'] || obj['Time'] || '';
-    if (!dateStr) continue;
-    const symbol = (obj['Symbol'] || obj['Contracts'] || obj['Pair'] || '').replace('USDT','').replace('USD','');
-    const pnl = parseFloat((obj['Realized P&L'] || obj['Closed P&L'] || obj['Closed PnL'] || obj['PnL'] || obj['Profit'] || '0').replace(/[^0-9.-]/g,''));
-    const side = (obj['Side'] || obj['Direction'] || '').toUpperCase();
-    const qty = Math.abs(parseFloat((obj['Qty'] || obj['Contracts'] || obj['Size'] || '0').replace(/[^0-9.]/g,'')));
-    const entryPrice = parseFloat((obj['Entry Price'] || obj['Avg Entry'] || '0').replace(/[^0-9.]/g,''));
-    const exitPrice = parseFloat((obj['Close Price'] || obj['Exit Price'] || obj['Avg Exit'] || '0').replace(/[^0-9.]/g,''));
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const vals = rows[i];
+    if (!vals || vals.length < 3) continue;
+
+    const dateStr = getCol(vals, ['date','close time','closed time','created time','updated time','trade time','time','transaction time','closed at','order time']);
+    const date = parseDateLoose(dateStr);
+    if (!date) continue;
+
+    const symRaw = getCol(vals, ['symbol','contracts','contract','pair','trading pair','instrument']);
+    const symbol = (symRaw || '').replace(/(USDT|USDC|BUSD|USD|PERP)$/i,'').replace(/\/.+$/,'').toUpperCase() || 'UNKNOWN';
+
+    const pnlRaw = getCol(vals, ['closed p&l','closed pnl','realized p&l','realized pnl','pnl','realized profit','profit','net pnl','closed profit','close p&l','net p&l']);
+    const pnl = parseFloat((pnlRaw || '0').toString().replace(/[^0-9.\-]/g,'')) || 0;
+
+    const sideRaw = (getCol(vals, ['side','direction','order side','position side']) || '').toUpperCase();
+    const qtyRaw  = getCol(vals, ['qty','quantity','filled qty','contracts','size','filled size','exec qty','total qty','closed qty']);
+    const qty = Math.abs(parseFloat((qtyRaw || '0').replace(/[^0-9.]/g,''))) || 1;
+
+    const entryPrice = parseFloat((getCol(vals, ['entry price','avg entry','avg entry price','open price']) || '0').replace(/[^0-9.]/g,'')) || 0;
+    const exitPrice  = parseFloat((getCol(vals, ['close price','exit price','avg exit','avg exit price','closing price']) || '0').replace(/[^0-9.]/g,'')) || 0;
+    const fee        = parseFloat((getCol(vals, ['fee','trading fee','commission','total fee']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
+    const fundingFee = parseFloat((getCol(vals, ['funding fee','funding']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
+    const orderId    = getCol(vals, ['order id','order no','trade id','position id','order_id']);
+
     txs.push({
-      id: 'bybf_' + i + '_' + Date.now(), exchange: 'Bybit Futures', date: new Date(dateStr),
-      type: 'futures', asset: symbol || 'UNKNOWN', amount: qty || 1,
+      id: 'bybf_' + i + '_' + Date.now(), exchange: 'Bybit Futures', date,
+      type: 'futures', asset: symbol, amount: qty,
       price_unit: exitPrice || entryPrice, quote: 'USDT',
-      total_value: Math.abs(pnl), side: pnl >= 0 ? 'sell' : 'buy',
-      fee_amount: parseFloat((obj['Fee'] || obj['Trading Fee'] || '0').replace(/[^0-9.]/g,'')),
-      fee_asset: 'USDT', pair: symbol + '/USDT', order_id: obj['Order ID'] || '',
-      status: 'futures_pnl', realized_gain_eur: pnl * (getEurUsdRate() || 0.92),
-      notes: 'Futures PnL: ' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + ' USDT'
+      total_value: Math.abs(pnl),
+      side: (sideRaw.includes('SELL') || sideRaw.includes('SHORT')) ? 'sell' : 'buy',
+      fee_amount: Math.abs(fee) + Math.abs(fundingFee), fee_asset: 'USDT',
+      pair: symbol + '/USDT', order_id: orderId, status: 'futures_pnl',
+      realized_gain_eur: pnl * (getEurUsdRate() || 0.92),
+      notes: 'Futures PnL: ' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + ' USDT' + (sideRaw ? ' · ' + sideRaw : '')
     });
   }
   return txs;
@@ -8592,7 +8646,17 @@ function importTaxCSV(text) {
     else { showTaxStatus('Unknown format: ' + exchange, 'error'); return; }
 
     if (txs.length === 0) {
-      showTaxStatus('Parsed 0 transactions from detected format: ' + exchange + '. File may be empty or have unexpected structure.', 'error');
+      // Diagnostic: dump filename + first 6 lines + lower-cased header tokens to console
+      const lines = text.split(/\r?\n/).filter(l => l.trim()).slice(0, 6);
+      const fname = importTaxCSV._currentFileName || '(unknown)';
+      console.warn('[TAX IMPORT] Parsed 0 — diagnostic for', fname);
+      console.warn('  Detected format:', exchange);
+      console.warn('  Total raw lines (non-empty):', text.split(/\r?\n/).filter(l => l.trim()).length);
+      console.warn('  Header line:', lines[0] || '(empty)');
+      for (let i = 1; i < lines.length && i <= 5; i++) console.warn('  Row ' + i + ':', lines[i]);
+      const headerTokens = (lines[0]||'').toLowerCase().split(/[,;\t]/).map(s => s.trim()).filter(Boolean);
+      console.warn('  Lowercased header tokens:', JSON.stringify(headerTokens));
+      showTaxStatus('Parsed 0 transactions from detected format: ' + exchange + '. Headers + first 5 rows logged to DevTools console (F12 → Console). Copy them here to patch the parser.', 'error');
       return;
     }
 
