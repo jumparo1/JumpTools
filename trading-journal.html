@@ -8886,7 +8886,7 @@ function setupTaxDropZone() {
 
 function renderTaxImportBadges() {
   const el = document.getElementById('taxImportBadges');
-  const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit CopyTrading', 'Bybit Futures', 'Kraken'];
+  const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit CopyTrading', 'Bybit Futures', 'Kraken', 'Revolut'];
   el.innerHTML = sources.map(ex => {
     const count = TAX_IMPORTS[ex] || 0;
     if (!count && (ex === 'Binance Futures' || ex === 'Bybit Futures')) return ''; // hide if no futures data
