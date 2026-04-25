@@ -8825,23 +8825,37 @@ async function autoReprocessDocs() {
   const docs = TAX_DOCS.filter(d => d.year === year);
   if (docs.length === 0) return;
   showTaxStatus('Reloading ' + docs.length + ' stored documents...', 'success');
-  let loaded = 0;
+  let loaded = 0, failed = 0, denied = false;
   for (const doc of docs) {
     try {
       const snap = await tjDbRef.child('taxes/rawFiles/' + doc.id).once('value');
       const csv = snap.val();
       if (csv) {
-        // Import without re-saving doc metadata
         importTaxCSV._skipDocSave = true;
         importTaxCSV(csv);
         importTaxCSV._skipDocSave = false;
         loaded++;
+      } else {
+        failed++;
       }
-    } catch(e) { console.warn('Failed to reload doc:', doc.name, e); }
+    } catch(e) {
+      console.warn('Failed to reload doc:', doc.name, e);
+      failed++;
+      if (e && (e.code === 'PERMISSION_DENIED' || /permission/i.test(e.message||''))) denied = true;
+    }
   }
   if (loaded > 0) {
     showTaxStatus('Reloaded ' + loaded + ' documents (' + TAX_TXS.length + ' transactions). Data restored.', 'success');
+  } else if (failed > 0) {
+    if (denied) {
+      showTaxStatus('Stored file metadata found, but raw CSV body is unavailable (Firebase permission denied). Please re-upload the original CSV files via click-to-pick to rebuild tax state.', 'error');
+    } else {
+      showTaxStatus('Stored file metadata found, but raw CSV body is unavailable. Please re-upload the original CSV files.', 'error');
+    }
   }
+  // Re-render badges + overview so they reflect TAX_TXS reality, not stale TAX_IMPORTS
+  if (typeof renderTaxImportBadges === 'function') renderTaxImportBadges();
+  if (typeof renderTaxOverview === 'function') renderTaxOverview();
 }
 
 // ── Renderers ──
@@ -8915,13 +8929,22 @@ function setupTaxDropZone() {
 
 function renderTaxImportBadges() {
   const el = document.getElementById('taxImportBadges');
+  if (!el) return;
   const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit CopyTrading', 'Bybit Futures', 'Kraken', 'Revolut'];
+  // Truth = parsed transactions in TAX_TXS, not stale TAX_IMPORTS metadata.
+  // Stale metadata may exist after Firebase rawFiles can no longer be loaded.
+  const parsedCounts = {};
+  TAX_TXS.forEach(t => { parsedCounts[t.exchange] = (parsedCounts[t.exchange] || 0) + 1; });
   el.innerHTML = sources.map(ex => {
-    const count = TAX_IMPORTS[ex] || 0;
-    if (!count && (ex === 'Binance Futures' || ex === 'Bybit Futures')) return ''; // hide if no futures data
-    const cls = count > 0 ? 'ok' : 'none';
-    const label = count > 0 ? count + ' txs' : 'not imported';
-    return `<div class="tax-badge ${cls}">${count > 0 ? '✅' : '○'} ${ex} (${label})</div>`;
+    const parsed = parsedCounts[ex] || 0;
+    const stale  = TAX_IMPORTS[ex] || 0;
+    // Hide rarely-used sub-buckets when nothing at all
+    if (!parsed && !stale && (ex === 'Binance Futures' || ex === 'Bybit Futures' || ex === 'Bybit CopyTrading')) return '';
+    let cls, icon, label;
+    if (parsed > 0)     { cls = 'ok';   icon = '✅'; label = parsed + ' txs'; }
+    else if (stale > 0) { cls = 'none'; icon = '⚠️'; label = 'metadata only — re-upload CSV'; }
+    else                { cls = 'none'; icon = '○';  label = 'not imported'; }
+    return `<div class="tax-badge ${cls}" title="${ex}: parsed=${parsed} · stale_metadata=${stale}">${icon} ${ex} (${label})</div>`;
   }).filter(Boolean).join('');
 }
 
@@ -8929,7 +8952,17 @@ function renderTaxOverview() {
   const s = computeTaxSummary();
   const fmtE = v => (v < 0 ? '-' : '') + '€' + Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const fmtB = v => Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' BGN';
-  document.getElementById('taxOverview').innerHTML = [
+  // Empty-state warning: TAX_TXS is the truth, TAX_IMPORTS may be stale.
+  let warning = '';
+  if (TAX_TXS.length === 0) {
+    const hasStaleMetadata = Object.values(TAX_IMPORTS||{}).some(c => c > 0) || (TAX_DOCS||[]).length > 0;
+    if (hasStaleMetadata) {
+      warning = '<div class="insight-card" style="border-left-color:var(--red);grid-column:1/-1;margin-bottom:8px"><h4>⚠️ No parsed 2025 tax transactions loaded</h4><p>Stored file metadata is present, but raw CSV bodies could not be reloaded (Firebase permission denied). Re-upload your CSVs via click-to-pick to rebuild local parsed state. Existing localStorage metadata is preserved — nothing was cleared.</p></div>';
+    } else {
+      warning = '<div class="insight-card" style="border-left-color:var(--blue);grid-column:1/-1;margin-bottom:8px"><h4>No 2025 tax transactions imported</h4><p>Click the drop zone above to import your exchange CSVs (Binance, Bybit, Kraken).</p></div>';
+    }
+  }
+  document.getElementById('taxOverview').innerHTML = warning + [
     metricCard('Transactions', s.total_txs, 'val-blue', s.transfers + ' transfers · ' + s.fiat_moves + ' fiat'),
     metricCard('Spot Disposals', s.total_disposals, 'val-neutral'),
     metricCard('Spot Net', fmtE(s.spot_net_eur), s.spot_net_eur >= 0 ? 'val-green' : 'val-red', fmtE(s.total_gains_eur) + ' gains / ' + fmtE(s.total_losses_eur) + ' losses'),
