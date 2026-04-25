@@ -7986,6 +7986,7 @@ const EUR_BGN = 1.95583;
 let TAX_TXS = []; // unified transactions
 let TAX_LOTS = []; // FIFO lots
 let TAX_IMPORTS = {}; // { binance: count, bybit: count, kraken: count }
+let TAX_REVOLUT_AUDIT = null; // Revolut consolidated statement (audit-only, NOT in crypto PnL)
 let currentTaxTab = 'ledger';
 
 // ── Ticker normalization ──
@@ -8061,6 +8062,16 @@ function detectExchangeCSV(text) {
   if (fname.includes('unifiedaccount_usdtperpetualtradehistory')) return 'bybit_perp_trades';
   if (fname.includes('unifiedaccount_usdtperpetualclosedpl')) return 'bybit_futures';
   if (fname.includes('unifiedaccount_assetchangedetails') || fname.includes('assetchangedetails')) return 'bybit_copytrading';
+
+  // ── Revolut consolidated statement (audit-only, semicolon-separated annual summary).
+  // Detected before any content sniffing so it never falls into Binance/Bybit/Kraken parsers.
+  if (fname.startsWith('consolidated_statement_') && fname.endsWith('.csv')) return 'revolut_consolidated_statement';
+  // Section headers can fall past the 1000-char prefix used elsewhere — scan the full text once.
+  const fullLower = text.toLowerCase();
+  if (fullLower.includes('current accounts summaries') &&
+      (fullLower.includes('investment services summaries') || fullLower.includes('flexible cash funds summaries'))) {
+    return 'revolut_consolidated_statement';
+  }
 
   // ── Bybit-specific content signatures (must run BEFORE loose Binance match) ──
   if (lower.includes('spot pairs') && (lower.includes('filled value') || lower.includes('filled price'))) return 'bybit_spot';
@@ -8756,12 +8767,85 @@ function showTaxStatus(msg, type) {
   el._timer = setTimeout(() => { el.className = 'import-status'; }, 10000);
 }
 
+// Revolut consolidated statement — semicolon-separated annual summary.
+// Audit-only: extracts Flexible Cash Funds + Investment Services totals for accountant notes.
+// Returns nothing taxable; never produces transactions for crypto PnL.
+function parseRevolutConsolidatedStatement(text) {
+  const summary = {};
+  const parseEur = s => {
+    if (!s) return null;
+    const m = String(s).match(/(-?)\s*€\s*([0-9.,]+)/);
+    if (!m) return null;
+    const num = parseFloat(m[2].replace(/,/g, ''));
+    return isNaN(num) ? null : (m[1] === '-' ? -num : num);
+  };
+  const FLEX_KEYS = {
+    'gross interest':           'flex_gross_interest_eur',
+    'net interest':             'flex_net_interest_eur',
+    'service fees':             'flex_service_fees_eur',
+    'net pnl':                  'flex_net_pnl_eur'
+  };
+  const INV_KEYS = {
+    'gross proceeds':           'inv_gross_proceeds_eur',
+    'cost basis':               'inv_cost_basis_eur',
+    'fees and other charges':   'inv_fees_eur',
+    'net pnl':                  'inv_net_pnl_eur',
+    'tax withheld on sales':    'inv_tax_withheld_sales_eur',
+    'tax withheld on purchase': 'inv_tax_withheld_purchase_eur'
+  };
+  let section = null; // 'flex' | 'inv' | null
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const lower = line.toLowerCase();
+    if (lower.includes('flexible cash funds summaries')) { section = 'flex'; continue; }
+    if (lower.includes('investment services summaries')) { section = 'inv'; continue; }
+    if (lower.includes('current accounts summaries') || lower.startsWith('personal account')) { section = null; continue; }
+    if (!section) continue;
+    const cells = line.split(';').map(c => c.trim());
+    const keymap = section === 'flex' ? FLEX_KEYS : INV_KEYS;
+    for (let i = 0; i < cells.length - 1; i++) {
+      const k = keymap[cells[i].toLowerCase()];
+      if (k && summary[k] === undefined) {
+        const v = parseEur(cells[i+1]);
+        if (v !== null) summary[k] = v;
+      }
+    }
+  }
+  // Derived: net interest = gross - service fees, when only those two are present.
+  if (summary.flex_gross_interest_eur !== undefined &&
+      summary.flex_service_fees_eur !== undefined &&
+      summary.flex_net_interest_eur === undefined) {
+    summary.flex_net_interest_eur = +(summary.flex_gross_interest_eur - summary.flex_service_fees_eur).toFixed(2);
+  }
+  return summary;
+}
+
 function importTaxCSV(text) {
   try {
     text = cleanCSV(text);
     const exchange = detectExchangeCSV(text);
     if (!exchange) {
       showTaxStatus('Could not detect exchange format. Supported: Binance, Bybit, Kraken CSV files. PDFs are not supported — use them as reference only.', 'error');
+      return;
+    }
+    // Revolut consolidated statement — audit-only branch, never enters the crypto PnL engine.
+    if (exchange === 'revolut_consolidated_statement') {
+      const summary = parseRevolutConsolidatedStatement(text);
+      const fname = importTaxCSV._currentFileName || ('revolut_consolidated_' + new Date().toISOString().slice(0,10) + '.csv');
+      TAX_REVOLUT_AUDIT = {
+        fileName: fname,
+        importedAt: new Date().toISOString(),
+        summary: summary
+      };
+      try { localStorage.setItem('tj_tax_revolut_audit', JSON.stringify(TAX_REVOLUT_AUDIT)); } catch(e) {}
+      if (!importTaxCSV._skipDocSave) {
+        saveTaxDoc(fname, text, 'Revolut (audit)', 0);
+      }
+      const fields = Object.keys(summary).length;
+      const extra = fields ? ' Extracted ' + fields + ' summary fields for accountant notes (Investment Services + Flexible Cash Funds — review-only, not crypto).' : '';
+      showTaxStatus('Revolut consolidated statement detected. Stored as audit-only proof. It is not included in crypto PnL.' + extra, 'success');
+      if (typeof renderTaxImportBadges === 'function') renderTaxImportBadges();
       return;
     }
     let txs = [];
@@ -9011,6 +9095,11 @@ function loadTaxData() {
   } else {
     TAX_TXS = []; TAX_LOTS = []; TAX_IMPORTS = {};
   }
+  // Revolut consolidated audit blob (separate from crypto PnL).
+  try {
+    const rev = localStorage.getItem('tj_tax_revolut_audit');
+    TAX_REVOLUT_AUDIT = rev ? JSON.parse(rev) : null;
+  } catch(e) { TAX_REVOLUT_AUDIT = null; }
   // If we have documents but no transactions, auto-reprocess
   if (TAX_TXS.length === 0 && TAX_DOCS.length > 0) {
     autoReprocessDocs();
@@ -9139,9 +9228,13 @@ function renderTaxImportBadges() {
     // Hide rarely-used sub-buckets when nothing at all
     if (!parsed && !stale && (ex === 'Binance Futures' || ex === 'Bybit Futures' || ex === 'Bybit CopyTrading')) return '';
     let cls, icon, label;
-    if (parsed > 0)     { cls = 'ok';   icon = '✅'; label = parsed + ' txs'; }
-    else if (stale > 0) { cls = 'none'; icon = '⚠️'; label = 'metadata only — re-upload CSV'; }
-    else                { cls = 'none'; icon = '○';  label = 'not imported'; }
+    if (ex === 'Revolut' && TAX_REVOLUT_AUDIT && parsed === 0) {
+      // Consolidated statement loaded as audit-only proof — not crypto PnL.
+      cls = 'ok'; icon = '📎';
+      label = 'audit-only proof (' + Object.keys(TAX_REVOLUT_AUDIT.summary || {}).length + ' fields)';
+    } else if (parsed > 0)     { cls = 'ok';   icon = '✅'; label = parsed + ' txs'; }
+    else if (stale > 0)        { cls = 'none'; icon = '⚠️'; label = 'metadata only — re-upload CSV'; }
+    else                       { cls = 'none'; icon = '○';  label = 'not imported'; }
     return `<div class="tax-badge ${cls}" title="${ex}: parsed=${parsed} · stale_metadata=${stale}">${icon} ${ex} (${label})</div>`;
   }).filter(Boolean).join('');
 }
@@ -9305,7 +9398,8 @@ const TAX_TODO_ITEMS = [
     { id: 'krk_ledger', label: 'Export Ledger (deposits, withdrawals, staking)', path: 'History → Export → Ledgers → Export CSV', done: false },
   ]},
   { group: 'Revolut (optional — audit trail)', items: [
-    { id: 'rev_statement', label: 'Export Account Statement', path: 'Profile → Statements → select year → CSV', done: false },
+    { id: 'rev_statement', label: 'Export per-currency Account Statement (for fiat transfer matching)', path: 'Profile → Statements → select EUR/USD/BGN account → CSV. For Revolut fiat transfer matching, upload a per-currency transaction statement CSV — NOT the consolidated annual summary.', done: false },
+    { id: 'rev_consolidated', label: 'Export Consolidated Statement (audit-only proof)', path: 'Profile → Statements → Consolidated → year → CSV. The consolidated statement is accepted as proof only — it is stored as audit-only and is not included in crypto PnL.', done: false },
   ]},
   { group: 'Import & Review', items: [
     { id: 'import_all', label: 'Drop all CSVs onto Tax page', path: 'Trading Journal → Taxes → drop files on import zone', done: false },
@@ -10046,6 +10140,26 @@ function exportBG_AccountantNotesMD(){
   md.push('- ' + (c.futures_count > 0 ? c.futures_count + ' futures/derivatives rows — confirm Bulgarian classification' : 'No futures activity detected'));
   md.push('- ' + (st.tx_count > 0 ? st.tx_count + ' stocks/ETF rows — separate Приложение 5 treatment' : 'No stocks/ETF activity detected'));
   md.push('- Revolut Crypto disposals (if any) handled out-of-band — verify the EUR PnL number against the Revolut consolidated statement.');
+  if (typeof TAX_REVOLUT_AUDIT !== 'undefined' && TAX_REVOLUT_AUDIT && TAX_REVOLUT_AUDIT.summary) {
+    const r = TAX_REVOLUT_AUDIT.summary;
+    const has = k => r[k] !== undefined && r[k] !== null;
+    md.push('- Revolut consolidated statement provided separately as fiat/investment audit trail. **Not included in crypto PnL calculation.** File: `' + (TAX_REVOLUT_AUDIT.fileName || 'consolidated_statement.csv') + '`.');
+    md.push('');
+    md.push('### Revolut Investment Services & Cash Funds (audit-only — review with accountant, NOT crypto)');
+    md.push('');
+    md.push('| Item | EUR |');
+    md.push('|---|---:|');
+    if (has('flex_gross_interest_eur')) md.push('| Flexible Cash Funds — gross interest | ' + fmt(r.flex_gross_interest_eur) + ' |');
+    if (has('flex_service_fees_eur'))   md.push('| Flexible Cash Funds — service fees | ' + fmt(r.flex_service_fees_eur) + ' |');
+    if (has('flex_net_interest_eur'))   md.push('| Flexible Cash Funds — net interest | ' + fmt(r.flex_net_interest_eur) + ' |');
+    if (has('flex_net_pnl_eur'))        md.push('| Flexible Cash Funds — net PnL | ' + fmt(r.flex_net_pnl_eur) + ' |');
+    if (has('inv_gross_proceeds_eur'))  md.push('| Investment Services — gross proceeds | ' + fmt(r.inv_gross_proceeds_eur) + ' |');
+    if (has('inv_cost_basis_eur'))      md.push('| Investment Services — cost basis | ' + fmt(r.inv_cost_basis_eur) + ' |');
+    if (has('inv_fees_eur'))            md.push('| Investment Services — fees | ' + fmt(r.inv_fees_eur) + ' |');
+    if (has('inv_net_pnl_eur'))         md.push('| Investment Services — net PnL | ' + fmt(r.inv_net_pnl_eur) + ' |');
+    md.push('');
+    md.push('These rows are Revolut **investment / cash-fund** items — not crypto disposals. They are listed for accountant review only and are excluded from the Приложение 5, code 508 (Виртуални валути) totals above.');
+  }
   md.push('- Volume threshold: spot disposals = ' + c.disposals_count + '. If the accountant considers volume to exceed activity-as-private-investment, reclassification as стопанска дейност (15% rate) may apply.');
   md.push('');
   md.push('## 8. Files in this package');
