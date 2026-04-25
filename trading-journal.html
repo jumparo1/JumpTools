@@ -8862,40 +8862,55 @@ function renderTaxes() {
 function setupTaxDropZone() {
   const dz = document.getElementById('taxDropZone');
   const fi = document.getElementById('taxFileInput');
+  if (!dz || !fi) { console.warn('Tax drop zone elements not found'); return; }
   if (dz._taxSetup) return; dz._taxSetup = true;
+
+  // Shared file processor — used by both click-to-pick and drag-drop paths
+  function handleTaxFile(file) {
+    const lower = (file.name || '').toLowerCase();
+    if (lower.endsWith('.pdf')) {
+      showTaxStatus('PDF files cannot be imported — use them as reference. Drop CSV files only.', 'error');
+      return;
+    }
+    if (!lower.endsWith('.csv')) {
+      showTaxStatus('Skipped "' + file.name + '" — only .csv files are supported (got "' + (lower.split('.').pop() || 'no extension') + '"). Save as CSV from Excel/Numbers and try again.', 'error');
+      return;
+    }
+    showTaxStatus('Reading "' + file.name + '" (' + (file.size/1024).toFixed(0) + ' KB)…', 'success');
+    const r = new FileReader();
+    const fname = file.name;
+    r.onload = ev => {
+      try {
+        importTaxCSV._currentFileName = fname;
+        importTaxCSV(ev.target.result);
+      } catch (err) {
+        console.error('Import failed for', fname, err);
+        showTaxStatus('Import failed for "' + fname + '": ' + (err && err.message || err), 'error');
+      } finally {
+        importTaxCSV._currentFileName = null;
+      }
+    };
+    r.onerror = () => showTaxStatus('Read failed for "' + fname + '". File may be locked or unreadable.', 'error');
+    r.readAsText(file);
+  }
+
   dz.addEventListener('click', () => fi.click());
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
   dz.addEventListener('drop', e => {
     e.preventDefault(); dz.classList.remove('drag-over');
-    for (let i = 0; i < e.dataTransfer.files.length; i++) {
-      const file = e.dataTransfer.files[i];
-      if (file.name.toLowerCase().endsWith('.pdf')) {
-        showTaxStatus('PDF files cannot be imported — use them as reference. Drop CSV files only.', 'error');
-        continue;
-      }
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        showTaxStatus('Skipped "' + file.name + '" — only CSV files are supported.', 'error');
-        continue;
-      }
-      const r = new FileReader();
-      const fname = file.name;
-      r.onload = ev => { importTaxCSV._currentFileName = fname; importTaxCSV(ev.target.result); importTaxCSV._currentFileName = null; };
-      r.readAsText(file);
-    }
+    const files = (e.dataTransfer && e.dataTransfer.files) || [];
+    if (!files.length) { showTaxStatus('Drag-drop produced no files. If you are using Parsec or a remote desktop, drag-drop may not transfer files — use the click-to-pick option instead.', 'error'); return; }
+    for (let i = 0; i < files.length; i++) handleTaxFile(files[i]);
   });
   fi.addEventListener('change', e => {
-    for (let i = 0; i < e.target.files.length; i++) {
-      const file = e.target.files[i];
-      if (file.name.toLowerCase().endsWith('.pdf')) {
-        showTaxStatus('PDF files cannot be imported — use them as reference. Drop CSV files only.', 'error');
-        continue;
-      }
-      const r = new FileReader();
-      const fname = file.name;
-      r.onload = ev => { importTaxCSV._currentFileName = fname; importTaxCSV(ev.target.result); importTaxCSV._currentFileName = null; };
-    }
+    const files = e.target.files || [];
+    if (!files.length) return;
+    for (let i = 0; i < files.length; i++) handleTaxFile(files[i]);
+    // Reset so picking the SAME file again still fires change
+    try { fi.value = ''; } catch(_) {}
   });
+  showTaxStatus('Upload handler ready. Click the drop zone or drag CSV files here.', 'success');
 }
 
 function renderTaxImportBadges() {
