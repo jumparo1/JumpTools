@@ -1819,6 +1819,7 @@ select.pt-input{cursor:pointer;}
             <button class="btn" onclick="exportBG_TransactionsNormalized()">4. Transactions Normalized CSV</button>
             <button class="btn" onclick="exportBG_NeedsReview()">5. Needs Review CSV</button>
             <button class="btn" onclick="exportBG_AccountantNotesMD()">6. Accountant Notes MD</button>
+            <button class="btn" onclick="exportBG_InvestmentReviewIBKR()" title="Investment / accountant-review rows from Interactive Brokers — separate from crypto">7. IBKR Investment Review CSV</button>
           </div>
         </div>
 
@@ -7987,6 +7988,7 @@ let TAX_TXS = []; // unified transactions
 let TAX_LOTS = []; // FIFO lots
 let TAX_IMPORTS = {}; // { binance: count, bybit: count, kraken: count }
 let TAX_REVOLUT_AUDIT = null; // Revolut consolidated statement (audit-only, NOT in crypto PnL)
+let TAX_IBKR = []; // Interactive Brokers — investment/accountant-review only, NEVER in crypto PnL
 let currentTaxTab = 'ledger';
 
 // ── Ticker normalization ──
@@ -8072,6 +8074,23 @@ function detectExchangeCSV(text) {
       (fullLower.includes('investment services summaries') || fullLower.includes('flexible cash funds summaries'))) {
     return 'revolut_consolidated_statement';
   }
+
+  // ── Interactive Brokers (IBKR) — Activity Statement / Flex Query.
+  // NEVER mixed with crypto PnL. Detection by filename or by the section,Header,Data row pattern.
+  const ibkrFilenameHit =
+    fname.includes('ibkr') ||
+    fname.includes('interactive') ||
+    fname.includes('activity_statement') || fname.includes('activity statement') ||
+    fname.includes('flex_query') || fname.includes('flex query') ||
+    /^u\d{6,}.*\.csv$/.test(fname);
+  const ibkrContentHit =
+    fullLower.includes('interactive brokers') ||
+    /(^|\n)statement,header,/i.test(text) ||
+    /(^|\n)statement,data,brokername,interactive brokers/i.test(text) ||
+    (fullLower.includes('asset category') && fullLower.includes('realized p/l') && fullLower.includes('comm/fee')) ||
+    fullLower.includes('realized & unrealized performance summary') ||
+    /(^|\n)trades,header,.*asset category.*symbol/i.test(text);
+  if (ibkrFilenameHit || ibkrContentHit) return 'ibkr_activity_statement';
 
   // ── Bybit-specific content signatures (must run BEFORE loose Binance match) ──
   if (lower.includes('spot pairs') && (lower.includes('filled value') || lower.includes('filled price'))) return 'bybit_spot';
@@ -8767,6 +8786,207 @@ function showTaxStatus(msg, type) {
   el._timer = setTimeout(() => { el.className = 'import-status'; }, 10000);
 }
 
+// Interactive Brokers — Activity Statement / Flex Query.
+// Section-based: each row is `<section>,<Header|Data|SubTotal|Total>,<col1>,<col2>,...`.
+// Investment / accountant-review only — NEVER enters crypto PnL.
+// Diagnostic-first: any unrecognized section is preserved as `ibkr_unclassified_review` with raw fields.
+function parseIBKRActivityStatement(text) {
+  const sections = {}; // { sectionName: { headers: [...], rows: [obj], counts: {...} } }
+  const allRows = parseCSVRows(text);
+  for (const row of allRows) {
+    if (!row || row.length < 2) continue;
+    const section = String(row[0]||'').trim();
+    const dataType = String(row[1]||'').trim();
+    if (!section) continue;
+    sections[section] = sections[section] || { headers: null, rows: [], counts: { Header:0, Data:0, SubTotal:0, Total:0, Other:0 } };
+    if (dataType === 'Header') {
+      sections[section].headers = row.slice(2).map(h => String(h||'').trim());
+      sections[section].counts.Header++;
+    } else if (dataType === 'Data') {
+      const headers = sections[section].headers;
+      if (headers && headers.length) {
+        const obj = {};
+        headers.forEach((h,i) => { if (h) obj[h] = String(row[i+2] !== undefined ? row[i+2] : '').trim(); });
+        sections[section].rows.push(obj);
+      }
+      sections[section].counts.Data++;
+    } else if (dataType === 'SubTotal') sections[section].counts.SubTotal++;
+    else if (dataType === 'Total') sections[section].counts.Total++;
+    else sections[section].counts.Other++;
+  }
+
+  const num = v => { const n = parseFloat(String(v||'').replace(/,/g,'')); return isNaN(n) ? 0 : n; };
+  const fname = importTaxCSV._currentFileName || '';
+  const typed = [];
+  const blank = {
+    source_file: fname, section: '', ibkr_type: 'ibkr_unclassified_review',
+    date: '', asset_category: '', symbol: '', description: '', action: '',
+    quantity: 0, price: 0, proceeds: 0, cost_basis: 0, realized_pnl: 0,
+    commission_fee: 0, currency: '', withholding_tax: 0, raw: null
+  };
+
+  // ── Trades ── (Stocks / ETFs / Options / Forex)
+  if (sections['Trades'] && sections['Trades'].rows.length) {
+    sections['Trades'].rows.forEach(r => {
+      const cat = (r['Asset Category']||'').toLowerCase();
+      let t = 'ibkr_unclassified_review';
+      if (/option/.test(cat)) t = 'ibkr_option_trade';
+      else if (/etf|fund/.test(cat)) t = 'ibkr_etf_trade';
+      else if (/stock|equity/.test(cat)) t = 'ibkr_stock_trade';
+      else if (/forex|cash|currency/.test(cat)) t = 'ibkr_fx_conversion';
+      typed.push(Object.assign({}, blank, {
+        section: 'Trades', ibkr_type: t,
+        date: r['Date/Time']||r['Date']||'',
+        asset_category: r['Asset Category']||'',
+        symbol: r['Symbol']||'',
+        description: r['Description']||'',
+        action: r['Code']||'',
+        quantity: num(r['Quantity']),
+        price: num(r['T. Price']||r['Trade Price']),
+        proceeds: num(r['Proceeds']),
+        cost_basis: num(r['Basis']),
+        realized_pnl: num(r['Realized P/L']),
+        commission_fee: num(r['Comm/Fee']||r['Commission']),
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  }
+
+  // ── Dividends ──
+  if (sections['Dividends'] && sections['Dividends'].rows.length) {
+    sections['Dividends'].rows.forEach(r => {
+      typed.push(Object.assign({}, blank, {
+        section: 'Dividends', ibkr_type: 'ibkr_dividend',
+        date: r['Date']||'',
+        description: r['Description']||'',
+        proceeds: num(r['Amount']),
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  }
+
+  // ── Withholding Tax ──
+  if (sections['Withholding Tax'] && sections['Withholding Tax'].rows.length) {
+    sections['Withholding Tax'].rows.forEach(r => {
+      typed.push(Object.assign({}, blank, {
+        section: 'Withholding Tax', ibkr_type: 'ibkr_withholding_tax',
+        date: r['Date']||'',
+        description: r['Description']||'',
+        action: r['Code']||'',
+        withholding_tax: num(r['Amount']),
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  }
+
+  // ── Interest ──
+  if (sections['Interest'] && sections['Interest'].rows.length) {
+    sections['Interest'].rows.forEach(r => {
+      typed.push(Object.assign({}, blank, {
+        section: 'Interest', ibkr_type: 'ibkr_interest',
+        date: r['Date']||'',
+        description: r['Description']||'',
+        proceeds: num(r['Amount']),
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  }
+
+  // ── Fees ──
+  if (sections['Fees'] && sections['Fees'].rows.length) {
+    sections['Fees'].rows.forEach(r => {
+      typed.push(Object.assign({}, blank, {
+        section: 'Fees', ibkr_type: 'ibkr_fee',
+        date: r['Date']||'',
+        description: r['Description']||'',
+        commission_fee: num(r['Amount']),
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  }
+
+  // ── Deposits & Withdrawals ──
+  if (sections['Deposits & Withdrawals'] && sections['Deposits & Withdrawals'].rows.length) {
+    sections['Deposits & Withdrawals'].rows.forEach(r => {
+      const amt = num(r['Amount']);
+      typed.push(Object.assign({}, blank, {
+        section: 'Deposits & Withdrawals',
+        ibkr_type: amt >= 0 ? 'ibkr_deposit' : 'ibkr_withdrawal',
+        date: r['Settle Date']||r['Date']||'',
+        description: r['Description']||'',
+        proceeds: amt,
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  }
+
+  // ── Forex P/L Details ──
+  if (sections['Forex P/L Details'] && sections['Forex P/L Details'].rows.length) {
+    sections['Forex P/L Details'].rows.forEach(r => {
+      typed.push(Object.assign({}, blank, {
+        section: 'Forex P/L Details', ibkr_type: 'ibkr_fx_conversion',
+        date: r['Date/Time']||r['Date']||'',
+        asset_category: 'Forex',
+        symbol: r['Symbol']||r['Description']||'',
+        description: r['Description']||'',
+        quantity: num(r['Quantity']),
+        realized_pnl: num(r['Realized P/L']),
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  }
+
+  // ── Anything else → unclassified review ──
+  // Skipped: meta sections that have no taxable rows.
+  const META_SECTIONS = new Set([
+    'Statement','Account Information','Net Asset Value','Change in NAV',
+    'Mark-to-Market Performance Summary','Realized & Unrealized Performance Summary',
+    'Open Positions','Cash Report','Codes','Notes','Notes/Legal Notes','Disclaimer','Total','Title',
+    'Financial Instrument Information','Transfers','Corporate Actions','Trade Confirmation Flags',
+    'Account Capabilities','Country and Tax Residency','Concentration of Investments by Asset Class'
+  ]);
+  const HANDLED = new Set(['Trades','Dividends','Withholding Tax','Interest','Fees','Deposits & Withdrawals','Forex P/L Details']);
+  Object.keys(sections).forEach(sec => {
+    if (HANDLED.has(sec) || META_SECTIONS.has(sec)) return;
+    if (!sections[sec].rows || !sections[sec].rows.length) return;
+    sections[sec].rows.forEach(r => {
+      typed.push(Object.assign({}, blank, {
+        section: sec, ibkr_type: 'ibkr_unclassified_review',
+        date: r['Date/Time']||r['Date']||'',
+        symbol: r['Symbol']||'',
+        description: r['Description']||'',
+        proceeds: num(r['Amount']||r['Proceeds']),
+        commission_fee: num(r['Comm/Fee']||r['Commission']),
+        realized_pnl: num(r['Realized P/L']),
+        currency: r['Currency']||'',
+        raw: r
+      }));
+    });
+  });
+
+  // Diagnostics for DevTools
+  const sectionSummary = Object.entries(sections).map(([k,v]) => ({
+    section: k, headers: v.headers, counts: v.counts, sample_row: v.rows[0] || null
+  }));
+  const firstLines = text.split(/\r?\n/).filter(Boolean).slice(0, 20);
+
+  return { typed_rows: typed, sections, diagnostics: {
+    file: fname,
+    delimiter: 'comma (IBKR Activity Statement)',
+    section_count: Object.keys(sections).length,
+    typed_row_count: typed.length,
+    section_summary: sectionSummary,
+    first_20_lines: firstLines
+  }};
+}
+
 // Revolut consolidated statement — semicolon-separated annual summary.
 // Audit-only: extracts Flexible Cash Funds + Investment Services totals for accountant notes.
 // Returns nothing taxable; never produces transactions for crypto PnL.
@@ -8827,6 +9047,36 @@ function importTaxCSV(text) {
     const exchange = detectExchangeCSV(text);
     if (!exchange) {
       showTaxStatus('Could not detect exchange format. Supported: Binance, Bybit, Kraken CSV files. PDFs are not supported — use them as reference only.', 'error');
+      return;
+    }
+    // Interactive Brokers — investment / accountant-review branch. NEVER enters crypto PnL engine.
+    if (exchange === 'ibkr_activity_statement') {
+      const result = parseIBKRActivityStatement(text);
+      const fname = importTaxCSV._currentFileName || ('ibkr_activity_' + new Date().toISOString().slice(0,10) + '.csv');
+      // Annotate rows with import metadata so they survive serialization & reload.
+      const importedAt = new Date().toISOString();
+      result.typed_rows.forEach(r => { r.imported_at = importedAt; if (!r.source_file) r.source_file = fname; });
+      // Append (no in-memory dedupe — TAX_DOCS de-dupes by file; row-level dedup is exposed in diagnostics).
+      TAX_IBKR.push(...result.typed_rows);
+      try { localStorage.setItem('tj_tax_ibkr', JSON.stringify(TAX_IBKR)); } catch(e) {
+        console.warn('[IBKR] localStorage save failed (size?):', e);
+      }
+      console.warn('[IBKR] Activity Statement parsed —', result.diagnostics.typed_row_count, 'review rows from',
+                   result.diagnostics.section_count, 'sections. File:', fname);
+      console.warn('[IBKR] Section summary:', result.diagnostics.section_summary);
+      console.warn('[IBKR] First 20 non-empty lines:', result.diagnostics.first_20_lines);
+      const unclassified = result.typed_rows.filter(r => r.ibkr_type === 'ibkr_unclassified_review').length;
+      const byType = {};
+      result.typed_rows.forEach(r => { byType[r.ibkr_type] = (byType[r.ibkr_type]||0) + 1; });
+      console.warn('[IBKR] Rows by ibkr_type:', byType);
+      if (!importTaxCSV._skipDocSave) {
+        saveTaxDoc(fname, text, 'IBKR (review)', result.typed_rows.length);
+      }
+      const summary = Object.entries(byType).map(([k,v]) => k.replace(/^ibkr_/,'') + '=' + v).join(', ');
+      const warn = unclassified > 0 ? ' ⚠️ ' + unclassified + ' rows unclassified — see DevTools console for diagnostics.' : '';
+      showTaxStatus('IBKR file detected. Parsed as investment/accountant-review data. Not included in crypto PnL. Rows: ' + result.typed_rows.length + ' (' + summary + ').' + warn, 'success');
+      if (typeof renderTaxImportBadges === 'function') renderTaxImportBadges();
+      if (typeof renderTaxOverview === 'function') renderTaxOverview();
       return;
     }
     // Revolut consolidated statement — audit-only branch, never enters the crypto PnL engine.
@@ -9100,6 +9350,12 @@ function loadTaxData() {
     const rev = localStorage.getItem('tj_tax_revolut_audit');
     TAX_REVOLUT_AUDIT = rev ? JSON.parse(rev) : null;
   } catch(e) { TAX_REVOLUT_AUDIT = null; }
+  // IBKR rows (investment / accountant-review only — never in crypto PnL).
+  try {
+    const ibkr = localStorage.getItem('tj_tax_ibkr');
+    TAX_IBKR = ibkr ? JSON.parse(ibkr) : [];
+    if (!Array.isArray(TAX_IBKR)) TAX_IBKR = [];
+  } catch(e) { TAX_IBKR = []; }
   // If we have documents but no transactions, auto-reprocess
   if (TAX_TXS.length === 0 && TAX_DOCS.length > 0) {
     autoReprocessDocs();
@@ -9217,11 +9473,13 @@ function setupTaxDropZone() {
 function renderTaxImportBadges() {
   const el = document.getElementById('taxImportBadges');
   if (!el) return;
-  const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit CopyTrading', 'Bybit Futures', 'Kraken', 'Revolut'];
+  const sources = ['Binance', 'Binance Futures', 'Bybit', 'Bybit CopyTrading', 'Bybit Futures', 'Kraken', 'Revolut', 'IBKR'];
   // Truth = parsed transactions in TAX_TXS, not stale TAX_IMPORTS metadata.
   // Stale metadata may exist after Firebase rawFiles can no longer be loaded.
   const parsedCounts = {};
   TAX_TXS.forEach(t => { parsedCounts[t.exchange] = (parsedCounts[t.exchange] || 0) + 1; });
+  const ibkrCount = (Array.isArray(TAX_IBKR) ? TAX_IBKR.length : 0);
+  const ibkrUnclassified = (Array.isArray(TAX_IBKR) ? TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_unclassified_review').length : 0);
   el.innerHTML = sources.map(ex => {
     const parsed = parsedCounts[ex] || 0;
     const stale  = TAX_IMPORTS[ex] || 0;
@@ -9232,6 +9490,11 @@ function renderTaxImportBadges() {
       // Consolidated statement loaded as audit-only proof — not crypto PnL.
       cls = 'ok'; icon = '📎';
       label = 'audit-only proof (' + Object.keys(TAX_REVOLUT_AUDIT.summary || {}).length + ' fields)';
+    } else if (ex === 'IBKR') {
+      // IBKR is investment / accountant-review only — NEVER crypto PnL.
+      if (ibkrCount === 0) { cls = 'none'; icon = '○';  label = 'not imported'; }
+      else if (ibkrUnclassified > 0) { cls = 'none'; icon = '⚠️'; label = ibkrCount + ' review rows · ' + ibkrUnclassified + ' need review'; }
+      else { cls = 'ok'; icon = '📎'; label = ibkrCount + ' review rows (not in crypto PnL)'; }
     } else if (parsed > 0)     { cls = 'ok';   icon = '✅'; label = parsed + ' txs'; }
     else if (stale > 0)        { cls = 'none'; icon = '⚠️'; label = 'metadata only — re-upload CSV'; }
     else                       { cls = 'none'; icon = '○';  label = 'not imported'; }
@@ -9400,6 +9663,10 @@ const TAX_TODO_ITEMS = [
   { group: 'Revolut (optional — audit trail)', items: [
     { id: 'rev_statement', label: 'Export per-currency Account Statement (for fiat transfer matching)', path: 'Profile → Statements → select EUR/USD/BGN account → CSV. For Revolut fiat transfer matching, upload a per-currency transaction statement CSV — NOT the consolidated annual summary.', done: false },
     { id: 'rev_consolidated', label: 'Export Consolidated Statement (audit-only proof)', path: 'Profile → Statements → Consolidated → year → CSV. The consolidated statement is accepted as proof only — it is stored as audit-only and is not included in crypto PnL.', done: false },
+  ]},
+  { group: 'Interactive Brokers — IBKR (investment review — NOT crypto)', items: [
+    { id: 'ibkr_activity', label: 'Export Activity Statement (CSV)', path: 'Reports → Statements → Activity → Format=CSV → period=Annual 2025. IBKR rows are excluded from crypto PnL and must be reviewed separately for Bulgarian tax filing.', done: false },
+    { id: 'ibkr_flex', label: 'Export Flex Query (CSV — optional, for trade-level detail)', path: 'Reports → Flex Queries → run yearly query → CSV. Investment / dividends / withholding tax / interest land in BG_2025_Investment_Review_IBKR.csv.', done: false },
   ]},
   { group: 'Import & Review', items: [
     { id: 'import_all', label: 'Drop all CSVs onto Tax page', path: 'Trading Journal → Taxes → drop files on import zone', done: false },
@@ -9996,6 +10263,10 @@ function exportBG_NAPAppendix5Input(){
     ['stocks_etfs_present', s.stocks.tx_count > 0 ? 'YES — see separate file/line' : 'no'],
     ['stocks_etfs_net_eur', s.stocks.combined_net_eur.toFixed(2)],
     ['notes_for_accountant','Stocks/ETFs are tracked separately and may belong to a different Приложение 5 line. Confirm classification before filing.'],
+    ['ibkr_present', (Array.isArray(TAX_IBKR) && TAX_IBKR.length > 0) ? ('YES — ' + TAX_IBKR.length + ' review rows in BG_'+s.year+'_Investment_Review_IBKR.csv') : 'no'],
+    ['ibkr_review_rows', String(Array.isArray(TAX_IBKR) ? TAX_IBKR.length : 0)],
+    ['ibkr_in_virtual_currency_totals', 'NO — IBKR is excluded from crypto code 508 totals above'],
+    ['ibkr_notes_for_accountant', 'IBKR securities/investment rows are not included in crypto virtual-currency totals. Accountant must review correct Приложение 5 placement separately from crypto.'],
     ['disclaimer', BG_DISCLAIMER],
     ['generated_at', s.generated_at]
   ];
@@ -10008,7 +10279,63 @@ function exportBG_ExchangeSummary(){
   const headers = ['exchange','parsed_rows','spot_net_eur','futures_net_eur','fees_eur','rewards_eur','deposits','withdrawals','needs_review_count'];
   const lines = [bg_csvRow(headers)];
   exch.forEach(e => lines.push(bg_csvRow([e.exchange,e.parsed_rows,e.spot_net_eur.toFixed(2),e.futures_net_eur.toFixed(2),e.fees_eur.toFixed(2),e.rewards_eur.toFixed(2),e.deposits,e.withdrawals,e.needs_review_count])));
+  // ── IBKR investment-review rows (separate from crypto — listed for accountant audit only) ──
+  if (Array.isArray(TAX_IBKR) && TAX_IBKR.length) {
+    const groups = {
+      'IBKR Stocks/ETFs':        TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_stock_trade' || r.ibkr_type === 'ibkr_etf_trade'),
+      'IBKR Options':            TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_option_trade'),
+      'IBKR Dividends':          TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_dividend'),
+      'IBKR Withholding Tax':    TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_withholding_tax'),
+      'IBKR Interest':           TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_interest'),
+      'IBKR Fees':               TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_fee'),
+      'IBKR FX/Reconciliation':  TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_fx_conversion'),
+      'IBKR Deposits/Withdrawals (reconciliation)': TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_deposit' || r.ibkr_type === 'ibkr_withdrawal'),
+      'IBKR Unclassified — needs review': TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_unclassified_review')
+    };
+    Object.entries(groups).forEach(([label, rows]) => {
+      if (!rows.length) return;
+      const realized = rows.reduce((a,r) => a + (Number(r.realized_pnl)||0), 0);
+      const fees     = rows.reduce((a,r) => a + (Number(r.commission_fee)||0), 0);
+      const wh       = rows.reduce((a,r) => a + (Number(r.withholding_tax)||0), 0);
+      // realized PnL goes into spot_net_eur slot for visibility — but this is NOT crypto.
+      lines.push(bg_csvRow([label, rows.length, realized.toFixed(2), '0.00', fees.toFixed(2), wh.toFixed(2), 0, 0, label === 'IBKR Unclassified — needs review' ? rows.length : 0]));
+    });
+  }
   downloadText('BG_'+s.year+'_Exchange_Summary.csv', lines.join('\n'));
+}
+
+function exportBG_InvestmentReviewIBKR(){
+  const year = bg_currentYear();
+  const headers = [
+    'source_file','section','date','asset_category','symbol','description','action',
+    'quantity','price','proceeds','cost_basis','realized_pnl','commission_fee','currency',
+    'withholding_tax','ibkr_type','included_in_crypto_pnl','accountant_review_reason'
+  ];
+  const lines = [bg_csvRow(headers)];
+  const reasonFor = t => {
+    if (t === 'ibkr_stock_trade') return 'Stocks — separate Приложение 5 line, not crypto code 508';
+    if (t === 'ibkr_etf_trade')   return 'ETFs — separate Приложение 5 line, not crypto code 508';
+    if (t === 'ibkr_option_trade')return 'Options — separate Приложение 5 line, accountant must confirm treatment';
+    if (t === 'ibkr_dividend')    return 'Dividend income — separate income line, not capital gain, not crypto';
+    if (t === 'ibkr_withholding_tax') return 'Foreign tax withheld — credit/relief item, accountant must confirm';
+    if (t === 'ibkr_interest')    return 'Interest income — separate income line, not crypto';
+    if (t === 'ibkr_fee')         return 'Brokerage fee — reduces investment net, not crypto';
+    if (t === 'ibkr_fx_conversion') return 'FX conversion — reconciliation only, not crypto PnL';
+    if (t === 'ibkr_deposit' || t === 'ibkr_withdrawal') return 'Cash movement — reconciliation only, not income/expense';
+    return 'Unclassified IBKR row — accountant review required';
+  };
+  if (Array.isArray(TAX_IBKR)) TAX_IBKR.forEach(r => {
+    lines.push(bg_csvRow([
+      r.source_file||'', r.section||'', r.date||'', r.asset_category||'', r.symbol||'',
+      r.description||'', r.action||'',
+      (Number(r.quantity)||0).toString(), (Number(r.price)||0).toFixed(4),
+      (Number(r.proceeds)||0).toFixed(2), (Number(r.cost_basis)||0).toFixed(2),
+      (Number(r.realized_pnl)||0).toFixed(2), (Number(r.commission_fee)||0).toFixed(2),
+      r.currency||'', (Number(r.withholding_tax)||0).toFixed(2),
+      r.ibkr_type||'', 'NO', reasonFor(r.ibkr_type)
+    ]));
+  });
+  downloadText('BG_'+year+'_Investment_Review_IBKR.csv', lines.join('\n'));
 }
 
 function exportBG_TransactionsNormalized(){
@@ -10160,6 +10487,35 @@ function exportBG_AccountantNotesMD(){
     md.push('');
     md.push('These rows are Revolut **investment / cash-fund** items — not crypto disposals. They are listed for accountant review only and are excluded from the Приложение 5, code 508 (Виртуални валути) totals above.');
   }
+  if (Array.isArray(TAX_IBKR) && TAX_IBKR.length > 0) {
+    const byType = {};
+    TAX_IBKR.forEach(r => { byType[r.ibkr_type] = (byType[r.ibkr_type]||0) + 1; });
+    const sumRealized = TAX_IBKR.reduce((a,r) => a + (Number(r.realized_pnl)||0), 0);
+    const sumDividends = TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_dividend').reduce((a,r) => a + (Number(r.proceeds)||0), 0);
+    const sumWh = TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_withholding_tax').reduce((a,r) => a + (Number(r.withholding_tax)||0), 0);
+    const sumInterest = TAX_IBKR.filter(r => r.ibkr_type === 'ibkr_interest').reduce((a,r) => a + (Number(r.proceeds)||0), 0);
+    const unclassified = byType['ibkr_unclassified_review'] || 0;
+    md.push('- Interactive Brokers (IBKR) data is included as separate investment/accountant-review data. **It is excluded from crypto virtual-currency totals.** Final classification and placement in the Bulgarian annual return should be confirmed by a qualified Bulgarian accountant or tax advisor. See `BG_'+s.year+'_Investment_Review_IBKR.csv` for the full row-level export.');
+    md.push('');
+    md.push('### IBKR investment-review summary (NOT crypto, NOT in code 508)');
+    md.push('');
+    md.push('| Category | Rows | Native-currency total |');
+    md.push('|---|---:|---:|');
+    if (byType['ibkr_stock_trade'])       md.push('| Stocks (realized P/L) | ' + byType['ibkr_stock_trade'] + ' | — see CSV |');
+    if (byType['ibkr_etf_trade'])         md.push('| ETFs (realized P/L) | ' + byType['ibkr_etf_trade'] + ' | — see CSV |');
+    if (byType['ibkr_option_trade'])      md.push('| Options (realized P/L) | ' + byType['ibkr_option_trade'] + ' | — see CSV |');
+    if (byType['ibkr_dividend'])          md.push('| Dividends | ' + byType['ibkr_dividend'] + ' | ' + sumDividends.toFixed(2) + ' |');
+    if (byType['ibkr_withholding_tax'])   md.push('| Withholding tax | ' + byType['ibkr_withholding_tax'] + ' | ' + sumWh.toFixed(2) + ' |');
+    if (byType['ibkr_interest'])          md.push('| Interest | ' + byType['ibkr_interest'] + ' | ' + sumInterest.toFixed(2) + ' |');
+    if (byType['ibkr_fee'])               md.push('| Fees | ' + byType['ibkr_fee'] + ' | — see CSV |');
+    if (byType['ibkr_fx_conversion'])     md.push('| FX conversions (reconciliation) | ' + byType['ibkr_fx_conversion'] + ' | — reconciliation only |');
+    if (byType['ibkr_deposit'])           md.push('| Deposits (reconciliation) | ' + byType['ibkr_deposit'] + ' | — reconciliation only |');
+    if (byType['ibkr_withdrawal'])        md.push('| Withdrawals (reconciliation) | ' + byType['ibkr_withdrawal'] + ' | — reconciliation only |');
+    if (unclassified > 0)                 md.push('| **Unclassified — needs review** | **' + unclassified + '** | review required |');
+    md.push('');
+    md.push('Sum of explicit `realized_pnl` across IBKR rows (informational only; review with accountant): ' + sumRealized.toFixed(2) + ' (native currency, mostly USD). FX-to-EUR conversion not auto-applied — let the accountant confirm the rate.');
+    md.push('');
+  }
   md.push('- Volume threshold: spot disposals = ' + c.disposals_count + '. If the accountant considers volume to exceed activity-as-private-investment, reclassification as стопанска дейност (15% rate) may apply.');
   md.push('');
   md.push('## 8. Files in this package');
@@ -10184,7 +10540,10 @@ function exportBG_All(){
   exportBG_TransactionsNormalized();
   exportBG_NeedsReview();
   exportBG_AccountantNotesMD();
-  if (typeof showTaxStatus === 'function') showTaxStatus('Exported 6 BG accountant package files. Check Downloads.', 'success');
+  const ibkrPresent = Array.isArray(TAX_IBKR) && TAX_IBKR.length > 0;
+  if (ibkrPresent) exportBG_InvestmentReviewIBKR();
+  const fileCount = ibkrPresent ? 7 : 6;
+  if (typeof showTaxStatus === 'function') showTaxStatus('Exported ' + fileCount + ' BG accountant package files' + (ibkrPresent ? ' (incl. IBKR investment review)' : '') + '. Check Downloads.', 'success');
 }
 
 function downloadText(filename, content) {
