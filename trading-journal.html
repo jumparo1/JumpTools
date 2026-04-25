@@ -1808,9 +1808,23 @@ select.pt-input{cursor:pointer;}
     <!-- Export -->
     <div class="sub-panel" id="taxpanel-export">
       <div style="margin-top:12px;max-width:700px">
-        <h3 class="section-title">Accountant Package</h3>
+        <h3 class="section-title">🇧🇬 Bulgaria 2025 — Accountant Package (CSV/MD)</h3>
+        <p style="font-size:12px;color:var(--tx2);margin:4px 0 10px 0">Six structured files with crypto vs stocks/ETFs split. Use these to send the accountant or import into spreadsheet tools.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-primary" onclick="exportBG_All()" style="padding:12px 20px">⬇️ Export ALL 6 files — accountant package</button>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn" onclick="exportBG_TaxSummaryCSV()">1. Tax Summary CSV</button>
+            <button class="btn" onclick="exportBG_NAPAppendix5Input()">2. NAP Приложение 5 Input CSV</button>
+            <button class="btn" onclick="exportBG_ExchangeSummary()">3. Exchange Summary CSV</button>
+            <button class="btn" onclick="exportBG_TransactionsNormalized()">4. Transactions Normalized CSV</button>
+            <button class="btn" onclick="exportBG_NeedsReview()">5. Needs Review CSV</button>
+            <button class="btn" onclick="exportBG_AccountantNotesMD()">6. Accountant Notes MD</button>
+          </div>
+        </div>
+
+        <h3 class="section-title" style="margin-top:24px">Legacy exports (text format)</h3>
         <div style="display:flex;flex-direction:column;gap:10px">
-          <button class="btn btn-primary" onclick="exportAppendix5()" style="padding:12px 20px">🇧🇬 Приложение 5 — готово за попълване (BG/EN)</button>
+          <button class="btn" onclick="exportAppendix5()" style="padding:12px 20px">🇧🇬 Приложение 5 — готово за попълване (BG/EN, .txt)</button>
           <button class="btn" onclick="exportTaxSummary()" style="padding:12px 20px">📋 Tax Summary (English — for accountant review)</button>
           <button class="btn" onclick="exportFullLedger()" style="padding:12px 20px">📊 Full Transaction Ledger (CSV — all trades)</button>
           <button class="btn" onclick="exportAccountantLetter()" style="padding:12px 20px">📝 Accountant Cover Letter (BG)</button>
@@ -9466,6 +9480,351 @@ function exportAccountantLetter() {
     'Борислав Йорданов',
   ].filter(l => l !== '');
   downloadText('Accountant_Letter_' + year + '.txt', lines.join('\n'));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BULGARIA 2025 — ACCOUNTANT-GRADE EXPORT PACKAGE
+   Six CSV/MD files. Additive; reads TAX_TXS / TAX_DOCS only.
+   Crypto vs Stocks/ETFs split by ticker classification.
+   ═══════════════════════════════════════════════════════════ */
+const BG_DISCLAIMER = 'Prepared for accountant review. Final filing treatment must be confirmed by a qualified Bulgarian accountant or tax advisor.';
+
+const BG_STOCK_TICKERS = new Set([
+  'AAPL','TSLA','MSFT','GOOGL','GOOG','AMZN','META','NVDA','NFLX','AMD','INTC',
+  'BABA','V','MA','JPM','BAC','WFC','GS','C','MS','BLK',
+  'WMT','DIS','KO','PEP','MCD','NKE','BA','GE','F','GM','T','VZ',
+  'CVX','XOM','BP','SHEL','PFE','JNJ','MRK','LLY','ABBV','MRNA','BNTX',
+  'CRWD','PLTR','SHOP','SQ','PYPL','COIN','HOOD','RIVN','LCID','NIO','NKLA','UBER','LYFT','SNAP','PINS','ROKU','TWLO','OKTA','ZM','DDOG','NET',
+  'SPY','VOO','VTI','QQQ','IWM','DIA','EFA','EEM','VEA','VWO',
+  'GLD','SLV','USO','UNG','TLT','IEF','HYG','LQD',
+  'ARKK','ARKG','ARKQ','ARKF','ARKW','XLE','XLF','XLK','XLV','XLY','XLI','XLB','XLU','XLP','XLRE','XLC',
+  'GME','AMC','BB','NOK',
+  'GBTC','ETHE','BITO','MSTR'
+]);
+
+function bg_classifyAssetClass(asset, exchange){
+  if (!asset) return 'crypto';
+  const a = String(asset).toUpperCase().replace(/^X(?=[A-Z]{3,})/,'').replace(/\.X$/,'');
+  if (exchange === 'Kraken' && BG_STOCK_TICKERS.has(a)) return 'stocks_etfs';
+  return 'crypto';
+}
+
+function bg_eurUsd(){ return getEurUsdRate() || 0.92; }
+
+function bg_proceedsEur(t){
+  const priceEur = t.disposal_price_eur || (t.price_unit * bg_eurUsd());
+  return (t.amount || 0) * (priceEur || 0);
+}
+
+function bg_feeEur(t){
+  if (!t.fee_amount) return 0;
+  const fa = String(t.fee_asset || '').toUpperCase();
+  if (fa === 'EUR') return t.fee_amount;
+  if (['USD','USDT','USDC','BUSD','DAI','FDUSD','TUSD','USDP'].includes(fa)) return t.fee_amount * bg_eurUsd();
+  if (fa === 'BGN') return t.fee_amount / EUR_BGN;
+  if (t.price_unit) return t.fee_amount * t.price_unit * bg_eurUsd();
+  return 0;
+}
+
+function bg_csvCell(v){
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+function bg_csvRow(arr){ return arr.map(bg_csvCell).join(','); }
+function bg_currentYear(){ return document.getElementById('taxYear').value || '2025'; }
+
+function computeBGSummary(){
+  const year = bg_currentYear();
+  const all = TAX_TXS.filter(t => t.date && String(t.date.getFullYear()) === String(year));
+  function bucket(arr){
+    const disposals = arr.filter(t => t.status === 'taxable_disposal' && t.realized_gain_eur !== undefined);
+    const proceeds = disposals.reduce((s,t) => s + bg_proceedsEur(t), 0);
+    const cost = disposals.reduce((s,t) => s + (t.cost_basis_eur||0), 0);
+    const gains = disposals.filter(t => t.realized_gain_eur > 0).reduce((s,t) => s + t.realized_gain_eur, 0);
+    const losses = disposals.filter(t => t.realized_gain_eur < 0).reduce((s,t) => s + Math.abs(t.realized_gain_eur), 0);
+    const spotNet = gains - losses;
+    const futuresTxs = arr.filter(t => t.status === 'futures_pnl' && t.realized_gain_eur !== undefined);
+    const futuresNet = futuresTxs.reduce((s,t) => s + (t.realized_gain_eur||0), 0);
+    const earnTxs = arr.filter(t => t.status === 'earn_income');
+    const earnEur = earnTxs.reduce((s,t) => s + (t.realized_gain_eur||0), 0);
+    const fees = arr.reduce((s,t) => s + bg_feeEur(t), 0);
+    const review = arr.filter(t => t.status === 'needs_review').length;
+    return {
+      tx_count: arr.length, disposals_count: disposals.length, futures_count: futuresTxs.length,
+      proceeds_eur: proceeds, cost_basis_eur: cost,
+      gains_eur: gains, losses_eur: losses, spot_net_eur: spotNet,
+      futures_net_eur: futuresNet, earn_count: earnTxs.length, earn_eur: earnEur,
+      fees_eur: fees,
+      deposits_count: arr.filter(t => t.type === 'deposit').length,
+      withdrawals_count: arr.filter(t => t.type === 'withdrawal').length,
+      review_count: review, combined_net_eur: spotNet + futuresNet + earnEur
+    };
+  }
+  const cryptoTxs = all.filter(t => bg_classifyAssetClass(t.asset, t.exchange) === 'crypto');
+  const stockTxs  = all.filter(t => bg_classifyAssetClass(t.asset, t.exchange) === 'stocks_etfs');
+  const crypto = bucket(cryptoTxs);
+  const stocks = bucket(stockTxs);
+  const cryptoTaxableEur = Math.max(0, crypto.combined_net_eur - Math.max(0, crypto.combined_net_eur * 0.10));
+  return {
+    year, crypto, stocks,
+    crypto_taxable_eur: cryptoTaxableEur,
+    crypto_taxable_bgn: cryptoTaxableEur * EUR_BGN,
+    crypto_tax_owed_bgn: cryptoTaxableEur * EUR_BGN * 0.10,
+    eur_bgn: EUR_BGN, eur_usd: bg_eurUsd(),
+    generated_at: new Date().toISOString()
+  };
+}
+
+function computeBGExchangeSummary(){
+  const year = bg_currentYear();
+  const all = TAX_TXS.filter(t => t.date && String(t.date.getFullYear()) === String(year));
+  const groups = {};
+  all.forEach(t => {
+    const cls = bg_classifyAssetClass(t.asset, t.exchange);
+    const key = (t.exchange || 'Unknown') + (cls === 'stocks_etfs' ? ' (Stocks/ETFs)' : '');
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+  return Object.entries(groups).map(([name, arr]) => {
+    const disposals = arr.filter(t => t.status === 'taxable_disposal' && t.realized_gain_eur !== undefined);
+    const futures = arr.filter(t => t.status === 'futures_pnl' && t.realized_gain_eur !== undefined);
+    const earn = arr.filter(t => t.status === 'earn_income');
+    return {
+      exchange: name, parsed_rows: arr.length,
+      spot_net_eur: disposals.reduce((s,t) => s + (t.realized_gain_eur||0), 0),
+      futures_net_eur: futures.reduce((s,t) => s + (t.realized_gain_eur||0), 0),
+      fees_eur: arr.reduce((s,t) => s + bg_feeEur(t), 0),
+      rewards_eur: earn.reduce((s,t) => s + (t.realized_gain_eur||0), 0),
+      deposits: arr.filter(t => t.type === 'deposit').length,
+      withdrawals: arr.filter(t => t.type === 'withdrawal').length,
+      needs_review_count: arr.filter(t => t.status === 'needs_review').length
+    };
+  });
+}
+
+function exportBG_TaxSummaryCSV(){
+  const s = computeBGSummary();
+  const headers = ['category','tax_year','country','method','spot_proceeds_eur','spot_cost_basis_eur','spot_gains_eur','spot_losses_eur','spot_net_eur','futures_net_eur','fees_eur','rewards_income_eur','combined_net_eur','taxable_candidate_eur','taxable_candidate_bgn','estimated_tax_bgn','needs_review_count','generated_at','disclaimer'];
+  function row(cat, b, taxEur, taxBgn, owedBgn){
+    return [cat, s.year, 'Bulgaria','FIFO',
+      b.proceeds_eur.toFixed(2), b.cost_basis_eur.toFixed(2),
+      b.gains_eur.toFixed(2), b.losses_eur.toFixed(2),
+      b.spot_net_eur.toFixed(2), b.futures_net_eur.toFixed(2),
+      b.fees_eur.toFixed(2), b.earn_eur.toFixed(2), b.combined_net_eur.toFixed(2),
+      taxEur.toFixed(2), taxBgn.toFixed(2), owedBgn.toFixed(2),
+      String(b.review_count), s.generated_at, BG_DISCLAIMER];
+  }
+  const lines = [bg_csvRow(headers)];
+  lines.push(bg_csvRow(row('crypto', s.crypto, s.crypto_taxable_eur, s.crypto_taxable_bgn, s.crypto_tax_owed_bgn)));
+  if (s.stocks.tx_count > 0) lines.push(bg_csvRow(row('stocks_etfs_separate_line', s.stocks, 0, 0, 0)));
+  downloadText('BG_'+s.year+'_Tax_Summary.csv', lines.join('\n'));
+}
+
+function exportBG_NAPAppendix5Input(){
+  const s = computeBGSummary();
+  const c = s.crypto;
+  const rows = [
+    ['key','value'],
+    ['declaration','Годишна данъчна декларация по чл. 50 ЗДДФЛ'],
+    ['form','Образец 2001 (Form 200)'],
+    ['appendix','Приложение 5'],
+    ['table','Част I, Таблица 2'],
+    ['code','508'],
+    ['income_type','Доходи от продажба/замяна на виртуални валути'],
+    ['tax_year', s.year],
+    ['method','FIFO (First-In, First-Out)'],
+    ['eur_bgn_rate', String(EUR_BGN)],
+    ['total_proceeds_eur', c.proceeds_eur.toFixed(2)],
+    ['total_proceeds_bgn', (c.proceeds_eur*EUR_BGN).toFixed(2)],
+    ['total_cost_basis_eur', c.cost_basis_eur.toFixed(2)],
+    ['total_cost_basis_bgn', (c.cost_basis_eur*EUR_BGN).toFixed(2)],
+    ['gross_gains_eur', c.gains_eur.toFixed(2)],
+    ['gross_losses_eur', c.losses_eur.toFixed(2)],
+    ['spot_net_eur', c.spot_net_eur.toFixed(2)],
+    ['futures_net_eur', c.futures_net_eur.toFixed(2)],
+    ['combined_net_eur', c.combined_net_eur.toFixed(2)],
+    ['combined_net_bgn', (c.combined_net_eur*EUR_BGN).toFixed(2)],
+    ['profit_kolona_5_bgn', (c.combined_net_eur >= 0 ? c.combined_net_eur*EUR_BGN : 0).toFixed(2)],
+    ['loss_kolona_6_bgn',   (c.combined_net_eur < 0  ? Math.abs(c.combined_net_eur)*EUR_BGN : 0).toFixed(2)],
+    ['expense_deduction_10pct_eur', Math.max(0, c.combined_net_eur*0.10).toFixed(2)],
+    ['taxable_amount_eur', s.crypto_taxable_eur.toFixed(2)],
+    ['taxable_amount_bgn', s.crypto_taxable_bgn.toFixed(2)],
+    ['estimated_tax_due_bgn', s.crypto_tax_owed_bgn.toFixed(2)],
+    ['needs_review_count', String(c.review_count)],
+    ['stocks_etfs_present', s.stocks.tx_count > 0 ? 'YES — see separate file/line' : 'no'],
+    ['stocks_etfs_net_eur', s.stocks.combined_net_eur.toFixed(2)],
+    ['notes_for_accountant','Stocks/ETFs are tracked separately and may belong to a different Приложение 5 line. Confirm classification before filing.'],
+    ['disclaimer', BG_DISCLAIMER],
+    ['generated_at', s.generated_at]
+  ];
+  downloadText('BG_'+s.year+'_NAP_Appendix5_Input.csv', rows.map(bg_csvRow).join('\n'));
+}
+
+function exportBG_ExchangeSummary(){
+  const s = computeBGSummary();
+  const exch = computeBGExchangeSummary();
+  const headers = ['exchange','parsed_rows','spot_net_eur','futures_net_eur','fees_eur','rewards_eur','deposits','withdrawals','needs_review_count'];
+  const lines = [bg_csvRow(headers)];
+  exch.forEach(e => lines.push(bg_csvRow([e.exchange,e.parsed_rows,e.spot_net_eur.toFixed(2),e.futures_net_eur.toFixed(2),e.fees_eur.toFixed(2),e.rewards_eur.toFixed(2),e.deposits,e.withdrawals,e.needs_review_count])));
+  downloadText('BG_'+s.year+'_Exchange_Summary.csv', lines.join('\n'));
+}
+
+function exportBG_TransactionsNormalized(){
+  const year = bg_currentYear();
+  const headers = ['exchange','asset_class','source_file','timestamp','year','type','status','asset','quote','side','amount','price','price_unit_eur_approx','fee','fee_asset','fee_eur','proceeds_eur','cost_basis_eur','pnl_eur','pair','order_id','notes','needs_review_reason'];
+  const lines = [bg_csvRow(headers)];
+  TAX_TXS.forEach(t => {
+    const cls = bg_classifyAssetClass(t.asset, t.exchange);
+    const tsYear = t.date ? t.date.getFullYear() : '';
+    const proceedsEur = (t.status === 'taxable_disposal') ? bg_proceedsEur(t).toFixed(2) : '';
+    const review = (t.status === 'needs_review') ? (t.notes || 'unclassified') : '';
+    lines.push(bg_csvRow([
+      t.exchange||'', cls, t.source_file||'', t.date ? t.date.toISOString() : '', tsYear,
+      t.type||'', t.status||'', t.asset||'', t.quote||'', t.side||'',
+      t.amount||'', t.price_unit||'', (t.price_unit ? (t.price_unit*bg_eurUsd()).toFixed(6) : ''),
+      t.fee_amount||'', t.fee_asset||'', bg_feeEur(t).toFixed(4),
+      proceedsEur, (t.cost_basis_eur||0).toFixed(2), (t.realized_gain_eur||0).toFixed(2),
+      t.pair||'', t.order_id||'', (t.notes||''), review
+    ]));
+  });
+  downloadText('BG_'+year+'_Transactions_Normalized.csv', lines.join('\n'));
+}
+
+function exportBG_NeedsReview(){
+  const year = bg_currentYear();
+  const headers = ['exchange','asset_class','source_file','timestamp','raw_type','parsed_type','reason','amount','asset','quote','suggested_action'];
+  const review = TAX_TXS.filter(t => t.status === 'needs_review');
+  const lines = [bg_csvRow(headers)];
+  review.forEach(t => {
+    let action = 'Review manually';
+    if (t.type === 'deposit') action = 'Match to a withdrawal from another exchange or classify as taxable income';
+    else if (t.type === 'withdrawal') action = 'Match to a deposit on another exchange or classify as fiat-out';
+    lines.push(bg_csvRow([t.exchange||'', bg_classifyAssetClass(t.asset, t.exchange), t.source_file||'', t.date ? t.date.toISOString() : '', t.type||'', t.status||'', t.notes||'', t.amount||'', t.asset||'', t.quote||'', action]));
+  });
+  if (review.length === 0) lines.push(bg_csvRow(['','','','','','','No rows currently flagged as needs_review','','','','']));
+  downloadText('BG_'+year+'_Needs_Review.csv', lines.join('\n'));
+}
+
+function exportBG_AccountantNotesMD(){
+  const s = computeBGSummary();
+  const c = s.crypto, st = s.stocks;
+  const docs = (TAX_DOCS||[]).filter(d => d.year === s.year);
+  const exch = computeBGExchangeSummary();
+  const fmt = v => (v < 0 ? '-' : '') + '€' + Math.abs(v).toFixed(2);
+  const fmtBgn = v => (v < 0 ? '-' : '') + Math.abs(v).toFixed(2) + ' лв.';
+  const md = [];
+  md.push('# Bulgaria ' + s.year + ' — Crypto Tax Package');
+  md.push('');
+  md.push('**' + BG_DISCLAIMER + '**');
+  md.push('');
+  md.push('Generated: ' + s.generated_at + '  ');
+  md.push('Method: FIFO  ');
+  md.push('Currency: 1 EUR = ' + EUR_BGN + ' BGN (Currency Board fixed rate)  ');
+  md.push('EUR/USD reference rate: ' + s.eur_usd);
+  md.push('');
+  md.push('---');
+  md.push('## 1. Imported source files (' + docs.length + ')');
+  md.push('');
+  if (docs.length === 0) md.push('_No documents tracked in the page state — uploads may live in localStorage only. Reconcile against the local backup JSON._');
+  else {
+    md.push('| File | Exchange | Rows | Size (KB) | Uploaded |');
+    md.push('|---|---|---:|---:|---|');
+    docs.forEach(d => md.push('| ' + d.name + ' | ' + d.exchange + ' | ' + d.rows + ' | ' + (d.size/1024).toFixed(0) + ' | ' + (d.uploadedAt ? d.uploadedAt.slice(0,10) : '—') + ' |'));
+  }
+  md.push('');
+  md.push('## 2. Crypto disposal results (Приложение 5, код 508 — Виртуални валути)');
+  md.push('');
+  md.push('| Field | EUR | BGN |');
+  md.push('|---|---:|---:|');
+  md.push('| Total proceeds (продажна цена) | ' + fmt(c.proceeds_eur) + ' | ' + fmtBgn(c.proceeds_eur*EUR_BGN) + ' |');
+  md.push('| Total cost basis (цена на придобиване) | ' + fmt(c.cost_basis_eur) + ' | ' + fmtBgn(c.cost_basis_eur*EUR_BGN) + ' |');
+  md.push('| Gross gains | ' + fmt(c.gains_eur) + ' | ' + fmtBgn(c.gains_eur*EUR_BGN) + ' |');
+  md.push('| Gross losses | ' + fmt(c.losses_eur) + ' | ' + fmtBgn(c.losses_eur*EUR_BGN) + ' |');
+  md.push('| Spot net | **' + fmt(c.spot_net_eur) + '** | ' + fmtBgn(c.spot_net_eur*EUR_BGN) + ' |');
+  md.push('| Futures/derivatives net | ' + fmt(c.futures_net_eur) + ' | ' + fmtBgn(c.futures_net_eur*EUR_BGN) + ' |');
+  md.push('| Earn/staking/rewards | ' + fmt(c.earn_eur) + ' | ' + fmtBgn(c.earn_eur*EUR_BGN) + ' |');
+  md.push('| Fees (estimated) | ' + fmt(c.fees_eur) + ' | ' + fmtBgn(c.fees_eur*EUR_BGN) + ' |');
+  md.push('| **Combined net (taxable candidate)** | **' + fmt(c.combined_net_eur) + '** | **' + fmtBgn(c.combined_net_eur*EUR_BGN) + '** |');
+  md.push('');
+  md.push('Counts: ' + c.disposals_count + ' spot disposals · ' + c.futures_count + ' futures rows · ' + c.earn_count + ' earn events · ' + c.review_count + ' rows flagged for review.');
+  md.push('');
+  md.push('## 3. Tax calculation (crypto only)');
+  md.push('');
+  if (c.combined_net_eur < 0) {
+    md.push('Combined net is **negative**. Per Bulgarian individual tax treatment of crypto disposals, **no tax is owed for ' + s.year + '.** Loss must still be declared on Приложение 5, Колона 6 (Загуба).');
+  } else {
+    md.push('| Step | EUR | BGN |');
+    md.push('|---|---:|---:|');
+    md.push('| Combined net | ' + fmt(c.combined_net_eur) + ' | ' + fmtBgn(c.combined_net_eur*EUR_BGN) + ' |');
+    md.push('| 10% expense deduction (чл. 33 ал. 3 ЗДДФЛ) | -' + fmt(c.combined_net_eur*0.10) + ' | -' + fmtBgn(c.combined_net_eur*0.10*EUR_BGN) + ' |');
+    md.push('| Taxable income | ' + fmt(s.crypto_taxable_eur) + ' | ' + fmtBgn(s.crypto_taxable_bgn) + ' |');
+    md.push('| **Tax owed (10%)** | — | **' + fmtBgn(s.crypto_tax_owed_bgn) + '** |');
+  }
+  md.push('');
+  md.push('## 4. Stocks/ETFs activity (separate Приложение 5 treatment)');
+  md.push('');
+  if (st.tx_count === 0) md.push('No stocks/ETFs activity detected for ' + s.year + '. (Detector classifies known equity tickers traded on Kraken as stocks/ETFs.)');
+  else {
+    md.push('Detected ' + st.tx_count + ' rows tagged as stocks/ETFs. **These are NOT included in the crypto net above.** They likely belong to a different line of Приложение 5 (доходи от продажба на финансови активи на регулиран пазар, ако приложимо). Confirm classification with the accountant.');
+    md.push('');
+    md.push('| Field | EUR |');
+    md.push('|---|---:|');
+    md.push('| Disposal count | ' + st.disposals_count + ' |');
+    md.push('| Proceeds | ' + fmt(st.proceeds_eur) + ' |');
+    md.push('| Cost basis | ' + fmt(st.cost_basis_eur) + ' |');
+    md.push('| Net | ' + fmt(st.combined_net_eur) + ' |');
+  }
+  md.push('');
+  md.push('## 5. Per-exchange breakdown');
+  md.push('');
+  md.push('| Exchange | Rows | Spot Net (EUR) | Futures Net (EUR) | Fees (EUR) | Rewards (EUR) | Dep | Wd | Review |');
+  md.push('|---|---:|---:|---:|---:|---:|---:|---:|---:|');
+  exch.forEach(e => md.push('| ' + e.exchange + ' | ' + e.parsed_rows + ' | ' + e.spot_net_eur.toFixed(2) + ' | ' + e.futures_net_eur.toFixed(2) + ' | ' + e.fees_eur.toFixed(2) + ' | ' + e.rewards_eur.toFixed(2) + ' | ' + e.deposits + ' | ' + e.withdrawals + ' | ' + e.needs_review_count + ' |'));
+  md.push('');
+  md.push('## 6. Numbers for НАП Приложение 5 entry');
+  md.push('');
+  md.push('Form: **Образец 2001 (Form 200)** · Appendix: **Приложение 5** · Section: **Част I, Таблица 2** · Code: **508 — Виртуални валути**');
+  md.push('');
+  md.push('| Колона | Meaning | BGN |');
+  md.push('|---|---|---:|');
+  md.push('| 3 (Продажна цена) | Sale proceeds | ' + fmtBgn(c.proceeds_eur*EUR_BGN) + ' |');
+  md.push('| 4 (Цена на придобиване) | Acquisition cost | ' + fmtBgn(c.cost_basis_eur*EUR_BGN) + ' |');
+  md.push('| 5 (Печалба) | Profit | ' + fmtBgn(c.combined_net_eur >= 0 ? c.combined_net_eur*EUR_BGN : 0) + ' |');
+  md.push('| 6 (Загуба) | Loss | ' + fmtBgn(c.combined_net_eur < 0 ? Math.abs(c.combined_net_eur)*EUR_BGN : 0) + ' |');
+  md.push('');
+  md.push('## 7. Items to review with accountant');
+  md.push('');
+  md.push('- ' + (c.review_count > 0 ? c.review_count + ' rows flagged needs_review (see `BG_' + s.year + '_Needs_Review.csv`)' : 'No rows flagged needs_review'));
+  md.push('- ' + (c.futures_count > 0 ? c.futures_count + ' futures/derivatives rows — confirm Bulgarian classification' : 'No futures activity detected'));
+  md.push('- ' + (st.tx_count > 0 ? st.tx_count + ' stocks/ETF rows — separate Приложение 5 treatment' : 'No stocks/ETF activity detected'));
+  md.push('- Revolut Crypto disposals (if any) handled out-of-band — verify the EUR PnL number against the Revolut consolidated statement.');
+  md.push('- Volume threshold: spot disposals = ' + c.disposals_count + '. If the accountant considers volume to exceed activity-as-private-investment, reclassification as стопанска дейност (15% rate) may apply.');
+  md.push('');
+  md.push('## 8. Files in this package');
+  md.push('');
+  md.push('1. `BG_' + s.year + '_Tax_Summary.csv` — top-line numbers per category');
+  md.push('2. `BG_' + s.year + '_NAP_Appendix5_Input.csv` — key/value pairs ready for Form 200 entry');
+  md.push('3. `BG_' + s.year + '_Exchange_Summary.csv` — per-exchange split (crypto vs stocks/ETFs)');
+  md.push('4. `BG_' + s.year + '_Transactions_Normalized.csv` — every row, classified');
+  md.push('5. `BG_' + s.year + '_Needs_Review.csv` — flagged rows + suggested actions');
+  md.push('6. `BG_' + s.year + '_Accountant_Notes.md` — this file');
+  md.push('');
+  md.push('---');
+  md.push('');
+  md.push('**' + BG_DISCLAIMER + '**');
+  downloadText('BG_'+s.year+'_Accountant_Notes.md', md.join('\n'));
+}
+
+function exportBG_All(){
+  exportBG_TaxSummaryCSV();
+  exportBG_NAPAppendix5Input();
+  exportBG_ExchangeSummary();
+  exportBG_TransactionsNormalized();
+  exportBG_NeedsReview();
+  exportBG_AccountantNotesMD();
+  if (typeof showTaxStatus === 'function') showTaxStatus('Exported 6 BG accountant package files. Check Downloads.', 'success');
 }
 
 function downloadText(filename, content) {
