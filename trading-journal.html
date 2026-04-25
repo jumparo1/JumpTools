@@ -8434,25 +8434,39 @@ function parseBybitFuturesCSV(text) {
     const vals = rows[i];
     if (!vals || vals.length < 3) continue;
 
-    const dateStr = getCol(vals, ['date','close time','closed time','created time','updated time','trade time','time','transaction time','closed at','order time']);
+    // Date candidates — Bybit Closed PnL uses "Filled/Settlement Time(UTC+0)" and "Create Time"
+    const dateStr = getCol(vals, [
+      'filled/settlement time(utc+0)','filled/settlement time','filled settlement time',
+      'settlement time','filled time','exec time','executed time',
+      'close time','closed time','created time','create time','updated time',
+      'trade time','transaction time','closed at','order time','date','time'
+    ]);
     const date = parseDateLoose(dateStr);
     if (!date) continue;
 
-    const symRaw = getCol(vals, ['symbol','contracts','contract','pair','trading pair','instrument']);
+    const symRaw = getCol(vals, ['contracts','contract','symbol','pair','trading pair','instrument']);
     const symbol = (symRaw || '').replace(/(USDT|USDC|BUSD|USD|PERP)$/i,'').replace(/\/.+$/,'').toUpperCase() || 'UNKNOWN';
 
-    const pnlRaw = getCol(vals, ['closed p&l','closed pnl','realized p&l','realized pnl','pnl','realized profit','profit','net pnl','closed profit','close p&l','net p&l']);
+    const pnlRaw = getCol(vals, ['realized p&l','realized pnl','closed p&l','closed pnl','pnl','realized profit','profit','net pnl','closed profit','close p&l','net p&l']);
     const pnl = parseFloat((pnlRaw || '0').toString().replace(/[^0-9.\-]/g,'')) || 0;
 
-    const sideRaw = (getCol(vals, ['side','direction','order side','position side']) || '').toUpperCase();
-    const qtyRaw  = getCol(vals, ['qty','quantity','filled qty','contracts','size','filled size','exec qty','total qty','closed qty']);
+    // Side / Trade Type — user's file uses "Trade Type" with values BUY/SELL
+    const sideRaw = (getCol(vals, ['trade type','side','direction','order side','position side']) || '').toUpperCase();
+    const qtyRaw  = getCol(vals, ['qty','quantity','filled qty','size','filled size','exec qty','total qty','closed qty']);
     const qty = Math.abs(parseFloat((qtyRaw || '0').replace(/[^0-9.]/g,''))) || 1;
 
     const entryPrice = parseFloat((getCol(vals, ['entry price','avg entry','avg entry price','open price']) || '0').replace(/[^0-9.]/g,'')) || 0;
-    const exitPrice  = parseFloat((getCol(vals, ['close price','exit price','avg exit','avg exit price','closing price']) || '0').replace(/[^0-9.]/g,'')) || 0;
-    const fee        = parseFloat((getCol(vals, ['fee','trading fee','commission','total fee']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
+    // Exit price candidates — user's file uses "Filled Price"
+    const exitPrice  = parseFloat((getCol(vals, ['filled price','close price','exit price','avg exit','avg exit price','closing price']) || '0').replace(/[^0-9.]/g,'')) || 0;
+
+    // Fees — user's file splits into Opening Fee / Closing Fee / Funding Fee. Sum all.
+    const openingFee = parseFloat((getCol(vals, ['opening fee']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
+    const closingFee = parseFloat((getCol(vals, ['closing fee']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
     const fundingFee = parseFloat((getCol(vals, ['funding fee','funding']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
-    const orderId    = getCol(vals, ['order id','order no','trade id','position id','order_id']);
+    const generalFee = parseFloat((getCol(vals, ['fee','trading fee','commission','total fee']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
+    const fee = Math.abs(openingFee) + Math.abs(closingFee) + Math.abs(fundingFee) + Math.abs(generalFee);
+
+    const orderId    = getCol(vals, ['order id','order no','trade id','position id','order_id','uid']);
 
     txs.push({
       id: 'bybf_' + i + '_' + Date.now(), exchange: 'Bybit Futures', date,
@@ -8460,7 +8474,7 @@ function parseBybitFuturesCSV(text) {
       price_unit: exitPrice || entryPrice, quote: 'USDT',
       total_value: Math.abs(pnl),
       side: (sideRaw.includes('SELL') || sideRaw.includes('SHORT')) ? 'sell' : 'buy',
-      fee_amount: Math.abs(fee) + Math.abs(fundingFee), fee_asset: 'USDT',
+      fee_amount: fee, fee_asset: 'USDT',
       pair: symbol + '/USDT', order_id: orderId, status: 'futures_pnl',
       realized_gain_eur: pnl * (getEurUsdRate() || 0.92),
       notes: 'Futures PnL: ' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + ' USDT' + (sideRaw ? ' · ' + sideRaw : '')
