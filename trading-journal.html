@@ -8054,6 +8054,19 @@ function extractUnit(v) {
 function detectExchangeCSV(text) {
   text = cleanCSV(text);
   const lower = text.slice(0, 1000).toLowerCase();
+  const fname = String(importTaxCSV._currentFileName || '').toLowerCase();
+
+  // ── Filename-based detection (HIGHEST priority for Bybit unifiedAccount exports) ──
+  if (fname.includes('unifiedaccount_spottradehistory')) return 'bybit_spot';
+  if (fname.includes('unifiedaccount_usdtperpetualtradehistory')) return 'bybit_perp_trades';
+  if (fname.includes('unifiedaccount_usdtperpetualclosedpl')) return 'bybit_futures';
+  if (fname.includes('unifiedaccount_assetchangedetails') || fname.includes('assetchangedetails')) return 'bybit_copytrading';
+
+  // ── Bybit-specific content signatures (must run BEFORE loose Binance match) ──
+  if (lower.includes('spot pairs') && (lower.includes('filled value') || lower.includes('filled price'))) return 'bybit_spot';
+  if (lower.includes('contracts') && (lower.includes('trading fee rate') || lower.includes('filled type')) && lower.includes('filled qty')) return 'bybit_perp_trades';
+  if (lower.includes('contracts') && (lower.includes('realized p&l') || lower.includes('closed p&l'))) return 'bybit_futures';
+
   // Binance Transaction History / Statements (User ID, Time, Account, Operation, Coin, Change)
   if ((lower.includes('user id') || lower.includes('user_id')) && lower.includes('operation') && lower.includes('coin') && lower.includes('change')) return 'binance_statements';
   // Binance Futures Trade History (Uid, Time, Symbol, Side, Realized Profit)
@@ -8116,28 +8129,134 @@ function parseBinanceCSV(text) {
 function parseBybitCSV(text) {
   const rows = parseCSVRows(text);
   if (rows.length < 2) return [];
-  const headers = rows[0].map(h => h.trim());
+  const norm = h => String(h||'').toLowerCase().replace(/^﻿/,'').replace(/[\s_\-]+/g,' ').replace(/[\. ]+/g,'').trim();
+
+  // Find header row (Bybit unifiedAccount files prepend a UID/Company/Country line).
+  // Note: norm() strips spaces, so detection regex must use space-stripped tokens too.
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(8, rows.length); i++) {
+    const joined = ' ' + rows[i].map(norm).join(' | ') + ' ';
+    const hasSym   = /(spotpairs|symbol|tradingpair|\bpair\b|\bpairs\b|\bmarket\b)/.test(joined);
+    const hasMoney = /(filledvalue|filledprice|filledquantity|filledqty|executed|avgfilled|avgfilledprice|orderprice)/.test(joined);
+    if (hasSym && hasMoney) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) headerIdx = 0; // fallback for older formats with no preamble
+
+  const rawHeaders = rows[headerIdx];
+  const idxByName = {};
+  rawHeaders.forEach((h,j) => { const n = norm(h); if (n) idxByName[n] = j; });
+  function getCol(vals, candidates) {
+    for (const c of candidates) {
+      const i = idxByName[norm(c)];
+      if (i !== undefined && vals[i] !== undefined && String(vals[i]).trim() !== '') return String(vals[i]).trim();
+    }
+    return '';
+  }
+  function parseDateLoose(s) {
+    if (!s) return null;
+    const d1 = new Date(s);
+    if (!isNaN(d1.getTime())) return d1;
+    const ms = parseFloat(s);
+    if (!isNaN(ms) && ms > 1e10) {
+      const d2 = new Date(ms < 1e12 ? ms*1000 : ms);
+      if (!isNaN(d2.getTime())) return d2;
+    }
+    return null;
+  }
+
   const txs = [];
-  for (let i = 1; i < rows.length; i++) {
-    const vals = rows[i]; if (vals.length < 5) continue;
-    const obj = {}; headers.forEach((h,j) => obj[h] = (vals[j]||'').trim());
-    const dateStr = obj['Date'] || obj['Order Time'] || obj['Created Time'] || '';
-    if (!dateStr) continue;
-    const pairStr = obj['Pair'] || obj['Symbol'] || obj['Market'] || '';
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const vals = rows[i];
+    if (!vals || vals.length < 3) continue;
+    const dateStr = getCol(vals, ['timestamp (utc+0)','timestamp(utc+0)','timestamp','date','order time','created time','create time','executed time','exec time','filled time','time']);
+    const date = parseDateLoose(dateStr);
+    if (!date) continue;
+    const pairStr = getCol(vals, ['spot pairs','pair','symbol','market','trading pair']);
     const [base, quote] = normPair(pairStr);
-    const side = (obj['Side']||obj['Direction']||'').toUpperCase();
-    const price = parseFloat(obj['Avg. Filled Price']||obj['Avg. Price']||obj['Order Price']||obj['Price']||0);
-    const qty = parseFloat((obj['Filled Qty']||obj['Filled']||obj['Qty']||obj['Executed']||'0').replace(/[^0-9.]/g,''));
-    const total = parseFloat((obj['Total']||obj['Amount']||'0').replace(/[^0-9.]/g,'')) || qty * price;
-    const fee = parseFloat((obj['Fee']||obj['Trading Fee']||'0').replace(/[^0-9.]/g,''));
-    const feeAsset = obj['Fee Asset'] || obj['Fee Coin'] || quote;
+    const sideRaw = (getCol(vals, ['direction','side','order side']) || '').toUpperCase();
+    const side = sideRaw;
+    const price = parseFloat((getCol(vals, ['filled price','avg. filled price','avg filled price','avg. price','order price','price']) || '0').replace(/[^0-9.]/g,'')) || 0;
+    const qty = parseFloat((getCol(vals, ['filled quantity','filled qty','quantity','filled','executed','qty','exec qty']) || '0').replace(/[^0-9.]/g,'')) || 0;
+    const total = parseFloat((getCol(vals, ['filled value','total','amount','executed value']) || '0').replace(/[^0-9.]/g,'')) || (qty * price);
+    const fee = parseFloat((getCol(vals, ['fees','fee','trading fee','commission']) || '0').replace(/[^0-9.]/g,'')) || 0;
+    const feeAsset = getCol(vals, ['fee asset','fee coin','fee currency']) || quote || 'USDT';
+    const orderId = getCol(vals, ['order id','order no','order no.','transaction id','trade id']);
     if (!qty || !base) continue;
     txs.push({
-      id: 'byb_' + i + '_' + Date.now(), exchange: 'Bybit', date: new Date(dateStr),
+      id: 'byb_' + i + '_' + Date.now(), exchange: 'Bybit', date,
       type: 'trade', asset: base, amount: qty, price_unit: price,
-      quote, total_value: total, side: side === 'BUY' ? 'buy' : 'sell',
-      fee_amount: fee, fee_asset: feeAsset, pair: base+'/'+quote,
-      order_id: obj['Order Id'] || '', status: '', notes: ''
+      quote: quote || 'USDT', total_value: total,
+      side: (sideRaw === 'BUY') ? 'buy' : 'sell',
+      fee_amount: fee, fee_asset: feeAsset, pair: base + '/' + (quote || 'USDT'),
+      order_id: orderId, status: '', notes: ''
+    });
+  }
+  return txs;
+}
+
+// ── Bybit Perpetual Trade History Parser (per-trade execution log) ──
+// NOT realized PnL. Imported as audit-only rows (status='futures_audit').
+// fee_amount=0 to avoid double-counting with Closed PnL aggregated fees.
+function parseBybitPerpTradesCSV(text) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return [];
+  const norm = h => String(h||'').toLowerCase().replace(/^﻿/,'').replace(/[\s_\-]+/g,' ').replace(/[\. ]+/g,'').trim();
+
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(8, rows.length); i++) {
+    const joined = ' ' + rows[i].map(norm).join(' | ') + ' ';
+    if (/\bcontracts\b/.test(joined) && /(tradingfeerate|filledtype|filledqty)/.test(joined)) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const rawHeaders = rows[headerIdx];
+  const idxByName = {};
+  rawHeaders.forEach((h,j) => { const n = norm(h); if (n) idxByName[n] = j; });
+  function getCol(vals, candidates) {
+    for (const c of candidates) {
+      const i = idxByName[norm(c)];
+      if (i !== undefined && vals[i] !== undefined && String(vals[i]).trim() !== '') return String(vals[i]).trim();
+    }
+    return '';
+  }
+  function parseDateLoose(s) {
+    if (!s) return null;
+    const d1 = new Date(s);
+    if (!isNaN(d1.getTime())) return d1;
+    const ms = parseFloat(s);
+    if (!isNaN(ms) && ms > 1e10) {
+      const d2 = new Date(ms < 1e12 ? ms*1000 : ms);
+      if (!isNaN(d2.getTime())) return d2;
+    }
+    return null;
+  }
+
+  const txs = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const vals = rows[i];
+    if (!vals || vals.length < 3) continue;
+    const dateStr = getCol(vals, ['transaction time(utc+0)','transaction time','exec time','executed time','filled time','timestamp (utc+0)','timestamp','time']);
+    const date = parseDateLoose(dateStr);
+    if (!date) continue;
+    const symbol = (getCol(vals, ['contracts','contract','symbol','pair']) || '').replace(/(USDT|USDC|BUSD|USD|PERP)$/i,'').replace(/\/.+$/,'').toUpperCase() || 'UNKNOWN';
+    const filledType = (getCol(vals, ['filled type']) || '').toLowerCase();
+    const sideRaw = (getCol(vals, ['direction','side','order side']) || '').toUpperCase();
+    const qty = Math.abs(parseFloat((getCol(vals, ['filled qty','quantity','qty']) || '0').replace(/[^0-9.]/g,''))) || 0;
+    const price = parseFloat((getCol(vals, ['filled price','order price','price']) || '0').replace(/[^0-9.]/g,'')) || 0;
+    const feePaid = parseFloat((getCol(vals, ['fees paid','fee','fees','trading fee','commission']) || '0').replace(/[^0-9.\-]/g,'')) || 0;
+    const orderId = getCol(vals, ['transaction id','order no','order no.','trade id']);
+    const isFunding = filledType.includes('fund');
+    txs.push({
+      id: 'bybpt_' + i + '_' + Date.now(),
+      exchange: 'Bybit Futures', date,
+      type: isFunding ? 'funding' : 'futures_audit',
+      asset: symbol, amount: qty, price_unit: price, quote: 'USDT',
+      total_value: qty * price,
+      side: (sideRaw === 'SELL' || sideRaw.includes('SHORT')) ? 'sell' : 'buy',
+      fee_amount: 0, // intentionally 0 — Closed PnL has aggregated fees
+      fee_asset: 'USDT', pair: symbol + '/USDT', order_id: orderId,
+      status: 'futures_audit', // not in any computeTaxSummary filter — audit/normalized export only
+      notes: 'Perp Trade History (audit-only) · ' + (filledType || 'trade') + (sideRaw ? ' · ' + sideRaw : '') + ' · fee_paid=' + feePaid.toFixed(8) + ' USDT (already in Closed PnL aggregate)'
     });
   }
   return txs;
@@ -8654,6 +8773,7 @@ function importTaxCSV(text) {
     else if (exchange === 'bybit_spot') txs = parseBybitCSV(text);
     else if (exchange === 'bybit_copytrading') txs = parseBybitCopytradingCSV(text);
     else if (exchange === 'bybit_futures') txs = parseBybitFuturesCSV(text);
+    else if (exchange === 'bybit_perp_trades') txs = parseBybitPerpTradesCSV(text);
     else if (exchange === 'bybit_wallet') txs = parseBybitWalletCSV(text);
     else if (exchange === 'kraken_trades') txs = parseKrakenCSV(text);
     else if (exchange === 'kraken_ledger') txs = parseKrakenLedgerCSV(text);
@@ -8702,7 +8822,7 @@ function importTaxCSV(text) {
       'binance_statements': 'Binance', 'binance_spot': 'Binance', 'binance_wallet': 'Binance',
       'binance_futures': 'Binance Futures', 'binance_earn': 'Binance',
       'bybit_spot': 'Bybit', 'bybit_copytrading': 'Bybit CopyTrading',
-      'bybit_futures': 'Bybit Futures', 'bybit_wallet': 'Bybit',
+      'bybit_futures': 'Bybit Futures', 'bybit_perp_trades': 'Bybit Futures', 'bybit_wallet': 'Bybit',
       'kraken_trades': 'Kraken', 'kraken_ledger': 'Kraken'
     };
     const exName = EXCHANGE_NAMES[exchange] || exchange;
