@@ -721,6 +721,8 @@ select.pt-input{cursor:pointer;}
 <!-- Firebase SDK (compat mode — no build tools needed) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 </head>
 <body>
 
@@ -1578,6 +1580,7 @@ select.pt-input{cursor:pointer;}
   <!-- ═══ TAXES PAGE ═══ -->
   <div class="page" id="page-taxes">
     <div class="page-title">🏛️ Taxes — Bulgaria</div>
+    <div id="taxAuthBar"></div>
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
       <label style="font-size:13px;color:var(--tx2)">Tax Year:</label>
       <select id="taxYear" onchange="renderTaxes()" style="background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);color:var(--tx);padding:6px 12px;font-size:14px;font-weight:600">
@@ -1984,15 +1987,119 @@ const firebaseConfig = {
   messagingSenderId: "305591584755",
   appId: "1:305591584755:web:ccbe80fbdac2282b743486"
 };
+// Tax data: separate Firebase project, Google Auth required, files in Storage,
+// metadata in RTDB, all uid-scoped. No raw CSVs in any shared RTDB path.
+const taxFirebaseConfig = {
+  apiKey: "AIzaSyA9wJcuhLZou4n3WXnDusxFxwAEgSeKXOM",
+  authDomain: "tradingjournal-3bbc0.firebaseapp.com",
+  databaseURL: "https://tradingjournal-3bbc0-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tradingjournal-3bbc0",
+  storageBucket: "tradingjournal-3bbc0.firebasestorage.app",
+  messagingSenderId: "1053493330922",
+  appId: "1:1053493330922:web:7e957eb9ab6542ca5ee893"
+};
 let tjDbRef = null;
+let tjTaxApp = null;       // secondary Firebase app for tax data
+let tjAuth = null;         // firebase.auth() on tjTaxApp
+let tjStorage = null;      // firebase.storage() on tjTaxApp
+let tjUser = null;         // currently signed-in user, null if not authed
 let tjConnected = false;
 let tjFirebaseLoading = true; // true until first Firebase data arrives
 try {
   if (typeof firebase !== 'undefined') {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     tjDbRef = firebase.database().ref('tradingJournal');
+    if (!firebase.apps.find(a => a.name === 'tax')) {
+      firebase.initializeApp(taxFirebaseConfig, 'tax');
+    }
+    tjTaxApp  = firebase.app('tax');
+    tjAuth    = tjTaxApp.auth();
+    tjStorage = tjTaxApp.storage();
+    tjAuth.onAuthStateChanged(u => {
+      tjUser = u || null;
+      try { renderTaxAuthUI(); } catch(e) { console.warn('renderTaxAuthUI failed:', e); }
+      if (tjUser) {
+        try { loadTaxDocs(); } catch(e) { console.warn('loadTaxDocs failed:', e); }
+      } else {
+        TAX_DOCS = [];
+        try { renderTaxDocs(); } catch(e) {}
+      }
+    });
   }
 } catch(e) { console.warn('Firebase init failed:', e); }
+
+/* ── Tax Auth UI ── */
+function tjTaxSignInEmail() {
+  if (!tjAuth) { showTaxStatus('Auth not initialized — reload the page.', 'error'); return; }
+  const email = (document.getElementById('taxAuthEmail') || {}).value || '';
+  const pw    = (document.getElementById('taxAuthPassword') || {}).value || '';
+  if (!email || !pw) { tjShowAuthError('Enter email and password.'); return; }
+  tjShowAuthError('');
+  tjAuth.signInWithEmailAndPassword(email, pw).catch(err => tjShowAuthError(tjFormatAuthError(err)));
+}
+function tjTaxCreateAccountEmail() {
+  if (!tjAuth) { showTaxStatus('Auth not initialized — reload the page.', 'error'); return; }
+  const email = (document.getElementById('taxAuthEmail') || {}).value || '';
+  const pw    = (document.getElementById('taxAuthPassword') || {}).value || '';
+  if (!email || !pw) { tjShowAuthError('Enter email and password (min 6 characters).'); return; }
+  tjShowAuthError('');
+  tjAuth.createUserWithEmailAndPassword(email, pw).catch(err => tjShowAuthError(tjFormatAuthError(err)));
+}
+function tjTaxSignOut() {
+  if (!tjAuth) return;
+  tjAuth.signOut().catch(e => console.warn('Sign-out failed:', e));
+}
+function tjShowAuthError(msg) {
+  const el = document.getElementById('taxAuthError');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+function tjFormatAuthError(err) {
+  if (!err) return 'Unknown error';
+  switch (err.code || '') {
+    case 'auth/invalid-email':          return 'Invalid email address.';
+    case 'auth/missing-password':       return 'Password is required.';
+    case 'auth/weak-password':          return 'Password must be at least 6 characters.';
+    case 'auth/email-already-in-use':   return 'This email is already registered. Click "Sign in" instead.';
+    case 'auth/wrong-password':         return 'Wrong password.';
+    case 'auth/user-not-found':         return 'No account for this email. Click "Create account".';
+    case 'auth/invalid-credential':     return 'Invalid email or password.';
+    case 'auth/too-many-requests':      return 'Too many attempts. Wait a few minutes and try again.';
+    case 'auth/operation-not-allowed':  return 'Email/password sign-in is not enabled in Firebase Auth (console → Authentication → Sign-in method).';
+    case 'auth/network-request-failed': return 'Network error. Check your connection.';
+    default:                            return (err.message || String(err));
+  }
+}
+function renderTaxAuthUI() {
+  const el = document.getElementById('taxAuthBar');
+  if (!el) return;
+  if (tjUser) {
+    const email = (tjUser.email || '').replace(/[<>"&]/g, c => ({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c]));
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);margin-bottom:12px">' +
+        '<span style="font-size:12px;color:var(--tx2)">Signed in as <strong style="color:var(--tx)">' + email + '</strong></span>' +
+        '<span style="margin-left:auto;font-size:11px;color:var(--green)">🔒 Tax files private to your account</span>' +
+        '<button class="btn" onclick="tjTaxSignOut()" style="font-size:11px;padding:3px 10px">Sign out</button>' +
+      '</div>';
+    const dz = document.getElementById('taxDropZone');
+    if (dz) dz.style.opacity = '1';
+  } else {
+    el.innerHTML =
+      '<div style="display:flex;flex-direction:column;gap:8px;padding:14px 16px;background:var(--bg2);border:1px solid var(--yellow);border-radius:var(--radius);margin-bottom:12px">' +
+        '<div style="font-size:13px;color:var(--tx)"><strong>Sign in required</strong> — tax documents are stored privately under your account. Files are not visible to anyone else.</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+          '<input id="taxAuthEmail" type="email" placeholder="Email" autocomplete="username" style="flex:1;min-width:180px;padding:6px 10px;background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--radius);color:var(--tx);font-size:13px" onkeydown="if(event.key===\'Enter\')tjTaxSignInEmail()">' +
+          '<input id="taxAuthPassword" type="password" placeholder="Password (min 6 chars)" autocomplete="current-password" style="flex:1;min-width:180px;padding:6px 10px;background:var(--bg3);border:1px solid var(--bg4);border-radius:var(--radius);color:var(--tx);font-size:13px" onkeydown="if(event.key===\'Enter\')tjTaxSignInEmail()">' +
+          '<button class="btn btn-primary" onclick="tjTaxSignInEmail()" style="font-size:13px;padding:6px 14px">Sign in</button>' +
+          '<button class="btn" onclick="tjTaxCreateAccountEmail()" style="font-size:13px;padding:6px 14px">Create account</button>' +
+        '</div>' +
+        '<div id="taxAuthError" style="display:none;font-size:12px;color:var(--red);margin-top:2px"></div>' +
+      '</div>';
+    const dz = document.getElementById('taxDropZone');
+    if (dz) dz.style.opacity = '0.5';
+  }
+}
 
 function updateConnDot() {
   const dot = document.getElementById('tj-conn');
@@ -9363,37 +9470,35 @@ function loadTaxData() {
 }
 
 async function autoReprocessDocs() {
-  if (!tjDbRef) return;
+  if (!tjUser || !tjStorage) return;
   const year = document.getElementById('taxYear').value;
-  const docs = TAX_DOCS.filter(d => d.year === year);
+  const docs = TAX_DOCS.filter(d => d.year === year && d.storagePath);
   if (docs.length === 0) return;
-  showTaxStatus('Reloading ' + docs.length + ' stored documents...', 'success');
+  showTaxStatus('Reloading ' + docs.length + ' stored documents from your account…', 'success');
   let loaded = 0, failed = 0, denied = false;
   for (const doc of docs) {
     try {
-      const snap = await tjDbRef.child('taxes/rawFiles/' + doc.id).once('value');
-      const csv = snap.val();
-      if (csv) {
-        importTaxCSV._skipDocSave = true;
-        importTaxCSV(csv);
-        importTaxCSV._skipDocSave = false;
-        loaded++;
-      } else {
-        failed++;
-      }
+      const url = await tjStorage.ref(doc.storagePath).getDownloadURL();
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const csv = await res.text();
+      importTaxCSV._skipDocSave = true;
+      importTaxCSV(csv);
+      importTaxCSV._skipDocSave = false;
+      loaded++;
     } catch(e) {
       console.warn('Failed to reload doc:', doc.name, e);
       failed++;
-      if (e && (e.code === 'PERMISSION_DENIED' || /permission/i.test(e.message||''))) denied = true;
+      if (e && (e.code === 'storage/unauthorized' || /unauthorized|permission/i.test(e.message||''))) denied = true;
     }
   }
   if (loaded > 0) {
     showTaxStatus('Reloaded ' + loaded + ' documents (' + TAX_TXS.length + ' transactions). Data restored.', 'success');
   } else if (failed > 0) {
     if (denied) {
-      showTaxStatus('Stored file metadata found, but raw CSV body is unavailable (Firebase permission denied). Please re-upload the original CSV files via click-to-pick to rebuild tax state.', 'error');
+      showTaxStatus('Stored files exist but are not readable on this account. Sign in with the same Google account you used to upload them.', 'error');
     } else {
-      showTaxStatus('Stored file metadata found, but raw CSV body is unavailable. Please re-upload the original CSV files.', 'error');
+      showTaxStatus('Stored files could not be reloaded. Please re-upload the original CSV files.', 'error');
     }
   }
   // Re-render badges + overview so they reflect TAX_TXS reality, not stale TAX_IMPORTS
@@ -9424,6 +9529,10 @@ function setupTaxDropZone() {
 
   // Shared file processor — used by both click-to-pick and drag-drop paths
   function handleTaxFile(file) {
+    if (!tjUser) {
+      showTaxStatus('Sign in with Google to upload tax documents.', 'error');
+      return;
+    }
     const lower = (file.name || '').toLowerCase();
     if (lower.endsWith('.pdf')) {
       showTaxStatus('PDF files cannot be imported — use them as reference. Drop CSV files only.', 'error');
@@ -9690,7 +9799,9 @@ function saveTaxTodo() {
   const data = {};
   TAX_TODO_ITEMS.forEach(g => g.items.forEach(i => { data[i.id] = i.done; }));
   localStorage.setItem('tj_tax_todo', JSON.stringify(data));
-  if (tjDbRef) tjDbRef.child('taxes/todo').set(data);
+  if (tjUser && tjTaxApp) {
+    tjTaxApp.database().ref('tradingJournal/users/' + tjUser.uid + '/taxTodo').set(data).catch(e => console.warn('Tax todo sync failed:', e));
+  }
 }
 function toggleTaxTodo(id) {
   TAX_TODO_ITEMS.forEach(g => g.items.forEach(i => { if (i.id === id) i.done = !i.done; }));
@@ -9734,56 +9845,102 @@ function renderTaxTodo() {
 }
 
 // ── Document Storage ──
-let TAX_DOCS = []; // { id, name, exchange, type, rows, year, uploadedAt, size }
+//   Files:    Storage path  taxFiles/{uid}/{year}/{fileId}_{safeFileName}
+//   Metadata: RTDB path     tradingJournal/users/{uid}/taxFiles/{year}/{fileId}
+//
+// Auth (Google) is required for all reads and writes. Storage rules enforce
+// per-uid isolation and reject contentType / size violations server-side.
+
+let TAX_DOCS = []; // { id, name, exchange, type, rows, year, uploadedAt, size, storagePath }
+
+function _tjSafeName(name) {
+  return String(name || '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+}
+function _tjMetaRef(uid, year, fileId) {
+  return tjTaxApp.database().ref('tradingJournal/users/' + uid + '/taxFiles/' + year + (fileId ? '/' + fileId : ''));
+}
 
 function saveTaxDoc(fileName, csvText, exchange, rowCount) {
-  const year = document.getElementById('taxYear').value;
-  const doc = {
-    id: 'doc_' + Date.now(),
+  if (!tjUser) {
+    showTaxStatus('Sign in with Google to upload tax documents.', 'error');
+    return Promise.reject(new Error('Not authenticated'));
+  }
+  if (!tjStorage) {
+    showTaxStatus('Storage not initialized — reload the page.', 'error');
+    return Promise.reject(new Error('Storage not initialized'));
+  }
+  const year   = document.getElementById('taxYear').value;
+  const fileId = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  const safe   = _tjSafeName(fileName || (exchange + '_' + year + '.csv'));
+  const path   = 'taxFiles/' + tjUser.uid + '/' + year + '/' + fileId + '_' + safe;
+  const meta = {
+    id: fileId,
     name: fileName || exchange + '_' + year + '.csv',
     exchange: exchange,
     rows: rowCount,
     year: year,
     uploadedAt: new Date().toISOString(),
-    size: csvText.length
+    size: csvText.length,
+    storagePath: path
   };
-  TAX_DOCS.push(doc);
-  // Save metadata to Firebase
-  if (tjDbRef) tjDbRef.child('taxes/docs/' + doc.id).set(doc);
-  // Save raw CSV to Firebase (for re-processing)
-  if (tjDbRef) tjDbRef.child('taxes/rawFiles/' + doc.id).set(csvText).catch(e => console.warn('Raw file save failed (too large?):', e));
+  TAX_DOCS.push(meta);
   try { localStorage.setItem('tj_tax_docs', JSON.stringify(TAX_DOCS)); } catch(e) {}
   renderTaxDocs();
+  return tjStorage.ref(path).putString(csvText, 'raw', { contentType: 'text/csv' })
+    .then(() => _tjMetaRef(tjUser.uid, year, fileId).set(meta))
+    .catch(err => {
+      console.warn('saveTaxDoc failed:', err);
+      showTaxStatus('Cloud save failed for "' + meta.name + '": ' + (err && err.message || err) + '. The file is parsed locally but not synced.', 'error');
+    });
 }
 
 function loadTaxDocs() {
   try { TAX_DOCS = JSON.parse(localStorage.getItem('tj_tax_docs')) || []; } catch(e) { TAX_DOCS = []; }
-  if (tjDbRef) {
-    tjDbRef.child('taxes/docs').once('value', snap => {
-      const data = snap.val();
-      if (data) {
-        TAX_DOCS = Object.values(data);
-        try { localStorage.setItem('tj_tax_docs', JSON.stringify(TAX_DOCS)); } catch(e) {}
-        renderTaxDocs();
-      }
-    });
-  }
+  if (!tjUser || !tjTaxApp) { renderTaxDocs(); return; }
+  const year = document.getElementById('taxYear').value;
+  _tjMetaRef(tjUser.uid, year).once('value', snap => {
+    const data = snap.val();
+    const cloudDocs = data ? Object.values(data) : [];
+    // Merge: cloud is authoritative for current year; preserve any cached local docs from other years
+    const localOtherYears = TAX_DOCS.filter(d => d.year !== year);
+    TAX_DOCS = localOtherYears.concat(cloudDocs);
+    try { localStorage.setItem('tj_tax_docs', JSON.stringify(TAX_DOCS)); } catch(e) {}
+    renderTaxDocs();
+    if (cloudDocs.length > 0 && (typeof TAX_TXS === 'undefined' || TAX_TXS.length === 0)) {
+      autoReprocessDocs();
+    }
+  });
 }
 
 function removeTaxDoc(id) {
+  const doc = TAX_DOCS.find(d => d.id === id);
   TAX_DOCS = TAX_DOCS.filter(d => d.id !== id);
-  if (tjDbRef) { tjDbRef.child('taxes/docs/' + id).remove(); tjDbRef.child('taxes/rawFiles/' + id).remove(); }
   try { localStorage.setItem('tj_tax_docs', JSON.stringify(TAX_DOCS)); } catch(e) {}
   renderTaxDocs();
+  if (!tjUser || !doc) return;
+  const year = doc.year || document.getElementById('taxYear').value;
+  _tjMetaRef(tjUser.uid, year, id).remove().catch(e => console.warn('Metadata delete failed:', e));
+  if (doc.storagePath && tjStorage) {
+    tjStorage.ref(doc.storagePath).delete().catch(e => console.warn('Storage delete failed:', e));
+  }
 }
 
 async function reprocessTaxDoc(id) {
-  if (!tjDbRef) { showTaxStatus('Firebase not connected — cannot re-process stored files.', 'error'); return; }
-  showTaxStatus('Re-processing...', 'success');
-  const snap = await tjDbRef.child('taxes/rawFiles/' + id).once('value');
-  const csv = snap.val();
-  if (!csv) { showTaxStatus('Raw file not found in Firebase. Re-upload the CSV.', 'error'); return; }
-  importTaxCSV(csv);
+  if (!tjUser) { showTaxStatus('Sign in with Google to re-process stored tax files.', 'error'); return; }
+  if (!tjStorage) { showTaxStatus('Storage not connected — cannot re-process stored files.', 'error'); return; }
+  const doc = TAX_DOCS.find(d => d.id === id);
+  if (!doc || !doc.storagePath) { showTaxStatus('File not found. Re-upload the CSV.', 'error'); return; }
+  showTaxStatus('Re-processing "' + doc.name + '"…', 'success');
+  try {
+    const url = await tjStorage.ref(doc.storagePath).getDownloadURL();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const csv = await res.text();
+    importTaxCSV(csv);
+  } catch(e) {
+    console.warn('reprocessTaxDoc failed:', e);
+    showTaxStatus('Re-process failed: ' + (e && e.message || e) + '. Try re-uploading the CSV.', 'error');
+  }
 }
 
 function renderTaxDocs() {
@@ -9819,7 +9976,8 @@ function clearTaxData() {
   const year = document.getElementById('taxYear').value;
   TAX_TXS = []; TAX_LOTS = []; TAX_IMPORTS = {};
   try { localStorage.removeItem('tj_taxes_' + year); localStorage.removeItem('tj_taxes_meta_' + year); } catch(e) {}
-  if (tjDbRef) { tjDbRef.child('taxes/' + year + '/transactions').remove(); tjDbRef.child('taxes/' + year + '/lots').remove(); tjDbRef.child('taxes/' + year + '/imports').remove(); }
+  // Cleared state is local-only. The user-scoped Storage files + RTDB metadata
+  // are preserved so reprocess still works. Use removeTaxDoc() to delete files.
   renderTaxes();
   showTaxStatus('Tax data cleared for ' + year + '. Documents preserved — click ↻ to re-process.', 'success');
 }
