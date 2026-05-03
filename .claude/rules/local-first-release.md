@@ -2,18 +2,17 @@
 
 This is the **live publish target** (`jumparo1/JumpTools` → `https://jumparo1.github.io/JumpTools/*`). Every push to `main` is a deploy. Local validation is mandatory before push.
 
-## Canonical release-gate URLs
+## Canonical release-gate URL
 
 - Trading Journal: `http://10.85.1.82:8080/trading-journal.html`
-- Jump HQ: `http://10.85.1.82:8080/fund-hq.html`
 
 Port **8080** is the canonical gate.
 
-## Live URLs
+## Live URL
 
 - Trading Journal: `https://jumparo1.github.io/JumpTools/trading-journal.html`
-- Jump HQ (mirror): `https://jumparo1.github.io/JumpTools/fund-hq.html`
-- Jump HQ (canonical): `https://jumparo1.github.io/JumpHQ/fund-hq.html`
+
+Fund HQ does **not** live in this repo. Canonical Fund HQ is `https://jumparo1.github.io/JumpHQ/fund-hq.html`. The previous JumpTools Fund HQ mirror was removed on 2026-05-03 (commit `7c58324`); do not redeploy it here.
 
 ## Protocol
 
@@ -29,7 +28,7 @@ Do not push if any of:
 
 - Port 8080 size/SHA doesn't match the file on disk in this repo.
 - `scripts/preflight.sh` (in TradingJournal) reports drift or marker regression.
-- `git status` shows unexpected staged files — especially `fund-hq.html` (pre-existing WIP must stay unstaged until its own validated release).
+- `git status` shows unexpected staged files (e.g. anything Fund-HQ-related — that should never be in this repo again).
 - Commit message doesn't match what's actually staged.
 
 ## Aggregator discipline
