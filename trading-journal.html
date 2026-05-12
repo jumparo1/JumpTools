@@ -1917,6 +1917,15 @@ select.pt-input{cursor:pointer;}
       <div id="taMigrationNote" style="margin-top:12px;padding:10px 12px;border-radius:6px;background:var(--bg3,#1f2127);font-size:12px;color:var(--tx2,#ccc);line-height:1.6;display:none;"></div>
     </div>
 
+    <!-- A2. Imported JumpHQ Setups (Signal Bridge inbound · read-only) -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <h3 style="margin:0;font-size:14px;color:var(--tx2,#ddd);">📥 Imported JumpHQ Setups <span id="taImportedCount" style="font-weight:400;color:var(--tx3,#888);font-size:11px;"></span></h3>
+        <span id="taImportedHealth" style="font-size:11px;color:var(--tx3,#888);">read-only · /fundHQ/signalBridge/outbound</span>
+      </div>
+      <div id="taImportedList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading imported setups…</div></div>
+    </div>
+
     <!-- B. Latest Trader Signals -->
     <div class="card" style="padding:16px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -4203,8 +4212,122 @@ const taState = {
   setups: [],
   migration: null,
   lastRefresh: null,
-  pathReport: {},      // path → { count, status, error }
+  pathReport: {},                // path → { count, status, error }
+  importedFromJumpHQ: [],        // Signal Bridge inbound — read-only mirror of /fundHQ/signalBridge/outbound
 };
+
+// ===== SIGNAL BRIDGE — INBOUND (Phase 2 · read-only) =====
+// Listens on /fundHQ/signalBridge/outbound (JumpHQ Phase 1 writes here).
+// Never writes. Never mutates the journal. Coach V3 untouched.
+let _taBridgeListenerAttached = false;
+let _taBridgeError = null;
+
+function taBridgeAttachListener() {
+  if (_taBridgeListenerAttached) return;
+  if (typeof firebase === 'undefined' || !firebase.database) {
+    _taBridgeError = 'firebase-unavailable';
+    taRenderImported();
+    return;
+  }
+  _taBridgeListenerAttached = true;
+  try {
+    const ref = firebase.database().ref('/fundHQ/signalBridge/outbound')
+      .orderByChild('createdAt').limitToLast(50);
+    ref.on('value', function(snap) {
+      _taBridgeError = null;
+      const val = snap.val();
+      const rows = [];
+      if (val && typeof val === 'object') {
+        Object.keys(val).forEach(function(k) {
+          const v = val[k];
+          if (v && typeof v === 'object') rows.push(v);
+        });
+      }
+      rows.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+      taState.importedFromJumpHQ = rows.slice(0, 50);
+      taRenderImported();
+    }, function(err) {
+      _taBridgeError = (err && (err.message || err.code)) || String(err) || 'unknown';
+      taState.importedFromJumpHQ = [];
+      taRenderImported();
+    });
+  } catch (e) {
+    _taBridgeError = String((e && e.message) || e);
+    _taBridgeListenerAttached = false;  // allow retry on next taRefresh
+    taRenderImported();
+  }
+}
+
+function taFmtAgeMs(ms) {
+  if (!ms || typeof ms !== 'number') return '—';
+  const diff = Date.now() - ms;
+  if (diff < 0) return 'future?';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+function taRenderImported() {
+  const el = document.getElementById('taImportedList');
+  const counter = document.getElementById('taImportedCount');
+  const healthEl = document.getElementById('taImportedHealth');
+  if (!el) return;
+
+  if (_taBridgeError) {
+    if (counter) counter.textContent = '';
+    if (healthEl) {
+      healthEl.textContent = '⚠ bridge read failed';
+      healthEl.style.color = '#f87171';
+    }
+    el.innerHTML = '<div style="color:#f87171;font-size:12px;padding:14px;line-height:1.5;">Bridge read failed: ' + taEsc(_taBridgeError) + '. Existing Trader Agent sections continue to work.</div>';
+    return;
+  }
+  if (healthEl) {
+    healthEl.textContent = 'read-only · /fundHQ/signalBridge/outbound';
+    healthEl.style.color = '';
+  }
+
+  const rows = taState.importedFromJumpHQ || [];
+  if (counter) counter.textContent = rows.length ? ('· ' + rows.length) : '';
+  if (!rows.length) {
+    el.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No JumpHQ setups imported yet.</div>';
+    return;
+  }
+
+  const html = rows.map(function(s) {
+    const asset = String(s.asset || '—').toUpperCase();
+    const side = String(s.direction || '—').toUpperCase();
+    const sideColor = side === 'LONG' ? '#34d399' : side === 'SHORT' ? '#f87171' : 'var(--tx2,#ccc)';
+    const conf = String(s.confidence || '').toLowerCase();
+    const confColor = conf === 'high' ? '#34d399' : conf === 'medium' ? '#fbbf24' : conf === 'low' ? '#f87171' : 'var(--tx3,#888)';
+    const agent = s.sourceAgent || '—';
+    const setup = s.setupType || '—';
+    const thesis = s.thesis || '';
+    const inval = s.invalidation || '';
+    const risk = s.riskNotes || '';
+    const age = taFmtAgeMs(s.createdAt);
+    return '<div style="border-bottom:1px solid var(--border,#2a2d34);padding:10px 12px;font-size:12px;">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">'
+        + '<strong style="font-size:13px;">' + taEsc(asset) + '</strong>'
+        + '<span style="color:' + sideColor + ';font-weight:600;font-size:11px;">' + taEsc(side) + '</span>'
+        + '<span style="font-size:10px;color:var(--tx3,#888);">via</span>'
+        + '<span style="font-size:11px;color:var(--tx2,#ccc);">' + taEsc(agent) + '</span>'
+        + '<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:var(--bg3,#1f2127);color:' + confColor + ';font-weight:600;text-transform:uppercase;">' + taEsc(conf || '—') + '</span>'
+        + '<span style="font-size:11px;color:var(--tx3,#888);">' + taEsc(setup) + '</span>'
+        + '<span style="margin-left:auto;font-size:11px;color:var(--tx3,#888);">' + taEsc(age) + '</span>'
+      + '</div>'
+      + (thesis ? '<div style="color:var(--tx2,#ccc);line-height:1.4;margin-bottom:3px;">' + taEsc(thesis) + '</div>' : '')
+      + (inval ? '<div style="color:var(--tx3,#888);font-size:11px;line-height:1.4;"><strong>Invalidation:</strong> ' + taEsc(inval) + '</div>' : '')
+      + (risk ? '<div style="color:var(--tx3,#888);font-size:11px;line-height:1.4;"><strong>Risk:</strong> ' + taEsc(risk) + '</div>' : '')
+      + '</div>';
+  }).join('');
+  el.innerHTML = '<div style="max-height:520px;overflow-y:auto;">' + html + '</div>';
+}
 
 function taFbReadOnce(path) {
   return new Promise((resolve) => {
@@ -4285,6 +4408,7 @@ function taEsc(s) {
 async function taRefresh() {
   const btn = document.getElementById('taRefreshBtn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Refreshing…'; }
+  taBridgeAttachListener();   // idempotent — attaches the inbound bridge listener once
   try {
     // Probe primary namespace first.
     const [jtSignals, jtScorecard, jtPaper, jtSetups, jtMeta] = await Promise.all([
@@ -4372,6 +4496,7 @@ async function taRefresh() {
 function taRender() {
   taRenderBadge();
   taRenderStatus();
+  taRenderImported();
   taRenderSignals();
   taRenderSetups();
   taRenderPaper();
