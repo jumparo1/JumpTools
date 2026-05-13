@@ -1936,6 +1936,16 @@ select.pt-input{cursor:pointer;}
       <div id="taAlignList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading alignment…</div></div>
     </div>
 
+    <!-- A4. Signal Quality Audit (local diagnostic · read-only) -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+        <h3 style="margin:0;font-size:14px;color:var(--tx2,#ddd);">🧪 Signal Quality Audit <span id="taAuditCount" style="font-weight:400;color:var(--tx3,#888);font-size:11px;"></span></h3>
+        <span style="font-size:11px;color:var(--tx3,#888);">read-only · local evaluation</span>
+      </div>
+      <div style="font-size:11px;color:var(--tx3,#888);margin-bottom:12px;line-height:1.5;">Groups trader signals by <code>asset · direction · setup type</code>, checks duplicate pressure, evaluated hit rate, and linked paper-trade PnL. Conservative grading. Answers: do these signals deserve attention?</div>
+      <div id="taAuditList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading audit…</div></div>
+    </div>
+
     <!-- B. Latest Trader Signals -->
     <div class="card" style="padding:16px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -4592,6 +4602,441 @@ function taRenderSignalAlignmentCard(g) {
        + '</div>';
 }
 
+/* ── Signal Quality Audit ──────────────────────────────────────────────────
+   Pure read-only diagnostic. Groups trader signals by asset+direction+setupType,
+   computes duplicate pressure, evaluated hit rate, and linked paper-trade PnL,
+   then grades each group conservatively. The goal is to surface whether these
+   signals are worth acting on — not to make them look good.
+*/
+function taSignalGroupKey(s) {
+  const asset = taNormalizeSignalAsset(s);
+  const dir   = taNormalizeSignalDirection(s) || 'NONE';
+  const type  = String(s.type || s.setupType || '').toLowerCase().trim() || 'untyped';
+  return asset + '|' + dir + '|' + type;
+}
+
+function taBacktestSignalGroups(signals, paperTrades, opts) {
+  opts = opts || {};
+  const now = Date.now();
+  const FRESH_MS = opts.freshMs != null ? opts.freshMs : (72 * 60 * 60 * 1000);
+  const byKey = {};
+
+  (signals || []).forEach(function(s) {
+    if (!s || typeof s !== 'object') return;
+    const asset = taNormalizeSignalAsset(s);
+    if (!asset) return;
+    const key = taSignalGroupKey(s);
+    const dir = taNormalizeSignalDirection(s) || '';
+    const type = String(s.type || s.setupType || '').toLowerCase().trim() || 'untyped';
+
+    let g = byKey[key];
+    if (!g) {
+      g = {
+        key: key, asset: asset, direction: dir, setupType: type,
+        signals: [], raw: 0,
+        firstTs: 0, lastTs: 0,
+        active: 0, evaluated: 0, wins: 0, losses: 0,
+        paperTrades: []
+      };
+      byKey[key] = g;
+    }
+    g.signals.push(s);
+    g.raw += 1;
+    const ts = taGetSignalTimestamp(s);
+    if (ts) {
+      if (!g.firstTs || ts < g.firstTs) g.firstTs = ts;
+      if (ts > g.lastTs) g.lastTs = ts;
+    }
+    const outcome = String(s.outcome || '').toLowerCase();
+    const status  = String(s.status  || '').toLowerCase();
+    if      (outcome === 'correct')   { g.wins += 1;   g.evaluated += 1; }
+    else if (outcome === 'incorrect') { g.losses += 1; g.evaluated += 1; }
+    else if (status === 'open' || status === 'active' || outcome === 'pending' || (!outcome && !status)) {
+      g.active += 1;
+    }
+  });
+
+  // Link paper trades by asset+direction
+  (paperTrades || []).forEach(function(t) {
+    if (!t || typeof t !== 'object') return;
+    const asset = taNormalizeSignalAsset(t);
+    const dir   = taNormalizeSignalDirection(t) || '';
+    Object.keys(byKey).forEach(function(k) {
+      const g = byKey[k];
+      if (g.asset === asset && g.direction === dir) g.paperTrades.push(t);
+    });
+  });
+
+  // Derived stats
+  return Object.keys(byKey).map(function(k) {
+    const g = byKey[k];
+    const unique = taCollapseDuplicateSignals(g.signals).length;
+    const hitRate = g.evaluated > 0 ? (g.wins / g.evaluated) : null;
+
+    let paperOpen = 0, paperClosed = 0;
+    let sumAll = 0, cAll = 0, sumOpen = 0, cOpen = 0, sumClosed = 0, cClosed = 0;
+    g.paperTrades.forEach(function(t) {
+      const st = String(t.status || '').toLowerCase();
+      const raw = t.pnl_pct;
+      const pnl = (raw === null || raw === undefined || raw === '') ? null
+                : (typeof raw === 'number' ? raw : Number(raw));
+      const pnlOk = pnl != null && !isNaN(pnl);
+      if (st === 'open' || st === 'active') {
+        paperOpen += 1;
+        if (pnlOk) { sumOpen += pnl; cOpen += 1; }
+      } else {
+        paperClosed += 1;
+        if (pnlOk) { sumClosed += pnl; cClosed += 1; }
+      }
+      if (pnlOk) { sumAll += pnl; cAll += 1; }
+    });
+
+    const repeatRatio = unique > 0 ? (g.raw / unique) : 1;
+
+    return Object.assign({}, g, {
+      unique: unique,
+      hitRate: hitRate,
+      paperOpen: paperOpen,
+      paperClosed: paperClosed,
+      avgPaperPnl:       cAll    > 0 ? (sumAll    / cAll)    : null,
+      avgOpenPaperPnl:   cOpen   > 0 ? (sumOpen   / cOpen)   : null,
+      avgClosedPaperPnl: cClosed > 0 ? (sumClosed / cClosed) : null,
+      repeatRatio: repeatRatio,
+      fresh: (g.lastTs && (now - g.lastTs) < FRESH_MS) ? 1 : 0
+    });
+  });
+}
+
+function taScoreSignalGroup(g) {
+  const reasons = [];
+  let score = 50;
+
+  if (g.evaluated >= 10 && g.hitRate != null) {
+    if (g.hitRate >= 0.55)       { score += 25; reasons.push('hit rate ' + (g.hitRate*100).toFixed(0) + '% over ' + g.evaluated + ' samples'); }
+    else if (g.hitRate >= 0.45)  { score += 5;  reasons.push('hit rate ' + (g.hitRate*100).toFixed(0) + '% — flat'); }
+    else                          { score -= 25; reasons.push('hit rate ' + (g.hitRate*100).toFixed(0) + '% — below random over ' + g.evaluated + ' samples'); }
+  } else if (g.evaluated > 0) {
+    reasons.push('only ' + g.evaluated + ' evaluated — too few for verdict');
+  } else {
+    reasons.push('no evaluated signals yet');
+  }
+
+  if (g.avgClosedPaperPnl != null) {
+    if (g.avgClosedPaperPnl >= 3)       { score += 15; reasons.push('paper closed PnL +' + g.avgClosedPaperPnl.toFixed(1) + '%'); }
+    else if (g.avgClosedPaperPnl >= 0)  { reasons.push('paper closed PnL ' + g.avgClosedPaperPnl.toFixed(1) + '% (flat)'); }
+    else                                 { score -= 15; reasons.push('paper closed PnL ' + g.avgClosedPaperPnl.toFixed(1) + '%'); }
+  }
+
+  if      (g.repeatRatio >= 10) { score -= 15; reasons.push('high repetition (' + g.raw + ' raw / ' + g.unique + ' unique = ' + g.repeatRatio.toFixed(1) + 'x)'); }
+  else if (g.repeatRatio >= 5)  { score -= 8;  reasons.push('repetitive (' + g.repeatRatio.toFixed(1) + 'x duplicates)'); }
+  else if (g.repeatRatio >= 2)  { score -= 3;  reasons.push('mild repetition (' + g.repeatRatio.toFixed(1) + 'x)'); }
+
+  const stillFiring = g.fresh && g.active > 0;
+  const losingHistory =
+    (g.hitRate != null && g.hitRate < 0.40 && g.evaluated >= 10) ||
+    (g.avgClosedPaperPnl != null && g.avgClosedPaperPnl < -3);
+  const dangerous = stillFiring && losingHistory && g.raw >= 10;
+
+  let grade;
+  if      (dangerous)                                              grade = 'DANGEROUS';
+  else if (g.evaluated < 5 && g.paperClosed < 1)                   grade = 'NEEDS_DATA';
+  else if (score >= 70)                                            grade = 'GOOD';
+  else if (score >= 50)                                            grade = 'WATCH';
+  else                                                             grade = 'WEAK';
+
+  return { grade: grade, score: score, reasons: reasons };
+}
+
+function taEstimateSignalUsefulness(g) {
+  const s = taScoreSignalGroup(g);
+  let verdict = '', issue = '';
+  if (s.grade === 'DANGEROUS') {
+    verdict = 'Do not trade this signal — negative historical edge and still firing.';
+    issue   = 'repeated losing signal still active';
+  } else if (s.grade === 'WEAK') {
+    verdict = 'Do not treat as standalone entry signal. Market-context only.';
+    issue   = s.reasons.filter(function(r){ return r.indexOf('below') !== -1 || r.indexOf('high repetition') !== -1 || r.indexOf('paper closed PnL -') !== -1; })[0] || 'weak evidence';
+  } else if (s.grade === 'NEEDS_DATA') {
+    verdict = 'Monitor — too few evaluated samples to draw a conclusion.';
+    issue   = 'insufficient evaluated history';
+  } else if (s.grade === 'WATCH') {
+    verdict = 'Watch only — wait for confirmation before sizing.';
+    issue   = s.reasons[0] || '';
+  } else if (s.grade === 'GOOD') {
+    verdict = 'Reasonable edge — still confirm with chart before entry.';
+    issue   = '';
+  } else {
+    verdict = 'Insufficient data.';
+  }
+  return Object.assign({}, s, { verdict: verdict, issue: issue });
+}
+
+function taBuildSignalQualitySummary(signals, paperTrades) {
+  const groups = taBacktestSignalGroups(signals, paperTrades);
+  const evaluated = groups.map(function(g) {
+    return Object.assign({}, g, taEstimateSignalUsefulness(g));
+  });
+  evaluated.sort(function(a, b) { return b.score - a.score; });
+
+  const totalRaw       = evaluated.reduce(function(s,g){ return s + g.raw; }, 0);
+  const totalUnique    = evaluated.reduce(function(s,g){ return s + g.unique; }, 0);
+  const totalEvaluated = evaluated.reduce(function(s,g){ return s + g.evaluated; }, 0);
+  const totalWins      = evaluated.reduce(function(s,g){ return s + g.wins; }, 0);
+  const overallHitRate = totalEvaluated > 0 ? (totalWins / totalEvaluated) : null;
+
+  let sumPnl = 0, cPnl = 0;
+  evaluated.forEach(function(g) {
+    g.paperTrades.forEach(function(t) {
+      const raw = t.pnl_pct;
+      const p = (raw === null || raw === undefined || raw === '') ? null
+              : (typeof raw === 'number' ? raw : Number(raw));
+      if (p != null && !isNaN(p)) { sumPnl += p; cPnl += 1; }
+    });
+  });
+  const avgPaperPnl = cPnl > 0 ? (sumPnl / cPnl) : null;
+  const dupRatio    = totalUnique > 0 ? (totalRaw / totalUnique) : 1;
+
+  const meaningful = evaluated.filter(function(g) { return g.evaluated >= 5 || g.paperClosed >= 1; });
+  const best  = meaningful.length ? meaningful[0] : null;
+  const worst = meaningful.length ? meaningful[meaningful.length - 1] : null;
+
+  let overallVerdict;
+  if (totalEvaluated < 20) {
+    overallVerdict = 'Too few evaluated signals to draw a conclusion. Treat as exploratory data only.';
+  } else if (overallHitRate != null && overallHitRate < 0.40) {
+    overallVerdict = 'Current signal evidence is weak. Use as market context only until backtest improves.';
+  } else if (overallHitRate != null && overallHitRate < 0.50) {
+    overallVerdict = 'Hit rate below random. Signals carry market-context value but no proven edge yet.';
+  } else if (avgPaperPnl != null && avgPaperPnl < -2) {
+    overallVerdict = 'Paper PnL is negative. Do not size from these signals without independent confirmation.';
+  } else {
+    overallVerdict = 'Mixed evidence. Use signals as one input among several until win-rate stabilizes.';
+  }
+
+  return {
+    groups: evaluated,
+    totalRaw: totalRaw, totalUnique: totalUnique, totalEvaluated: totalEvaluated, totalWins: totalWins,
+    overallHitRate: overallHitRate, avgPaperPnl: avgPaperPnl, dupRatio: dupRatio,
+    best: best, worst: worst,
+    overallVerdict: overallVerdict
+  };
+}
+
+function taRenderSignalQualityAudit(summary) {
+  const el = document.getElementById('taAuditList');
+  const counter = document.getElementById('taAuditCount');
+  if (!el) return;
+  if (!summary) summary = taBuildSignalQualitySummary(taState.signals || [], taState.paperTrades || []);
+
+  if (counter) counter.textContent = summary.groups.length ? ('· ' + summary.groups.length + ' groups') : '';
+
+  const disclaimer = '<div style="font-size:11px;color:var(--tx3,#888);font-style:italic;margin-top:10px;padding-top:8px;border-top:1px dotted var(--border,#2a2d34);">Audit is diagnostic only — not a trading recommendation. Run <code style="background:var(--bg3,#1f2127);padding:1px 4px;border-radius:3px;color:var(--tx2,#ccc);">window.taRunSignalQualityTests()</code> in DevTools to sanity-check the math.</div>';
+
+  if (!summary.groups.length) {
+    el.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No signals to audit.</div>' + disclaimer;
+    return;
+  }
+
+  const overallColor = (summary.overallHitRate != null && summary.overallHitRate < 0.40) ? '#f87171'
+                    : (summary.overallHitRate != null && summary.overallHitRate >= 0.50) ? '#34d399'
+                    : '#fbbf24';
+  const overallLabel = (summary.overallHitRate != null && summary.overallHitRate < 0.40) ? 'WEAK'
+                    : (summary.overallHitRate != null && summary.overallHitRate >= 0.50) ? 'OK'
+                    : 'MIXED';
+  const hitRateStr = summary.overallHitRate != null ? (summary.overallHitRate * 100).toFixed(1) + '%' : 'n/a';
+  const hitColor = summary.overallHitRate == null ? '#888'
+                 : summary.overallHitRate >= 0.50 ? '#34d399'
+                 : summary.overallHitRate >= 0.40 ? '#fbbf24' : '#f87171';
+  const pnlStr = summary.avgPaperPnl != null ? ((summary.avgPaperPnl >= 0 ? '+' : '') + summary.avgPaperPnl.toFixed(2) + '%') : 'n/a';
+  const pnlColor = summary.avgPaperPnl == null ? '#888' : summary.avgPaperPnl >= 0 ? '#34d399' : '#f87171';
+  const dupLabel = summary.dupRatio >= 5 ? 'high' : summary.dupRatio >= 2 ? 'mild' : 'low';
+  const dupColor = summary.dupRatio >= 5 ? '#f87171' : summary.dupRatio >= 2 ? '#fbbf24' : '#34d399';
+
+  function summaryCard(label, value, valueColor, sub) {
+    return '<div style="padding:10px 12px;background:var(--bg3,#1f2127);border-radius:6px;">'
+      + '<div style="font-size:10px;color:var(--tx3,#888);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">' + taEsc(label) + '</div>'
+      + '<div style="font-size:14px;font-weight:700;color:' + valueColor + ';">' + taEsc(value) + '</div>'
+      + '<div style="font-size:11px;color:var(--tx3,#888);margin-top:2px;">' + taEsc(sub) + '</div>'
+      + '</div>';
+  }
+
+  const cards = [
+    summaryCard('Overall signal quality', overallLabel, overallColor, summary.groups.length + ' groups · ' + summary.totalRaw + ' raw'),
+    summaryCard('Duplicate pressure',     summary.dupRatio.toFixed(1) + 'x · ' + dupLabel, dupColor, summary.totalUnique + ' unique of ' + summary.totalRaw),
+    summaryCard('Evaluated hit rate',     hitRateStr, hitColor, summary.totalWins + ' / ' + summary.totalEvaluated + ' evaluated'),
+    summaryCard('Paper PnL avg',          pnlStr, pnlColor, 'across linked paper trades')
+  ];
+  if (summary.best)  cards.push(summaryCard('Best group',  summary.best.asset + ' ' + summary.best.direction,  '#34d399', summary.best.grade  + ' · score ' + summary.best.score));
+  if (summary.worst && summary.worst !== summary.best) cards.push(summaryCard('Worst group', summary.worst.asset + ' ' + summary.worst.direction, '#f87171', summary.worst.grade + ' · score ' + summary.worst.score));
+
+  const summaryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:14px;">' + cards.join('') + '</div>';
+
+  const verdictHtml = '<div style="padding:10px 12px;background:var(--bg3,#1f2127);border-radius:6px;margin-bottom:14px;border-left:3px solid ' + overallColor + ';">'
+    + '<div style="font-size:11px;color:var(--tx3,#888);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Overall verdict</div>'
+    + '<div style="font-size:12px;color:var(--tx2,#ccc);line-height:1.5;">' + taEsc(summary.overallVerdict) + '</div>'
+    + '</div>';
+
+  const top = summary.groups.slice(0, 25);
+  const rows = top.map(function(g) {
+    const gradeColor = g.grade === 'GOOD' ? '#34d399'
+                     : g.grade === 'WATCH' ? '#fbbf24'
+                     : g.grade === 'NEEDS_DATA' ? '#60a5fa'
+                     : '#f87171';
+    const gradeBg = g.grade === 'GOOD' ? '#1e3a2f'
+                  : g.grade === 'WATCH' ? '#3a2f1e'
+                  : g.grade === 'NEEDS_DATA' ? '#1e2a3a'
+                  : '#3a2526';
+    const dirColor = g.direction === 'LONG' ? '#34d399' : g.direction === 'SHORT' ? '#f87171' : '#aaa';
+    const hitStr = g.hitRate != null
+      ? (g.hitRate*100).toFixed(0) + '% over ' + g.evaluated
+      : 'no data (' + g.evaluated + ' eval)';
+    const hitCellColor = g.hitRate != null && g.hitRate >= 0.50 ? '#34d399'
+                       : g.hitRate != null && g.hitRate <  0.40 ? '#f87171'
+                       : g.hitRate != null ? '#fbbf24' : '#888';
+
+    const paperBits = [];
+    if (g.paperClosed > 0) {
+      paperBits.push(g.paperClosed + ' closed' + (g.avgClosedPaperPnl != null ? ' ' + (g.avgClosedPaperPnl >= 0 ? '+' : '') + g.avgClosedPaperPnl.toFixed(1) + '%' : ''));
+    }
+    if (g.paperOpen > 0) {
+      paperBits.push(g.paperOpen + ' open' + (g.avgOpenPaperPnl != null ? ' ' + (g.avgOpenPaperPnl >= 0 ? '+' : '') + g.avgOpenPaperPnl.toFixed(1) + '%' : ''));
+    }
+    const paperLine = paperBits.length ? paperBits.join(' · ') : 'none linked';
+
+    return '<div style="border:1px solid var(--border,#2a2d34);border-radius:6px;padding:10px 12px;background:var(--bg3,#1f2127);margin-bottom:8px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">'
+      +   '<strong style="font-size:13px;color:var(--tx1,#eee);">' + taEsc(g.asset) + '</strong>'
+      +   '<span style="color:' + dirColor + ';font-weight:600;font-size:11px;">' + taEsc(g.direction || '—') + '</span>'
+      +   '<span style="font-size:11px;color:var(--tx3,#888);">' + taEsc(g.setupType) + '</span>'
+      +   '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;background:' + gradeBg + ';color:' + gradeColor + ';letter-spacing:0.5px;">' + taEsc(g.grade) + '</span>'
+      +   '<span style="margin-left:auto;font-size:11px;color:var(--tx3,#888);">score ' + g.score + '</span>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;font-size:11px;color:var(--tx2,#ccc);margin-bottom:6px;">'
+      +   '<div>Raw <strong>' + g.raw + '</strong> · Unique <strong>' + g.unique + '</strong> (' + g.repeatRatio.toFixed(1) + 'x)</div>'
+      +   '<div>Hit rate <strong style="color:' + hitCellColor + ';">' + taEsc(hitStr) + '</strong></div>'
+      +   '<div>Paper: ' + taEsc(paperLine) + '</div>'
+      + '</div>'
+      + (g.issue ? '<div style="font-size:11px;color:var(--tx3,#888);margin-bottom:3px;"><strong style="color:var(--tx2,#ccc);">Issue:</strong> ' + taEsc(g.issue) + '</div>' : '')
+      + '<div style="font-size:11px;color:var(--tx2,#ccc);line-height:1.4;"><strong>Verdict:</strong> ' + taEsc(g.verdict) + '</div>'
+      + '</div>';
+  }).join('');
+
+  el.innerHTML = summaryHtml + verdictHtml
+    + '<div style="max-height:540px;overflow-y:auto;">' + rows + '</div>'
+    + disclaimer;
+}
+
+// Console test harness — sanity-check the math without touching Firebase.
+window.taRunSignalQualityTests = function() {
+  const log = [];
+  let passed = 0, failed = 0;
+  function assert(name, cond, detail) {
+    if (cond) { passed += 1; log.push('✓ ' + name); }
+    else      { failed += 1; log.push('✗ ' + name + (detail ? ' — ' + detail : '')); }
+  }
+
+  // 1. Empty input
+  try {
+    const s = taBuildSignalQualitySummary([], []);
+    assert('empty input does not throw', true);
+    assert('empty input → 0 groups',     s.groups.length === 0);
+    assert('empty input → null hit rate', s.overallHitRate == null);
+  } catch (e) { assert('empty input does not throw', false, String(e && e.message || e)); }
+
+  // 2. AVAX duplicates collapse + paper-trade linking
+  const now = Date.now();
+  const mockSignals = [];
+  for (let i = 0; i < 36; i++) {
+    mockSignals.push({
+      coin: 'AVAX', side: 'short', type: 'short_setup',
+      assessment: 'Stage 4 declining, score 3.2/5.0',
+      created: new Date(now - i*3600*1000).toISOString(),
+      outcome: i < 20 ? (i % 3 === 0 ? 'correct' : 'incorrect') : 'pending'
+    });
+  }
+  for (let i = 0; i < 7; i++) {
+    mockSignals.push({ coin: 'WIF', side: 'short', type: 'short_setup',
+      created: new Date(now - i*7200*1000).toISOString() });
+  }
+  const summary = taBuildSignalQualitySummary(mockSignals, [
+    { coin: 'AVAX', side: 'short', status: 'closed', pnl_pct: -5.44, opened_at: new Date(now -  86400000).toISOString() },
+    { coin: 'WIF',  side: 'short', status: 'open',   pnl_pct:  9.01, opened_at: new Date(now -   7200000).toISOString() },
+    { coin: 'WIF',  side: 'short', status: 'closed', pnl_pct: -5.82, opened_at: new Date(now - 172800000).toISOString() }
+  ]);
+  const avax = summary.groups.filter(function(g){ return g.asset === 'AVAX'; })[0];
+  assert('AVAX group exists',                       avax != null);
+  assert('AVAX raw count = 36',                     avax && avax.raw === 36, avax && ('got ' + avax.raw));
+  assert('AVAX duplicates collapse to 1 unique',    avax && avax.unique === 1, avax && ('got ' + avax.unique));
+  assert('AVAX raw > unique (spam detected)',       avax && avax.raw > avax.unique);
+  assert('AVAX direction normalised to SHORT',      avax && avax.direction === 'SHORT');
+  assert('AVAX paper trade linked (asset+dir)',     avax && avax.paperTrades.length === 1);
+  assert('AVAX has evaluated signals',              avax && avax.evaluated > 0);
+
+  const wif = summary.groups.filter(function(g){ return g.asset === 'WIF'; })[0];
+  assert('WIF group exists',                        wif != null);
+  assert('WIF raw count = 7',                       wif && wif.raw === 7);
+  assert('WIF has 2 paper trades linked',           wif && wif.paperTrades.length === 2);
+
+  // 3. Grouping key honors asset+direction+setupType
+  const ks = [
+    { coin: 'BTC', side: 'long',  type: 'reversal' },
+    { coin: 'BTC', side: 'long',  type: 'reversal' },
+    { coin: 'BTC', side: 'long',  type: 'breakout' },
+    { coin: 'BTC', side: 'short', type: 'reversal' }
+  ];
+  const ksum = taBuildSignalQualitySummary(ks, []);
+  const btcGroups = ksum.groups.filter(function(g){ return g.asset === 'BTC'; });
+  assert('grouping by asset+direction+type produces 3 BTC groups', btcGroups.length === 3, 'got ' + btcGroups.length);
+
+  // 4. Malformed input does not crash
+  try {
+    const malformed = [
+      null, undefined, {},
+      { coin: 123, side: null, type: undefined },
+      { asset: 'ETH', direction: 'long', created: 'not-a-date' },
+      { coin: '', side: '' },
+      { coin: 'SOL', side: 'long', created: undefined, opened_at: 'bogus' }
+    ];
+    const s = taBuildSignalQualitySummary(malformed, [null, undefined, {}]);
+    assert('malformed input does not throw', true);
+    assert('malformed inputs filtered out — only valid asset groups remain', s.groups.every(function(g){ return !!g.asset; }));
+  } catch (e) { assert('malformed input does not throw', false, String(e && e.message || e)); }
+
+  // 5. No Firebase writes (audit is read-only by construction)
+  let bridgeWrites = 0;
+  if (typeof firebase !== 'undefined' && firebase.database) {
+    const dbRef = firebase.database();
+    const origPush   = dbRef.ref('/').push;
+    const origSet    = dbRef.ref('/').set;
+    const origUpdate = dbRef.ref('/').update;
+    // We can't safely shim ref().push globally without breaking other listeners,
+    // so this is a structural assertion: helpers only read taState, never call firebase.*
+    const srcText = (
+      taBuildSignalQualitySummary.toString() +
+      taBacktestSignalGroups.toString() +
+      taScoreSignalGroup.toString() +
+      taEstimateSignalUsefulness.toString() +
+      taRenderSignalQualityAudit.toString()
+    );
+    const writesFirebase = /firebase\.|\.push\(|\.set\(|\.update\(|\.remove\(/.test(srcText);
+    assert('audit helpers contain no firebase write calls', !writesFirebase);
+  } else {
+    assert('firebase not loaded — write check N/A', true);
+  }
+
+  // 6. Render does not throw
+  try {
+    if (document.getElementById('taAuditList')) taRenderSignalQualityAudit(summary);
+    assert('taRenderSignalQualityAudit does not throw', true);
+  } catch (e) { assert('taRenderSignalQualityAudit does not throw', false, String(e && e.message || e)); }
+
+  console.group('Signal Quality Audit — tests');
+  log.forEach(function(l){ console.log(l); });
+  console.log('passed=' + passed + ' failed=' + failed);
+  console.groupEnd();
+  return { passed: passed, failed: failed, log: log };
+};
+
 function taFbReadOnce(path) {
   return new Promise((resolve) => {
     if (typeof firebase === 'undefined' || !firebase.database) {
@@ -4761,6 +5206,7 @@ function taRender() {
   taRenderStatus();
   taRenderImported();
   taRenderSignalAlignment();
+  taRenderSignalQualityAudit();
   taRenderSignals();
   taRenderSetups();
   taRenderPaper();
