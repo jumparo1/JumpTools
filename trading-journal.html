@@ -1926,6 +1926,16 @@ select.pt-input{cursor:pointer;}
       <div id="taImportedList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading imported setups…</div></div>
     </div>
 
+    <!-- A3. Today's Signal Alignment (cross-agent conflict layer · read-only) -->
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+        <h3 style="margin:0;font-size:14px;color:var(--tx2,#ddd);">⚖️ Today's Signal Alignment <span id="taAlignCount" style="font-weight:400;color:var(--tx3,#888);font-size:11px;"></span></h3>
+        <span style="font-size:11px;color:var(--tx3,#888);">cross-agent · 72h window</span>
+      </div>
+      <div style="font-size:11px;color:var(--tx3,#888);margin-bottom:12px;line-height:1.5;">Groups JumpHQ strategic setups with Trader Agent tactical signals. CONFLICT = decision point, not invalid signal — wait for confirmation.</div>
+      <div id="taAlignList"><div style="color:var(--tx3,#888);font-size:12px;padding:14px;">Loading alignment…</div></div>
+    </div>
+
     <!-- B. Latest Trader Signals -->
     <div class="card" style="padding:16px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -4329,6 +4339,259 @@ function taRenderImported() {
   el.innerHTML = '<div style="max-height:520px;overflow-y:auto;">' + html + '</div>';
 }
 
+/* ── Signal Alignment / Conflict Layer ─────────────────────────────────────
+   Pure helpers. No Firebase writes, no schema changes. Reads existing
+   taState (importedFromJumpHQ + signals + paperTrades) and groups by asset
+   so the operator sees cross-agent agreement and disagreement instead of
+   disconnected LONG/SHORT contradictions.
+*/
+const TA_ALIGN_WINDOW_MS = 72 * 60 * 60 * 1000;
+const TA_DIR_LONG    = 'LONG';
+const TA_DIR_SHORT   = 'SHORT';
+const TA_DIR_WATCH   = 'WATCHLIST';
+const TA_DIR_NEUTRAL = 'NEUTRAL';
+
+function taNormalizeSignalAsset(o) {
+  if (!o || typeof o !== 'object') return '';
+  const raw = o.asset || o.coin || o.symbol || o.ticker || '';
+  return String(raw).trim().toUpperCase();
+}
+
+function taNormalizeSignalDirection(o) {
+  if (!o || typeof o !== 'object') return '';
+  const raw = String(o.direction || o.side || o.bias || '').trim().toLowerCase();
+  if (raw) {
+    if (raw === 'long' || raw === 'buy')        return TA_DIR_LONG;
+    if (raw === 'short' || raw === 'sell')      return TA_DIR_SHORT;
+    if (raw === 'watchlist' || raw === 'watch') return TA_DIR_WATCH;
+    if (raw === 'neutral' || raw === 'flat')    return TA_DIR_NEUTRAL;
+    if (raw.indexOf('long')  !== -1) return TA_DIR_LONG;
+    if (raw.indexOf('short') !== -1) return TA_DIR_SHORT;
+    if (raw.indexOf('watch') !== -1) return TA_DIR_WATCH;
+  }
+  const t = String(o.setupType || o.type || '').toLowerCase();
+  if (t.indexOf('short') !== -1) return TA_DIR_SHORT;
+  if (t.indexOf('long')  !== -1) return TA_DIR_LONG;
+  if (t.indexOf('watch') !== -1) return TA_DIR_WATCH;
+  return '';
+}
+
+function taGetSignalTimestamp(o) {
+  if (!o || typeof o !== 'object') return 0;
+  const numCands = [o.createdAt, o.created_ts, o.ts, o.timestamp];
+  for (let i = 0; i < numCands.length; i++) {
+    const n = numCands[i];
+    if (typeof n === 'number' && isFinite(n) && n > 0) {
+      return n < 1e12 ? n * 1000 : n;
+    }
+  }
+  const strCands = [o.created, o.opened_at, o.closed_at, o.updated_at, o.mirrored_at, o.createdAt];
+  for (let i = 0; i < strCands.length; i++) {
+    const s = strCands[i];
+    if (!s) continue;
+    const t = Date.parse(s);
+    if (!isNaN(t)) return t;
+  }
+  return 0;
+}
+
+function taBuildSignalAlignment(importedSetups, traderSignals, paperTrades) {
+  const cutoff = Date.now() - TA_ALIGN_WINDOW_MS;
+  const byAsset = {};
+
+  function add(kind, list) {
+    (list || []).forEach(function(o) {
+      const asset = taNormalizeSignalAsset(o);
+      if (!asset) return;
+      const ts = taGetSignalTimestamp(o);
+      if (!ts || ts < cutoff) return;
+      if (kind === 'paper') {
+        const st = String(o.status || '').toLowerCase();
+        if (st && st !== 'open' && st !== 'active') return;
+      }
+      const dir = taNormalizeSignalDirection(o);
+      const bucket = byAsset[asset] || (byAsset[asset] = {
+        asset: asset, strategic: [], tactical: [], paper: [], latest: 0
+      });
+      const entry = { kind: kind, dir: dir, obj: o, ts: ts };
+      if (kind === 'imported')   bucket.strategic.push(entry);
+      else if (kind === 'paper') bucket.paper.push(entry);
+      else                       bucket.tactical.push(entry);
+      if (ts > bucket.latest) bucket.latest = ts;
+    });
+  }
+  add('imported', importedSetups);
+  add('signal',   traderSignals);
+  add('paper',    paperTrades);
+
+  const groups = Object.keys(byAsset).map(function(k) { return byAsset[k]; });
+  groups.forEach(function(g) {
+    const all = g.strategic.concat(g.tactical, g.paper).map(function(e){ return e.dir; });
+    const hasLong  = all.indexOf(TA_DIR_LONG)  !== -1;
+    const hasShort = all.indexOf(TA_DIR_SHORT) !== -1;
+    const hasWatch = all.indexOf(TA_DIR_WATCH) !== -1;
+    if      (hasLong && hasShort) g.status = 'CONFLICT';
+    else if (hasLong)             g.status = 'ALIGNED_LONG';
+    else if (hasShort)            g.status = 'ALIGNED_SHORT';
+    else if (hasWatch)            g.status = 'WATCHLIST';
+    else                          g.status = 'NEUTRAL';
+  });
+
+  const rank = { CONFLICT: 0, ALIGNED_LONG: 1, ALIGNED_SHORT: 1, WATCHLIST: 2, NEUTRAL: 3 };
+  groups.sort(function(a, b) {
+    const ra = rank[a.status] != null ? rank[a.status] : 9;
+    const rb = rank[b.status] != null ? rank[b.status] : 9;
+    if (ra !== rb) return ra - rb;
+    return (b.latest || 0) - (a.latest || 0);
+  });
+  return groups;
+}
+
+function taCollapseDuplicateSignals(signals) {
+  const groups = [];
+  const byKey = {};
+  (signals || []).forEach(function(s) {
+    const asset = taNormalizeSignalAsset(s);
+    const side  = taNormalizeSignalDirection(s) || '';
+    const type  = String(s.type || '').toLowerCase().trim();
+    const reasonRaw = String(s.assessment || s.reason || s.type || '').trim().toLowerCase();
+    const reasonKey = reasonRaw.slice(0, 80).replace(/[\d.]+/g, '#');
+    const key = asset + '|' + side + '|' + type + '|' + reasonKey;
+    const ts = taGetSignalTimestamp(s);
+    let g = byKey[key];
+    if (!g) {
+      g = { key: key, asset: asset, side: side, type: type, sample: s, count: 1, firstTs: ts, lastTs: ts };
+      byKey[key] = g;
+      groups.push(g);
+    } else {
+      g.count += 1;
+      if (ts && ts > g.lastTs)  g.lastTs = ts;
+      if (ts && (ts < g.firstTs || !g.firstTs)) g.firstTs = ts;
+      if (ts >= taGetSignalTimestamp(g.sample)) g.sample = s;
+    }
+  });
+  groups.sort(function(a, b) { return (b.lastTs || 0) - (a.lastTs || 0); });
+  return groups;
+}
+
+function taRenderSignalAlignment() {
+  const el = document.getElementById('taAlignList');
+  const counter = document.getElementById('taAlignCount');
+  if (!el) return;
+
+  const groups = taBuildSignalAlignment(
+    taState.importedFromJumpHQ || [],
+    taState.signals || [],
+    taState.paperTrades || []
+  );
+
+  if (counter) counter.textContent = groups.length ? ('· ' + groups.length) : '';
+  if (!groups.length) {
+    el.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No cross-agent signals in the last 72h.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="display:flex;flex-direction:column;gap:10px;">'
+    + groups.map(taRenderSignalAlignmentCard).join('')
+    + '</div>';
+}
+
+function taRenderSignalAlignmentCard(g) {
+  let statusLabel, statusColor, statusBg;
+  if      (g.status === 'CONFLICT')      { statusLabel = 'CONFLICT';      statusColor = '#fbbf24'; statusBg = '#3a2f1e'; }
+  else if (g.status === 'ALIGNED_LONG')  { statusLabel = 'ALIGNED LONG';  statusColor = '#34d399'; statusBg = '#1e3a2f'; }
+  else if (g.status === 'ALIGNED_SHORT') { statusLabel = 'ALIGNED SHORT'; statusColor = '#f87171'; statusBg = '#3a2526'; }
+  else if (g.status === 'WATCHLIST')     { statusLabel = 'WATCHLIST';     statusColor = '#60a5fa'; statusBg = '#1e2a3a'; }
+  else                                   { statusLabel = 'NEUTRAL';       statusColor = '#aaa';    statusBg = '#2a2d34'; }
+
+  function lineFor(label, entries, emptyText) {
+    if (!entries || !entries.length) {
+      return emptyText
+        ? '<div style="font-size:11px;color:var(--tx3,#888);line-height:1.5;"><strong style="color:var(--tx2,#ccc);">' + taEsc(label) + ':</strong> ' + taEsc(emptyText) + '</div>'
+        : '';
+    }
+    const sorted = entries.slice().sort(function(a,b){ return b.ts - a.ts; });
+    const e = sorted[0];
+    const o = e.obj || {};
+    const dir = e.dir || '—';
+    const dirColor = dir === TA_DIR_LONG ? '#34d399'
+                   : dir === TA_DIR_SHORT ? '#f87171'
+                   : dir === TA_DIR_WATCH ? '#60a5fa'
+                   : 'var(--tx2,#ccc)';
+    let detail = '';
+    if (e.kind === 'imported') {
+      const conf = String(o.confidence || '').toLowerCase();
+      const setup = String(o.setupType || '');
+      const thesis = String(o.thesis || '').trim();
+      const bits = [];
+      if (setup) bits.push(taEsc(setup));
+      if (conf)  bits.push('conf ' + taEsc(conf));
+      if (thesis) bits.push(taEsc(thesis.length > 120 ? thesis.slice(0, 120) + '…' : thesis));
+      detail = bits.join(' · ');
+    } else if (e.kind === 'signal') {
+      const type = String(o.type || '');
+      const reason = String(o.assessment || o.reason || '');
+      const shortReason = reason.length > 120 ? (reason.slice(0, 120) + '…') : reason;
+      const bits = [];
+      if (type) bits.push(taEsc(type));
+      if (shortReason) bits.push(taEsc(shortReason));
+      detail = bits.join(' · ');
+    } else if (e.kind === 'paper') {
+      const status = String(o.status || '').toLowerCase();
+      const pnl = o.pnl_pct != null ? (Number(o.pnl_pct).toFixed(1) + '%') : '';
+      detail = [status, pnl].filter(Boolean).map(taEsc).join(' · ');
+    }
+    const extra = entries.length > 1 ? ' <span style="color:var(--tx3,#888);">(+' + (entries.length - 1) + ' more)</span>' : '';
+    const age = taFmtTimeShort(new Date(e.ts).toISOString());
+    return '<div style="font-size:11px;line-height:1.5;color:var(--tx2,#ccc);margin-bottom:2px;">'
+         +   '<strong style="color:var(--tx2,#ccc);">' + taEsc(label) + ':</strong> '
+         +   '<span style="color:' + dirColor + ';font-weight:600;">' + taEsc(dir || '—') + '</span>'
+         +   (detail ? ' · <span style="color:var(--tx3,#888);">' + detail + '</span>' : '')
+         +   ' <span style="color:var(--tx3,#888);opacity:0.8;">(' + taEsc(age) + ')</span>'
+         +   extra
+         + '</div>';
+  }
+
+  let operatorRead, action;
+  if (g.status === 'CONFLICT') {
+    operatorRead = 'Do not enter blindly. Treat as decision point. Long only if reclaim/support confirms. Short only if breakdown continues.';
+    action = 'Open chart · wait for confirmation · no auto-trade';
+  } else if (g.status === 'ALIGNED_LONG') {
+    operatorRead = 'Strategic and tactical agree long. Long remains valid above structure; size to plan.';
+    action = 'Open chart · stalk entry · respect invalidation';
+  } else if (g.status === 'ALIGNED_SHORT') {
+    operatorRead = 'Strategic and tactical agree short. Short remains valid below structure.';
+    action = 'Open chart · stalk entry · respect invalidation';
+  } else if (g.status === 'WATCHLIST') {
+    operatorRead = 'Strategic interest, no execution trigger yet. Wait for confirmation before sizing.';
+    action = 'Monitor confirmation';
+  } else {
+    operatorRead = 'Single-sided neutral signal. Nothing to act on yet.';
+    action = 'Monitor';
+  }
+
+  const lines = [
+    lineFor('JumpHQ',       g.strategic, 'no recent strategic input'),
+    lineFor('Trader Agent', g.tactical,  'no recent tactical signal'),
+  ];
+  if (g.paper && g.paper.length) lines.push(lineFor('Paper Trade', g.paper, ''));
+
+  const latestAge = taFmtTimeShort(new Date(g.latest).toISOString());
+  return '<div style="border:1px solid var(--border,#2a2d34);border-radius:6px;padding:12px;background:var(--bg3,#1f2127);">'
+       +   '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">'
+       +     '<strong style="font-size:14px;color:var(--tx1,#eee);">' + taEsc(g.asset || '—') + '</strong>'
+       +     '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;background:' + statusBg + ';color:' + statusColor + ';letter-spacing:0.5px;">' + taEsc(statusLabel) + '</span>'
+       +     '<span style="margin-left:auto;font-size:11px;color:var(--tx3,#888);">latest ' + taEsc(latestAge) + '</span>'
+       +   '</div>'
+       +   lines.filter(Boolean).join('')
+       +   '<div style="margin-top:8px;padding-top:8px;border-top:1px dotted var(--border,#2a2d34);font-size:11px;color:var(--tx2,#ccc);line-height:1.5;">'
+       +     '<strong style="color:var(--tx2,#ccc);">Operator read:</strong> ' + taEsc(operatorRead)
+       +   '</div>'
+       +   '<div style="font-size:11px;color:var(--tx3,#888);margin-top:4px;">'
+       +     '<strong style="color:var(--tx2,#ccc);">Action:</strong> ' + taEsc(action)
+       +   '</div>'
+       + '</div>';
+}
+
 function taFbReadOnce(path) {
   return new Promise((resolve) => {
     if (typeof firebase === 'undefined' || !firebase.database) {
@@ -4497,6 +4760,7 @@ function taRender() {
   taRenderBadge();
   taRenderStatus();
   taRenderImported();
+  taRenderSignalAlignment();
   taRenderSignals();
   taRenderSetups();
   taRenderPaper();
@@ -4576,13 +4840,19 @@ function taRenderSignals() {
   const el = document.getElementById('taSignalsList');
   const counter = document.getElementById('taSignalsCount');
   if (!el) return;
-  if (counter) counter.textContent = taState.signals.length ? ('· ' + taState.signals.length) : '';
   if (!taState.signals.length) {
+    if (counter) counter.textContent = '';
     el.innerHTML = '<div style="color:var(--tx3,#888);font-size:12px;padding:14px;">No trader signals found in primary or legacy namespace.</div>';
     return;
   }
-  const rows = taState.signals.map(s => {
-    const side = (s.side || '').toUpperCase();
+  const groups = taCollapseDuplicateSignals(taState.signals);
+  if (counter) {
+    const total = taState.signals.length;
+    counter.textContent = '· ' + groups.length + ' unique / ' + total + ' raw';
+  }
+  const rows = groups.map(function(g) {
+    const s = g.sample || {};
+    const side = (taNormalizeSignalDirection(s) || s.side || '').toUpperCase();
     const sideColor = side === 'LONG' ? '#34d399' : side === 'SHORT' ? '#f87171' : 'var(--tx2,#ccc)';
     const outcome = s.outcome || '';
     const outcomeColor = outcome === 'correct' ? '#34d399' : outcome === 'incorrect' ? '#f87171' : 'var(--tx3,#888)';
@@ -4590,14 +4860,21 @@ function taRenderSignals() {
     const conviction = s.conviction || '';
     const reason = (s.assessment || s.reason || s.type || '').toString();
     const shortReason = reason.length > 160 ? (reason.slice(0, 160) + '…') : reason;
-    return `<div style="display:grid;grid-template-columns:60px 60px 80px 1fr 100px 90px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border,#2a2d34);font-size:12px;">
-      <div><strong>${taEsc((s.coin || s.asset || '—').toUpperCase())}</strong></div>
-      <div style="color:${sideColor};font-weight:600;">${taEsc(side || '—')}</div>
-      <div style="color:var(--tx2,#ccc);">${taEsc(s.type || '—')}</div>
-      <div style="color:var(--tx3,#888);line-height:1.4;">${taEsc(shortReason)}</div>
-      <div style="color:${outcomeColor};font-size:11px;">${taEsc(outcome || s.status || '')} ${taEsc(pnl)}</div>
-      <div style="color:var(--tx3,#888);font-size:11px;text-align:right;" title="${taEsc(s.created || '')}">${taEsc(taFmtTimeShort(s.created || s.mirrored_at))}<br><span style="color:var(--tx3,#888);opacity:0.7;">${taEsc(conviction)}</span></div>
-    </div>`;
+    const repeatBadge = g.count > 1
+      ? ' <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:#3a2f1e;color:#fbbf24;font-weight:600;">×' + g.count + '</span>'
+      : '';
+    const latestAge = taFmtTimeShort(new Date(g.lastTs || taGetSignalTimestamp(s)).toISOString());
+    const ageCell = g.count > 1
+      ? ('latest ' + latestAge + '<br><span style="color:var(--tx3,#888);opacity:0.7;">first ' + taEsc(taFmtTimeShort(new Date(g.firstTs).toISOString())) + '</span>')
+      : (taEsc(latestAge) + '<br><span style="color:var(--tx3,#888);opacity:0.7;">' + taEsc(conviction) + '</span>');
+    return '<div style="display:grid;grid-template-columns:90px 60px 90px 1fr 100px 130px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border,#2a2d34);font-size:12px;">'
+      + '<div><strong>' + taEsc(taNormalizeSignalAsset(s) || '—') + '</strong>' + repeatBadge + '</div>'
+      + '<div style="color:' + sideColor + ';font-weight:600;">' + taEsc(side || '—') + '</div>'
+      + '<div style="color:var(--tx2,#ccc);">' + taEsc(s.type || '—') + '</div>'
+      + '<div style="color:var(--tx3,#888);line-height:1.4;">' + taEsc(shortReason) + '</div>'
+      + '<div style="color:' + outcomeColor + ';font-size:11px;">' + taEsc(outcome || s.status || '') + ' ' + taEsc(pnl) + '</div>'
+      + '<div style="color:var(--tx3,#888);font-size:11px;text-align:right;" title="' + taEsc(s.created || '') + '">' + ageCell + '</div>'
+      + '</div>';
   }).join('');
   el.innerHTML = '<div style="max-height:480px;overflow-y:auto;">' + rows + '</div>';
 }
